@@ -1,6 +1,10 @@
 QCoDeS |Build Status| |DOCS| |DOI|
 ===================================
 
+.. image:: https://api.codacy.com/project/badge/Grade/26b2495e9ab74279acca280067c4a1c6
+   :alt: Codacy Badge
+   :target: https://www.codacy.com/app/jenshnielsen/Qcodes?utm_source=github.com&utm_medium=referral&utm_content=jenshnielsen/Qcodes&utm_campaign=badger
+
 QCoDeS is a Python-based data acquisition framework developed by the
 Copenhagen / Delft / Sydney / Microsoft quantum computing consortium.
 While it has been developed to serve the needs of nanoelectronic device
