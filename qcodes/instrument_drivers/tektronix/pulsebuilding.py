@@ -168,8 +168,25 @@ class BluePrint():
             ts (int): Number of time segments this segment should last.
                 Default: 1.
         """
+
+        if pos < -1:
+            raise ValueError('Position must be strictly larger than -1')
+
         if name is None:
             name = func.__name__
+
+        if pos == -1:
+            self._namelist.append(name)
+            self._namelist = self._make_names_unique(self._namelist)
+            self._funlist.append(func)
+            self._argslist.append(args)
+            self._tslist.append(ts)
+        else:
+            self._namelist.insert(pos, name)
+            self._namelist = self._make_names_unique(self._namelist)
+            self._funlist.insert(pos, func)
+            self._argslist.insert(pos, args)
+            self._tslist.insert(pos, ts)
 
     def removeSegment(self, name):
         """
@@ -297,11 +314,13 @@ if __name__ == '__main__':
     elem2 = elementBuilder(bp2, durations)
     bluePrintPlotter([bp1, bp2], durations)
 
-    # ADDING blueprints and EXTENDING durations
+    # ADDING two blueprints and EXTENDING durations
     bp3 = bp1 + bp2
     bp3.removeSegment('up2')
     bp3.changeDuration('wiggle', 2)
-    bluePrintPlotter(bp3, durations+durations)
+    bp1.addSegment(-1, sine, (24, 1, 1))
+    bp1.addSegment(0, sine, (24, 1, 1), ts=2)
+    bluePrintPlotter([bp3, bp1], durations+durations)
 
     # using META functions
     # some day...
