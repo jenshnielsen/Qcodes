@@ -73,27 +73,8 @@ class BluePrint():
         self._namelist = namelist
         if tslist is None:
             self._tslist = [1]*len(namelist)
-
-        self._bp = OrderedDict()
-        for (name, fun, args) in zip(namelist, funlist, argslist):
-            # Allow users to input incorrect arg tuples, like (3)
-            try:
-                len(args)
-            except TypeError:
-                args = (args,)
-            self._bp.update({name: {'function': fun, 'args': args,
-                                    'timesteps': 1}})
-
-    def _updatelists(self):
-        self._funlist = []
-        self._argslist = []
-        self._namelist = []
-        self._tslist = []
-        for (key, val) in self._bp.items():
-            self._namelist.append(key)
-            self._funlist.append(val['function'])
-            self._argslist.append(val['args'])
-            self._tslist.append(val['timesteps'])
+        else:
+            self._tslist = tslist
 
     @staticmethod
     def _make_names_unique(lst):
@@ -131,18 +112,19 @@ class BluePrint():
         # TODO: is there any reason to use tuples internally?
         # TODO: add input validation
 
+        position = self._namelist.index(name)
+
         if isinstance(arg, str):
-            sig = signature(self._bp[name]['function'])
+            sig = signature(self._funlist[position])
             for ii, param in enumerate(sig.parameters):
                 if arg == param:
                     arg = ii
                     break
 
         # Mutating the immutable...
-        larg = list(self._bp[name]['args'])
+        larg = list(self._argslist[position])
         larg[arg] = value
-        self._bp[name]['args'] = tuple(larg)
-        self._updatelists()
+        self._argslist[position] = tuple(larg)
 
     def changeDuration(self, name, n):
         """
@@ -153,23 +135,41 @@ class BluePrint():
             name (str): The name of a segment of the blueprint.
             n (int): The number of timesteps for this segment to last.
         """
+
+        position = self._namelist.index(name)
+
         n_is_whole_number = float(n).is_integer()
         if not (n >= 1 and n_is_whole_number):
             raise ValueError('n must be a whole number strictly' +
                              ' greater than 0.')
 
-        self._bp[name]['timesteps'] = n
-        self._updatelists()
+        self._tslist[position] = n
 
     def copy(self):
-        fl = []
-        nl = []
-        al = []
-        for name in self._bp:
-            fl.append(self._bp[name]['function'])
-            al.append(self._bp[name]['args'])
-            nl.append(name)
-        return BluePrint(fl, al, nl)
+        return BluePrint(self._funlist.copy(),
+                         self._argslist.copy(),
+                         self._namelist.copy(),
+                         self._tslist.copy())
+
+    def addSegment(self, pos, func, args=(), name=None, ts=1):
+        """
+        Add a segment to the bluePrint.
+
+        Args:
+            pos (int): The position at which to add the segment. Counts like
+                a python list; 0 is first, -1 is last. Values below -1 are
+                not allowed, though.
+            func (function): Function describing the segment. Must have its
+               duration as the last argument (unless its a special function).
+            args (tuple): Tuple of arguments BESIDES duration. Default: ()
+            name (str): Name of the segment. If none is given, the segment
+                will receive the name of its function, possibly with a number
+                appended.
+            ts (int): Number of time segments this segment should last.
+                Default: 1.
+        """
+        if name is None:
+            name = func.__name__
 
     def removeSegment(self, name):
         """
@@ -178,8 +178,12 @@ class BluePrint():
         Args:
             name (str): The name of the segment to remove.
         """
-        self._bp.pop(name)
-        self._updatelists()
+        position = self._namelist.index(name)
+
+        del self._funlist[position]
+        del self._argslist[position]
+        del self._tslist[position]
+        del self._namelist[position]
 
     def __add__(self, other):
         """
@@ -203,9 +207,39 @@ def elementBuilder(blueprint, durations):
     """
     The function building a blueprint, returning a numpy array.
 
+    This is a single-blueprint forger. It should be easy to stack several.
+
     TO-DO: add proper behaviour for META functions like 'wait until X'
-    TO-DO: add support for multiple blueprints
     """
+
+    funlist = blueprint._funlist
+    argslist = blueprint._argslist
+    namelist = blueprint._namelist
+
+    # Take care of 'meta'-function inputs before proceeding
+    # all 'actions' return the same things; new lists
+
+    def waituntilaction(durations, funlist, n, tau):
+        timesofar = sum(durations[:n])
+        if tau-timesofar < 0:
+            raise ValueError("""
+                             Inconsistent duration specifications.
+                             Can not wait until {} s at segment {}, since
+                             the waveform is already {} s long at this point.
+                             """.format(tau, n, timesofar))
+
+        funlist.insert(n, PulseAtoms.waituntil)  # if meta func lives in names
+        # funlist[n] = PulseAtoms.waituntil  # if meta func lives in funcs
+        durations.insert(n, tau-timesofar)
+
+        return durations, funlist
+
+    metaactions = {'waituntil': waituntilaction}
+
+    # TODO: perhaps meta functions should live in funlist, not namelist?
+    for name in namelist:
+        if name in metaactions:
+            (durations, funlist) = metaactions[name]  # where are tau and n?
 
     # update the durations to accomodate for some segments having
     # timesteps larger than 1
@@ -215,11 +249,11 @@ def elementBuilder(blueprint, durations):
         dur = sum(durations[steps[ii]:steps[ii+1]])
         newdurations.append(dur)
 
-    funlist = blueprint._funlist
-    argslist = blueprint._argslist
+    # The actual forging
     parts = [ft.partial(fun, *args) for (fun, args) in zip(funlist, argslist)]
     blocks = [p(d) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
+
     return np.array(output)
 
 
@@ -250,8 +284,9 @@ if __name__ == '__main__':
     ramp = PulseAtoms.ramp
     sine = PulseAtoms.sine
 
-    durations = [1, 2, 0.8]
+    durations = [1, 2, 1]
 
+    # BASIC usage
     bp1 = BluePrint([ramp, sine, ramp],
                     [(-1,), (40, 1, 1), (2,)],
                     ['down', 'wiggle', 'up'])
@@ -260,9 +295,13 @@ if __name__ == '__main__':
     bp2 = bp1.copy()
     bp2.changeArg('wiggle', 'freq', 20)
     elem2 = elementBuilder(bp2, durations)
+    bluePrintPlotter([bp1, bp2], durations)
+
+    # ADDING blueprints and EXTENDING durations
     bp3 = bp1 + bp2
     bp3.removeSegment('up2')
     bp3.changeDuration('wiggle', 2)
-
-    bluePrintPlotter([bp1, bp2], durations)
     bluePrintPlotter(bp3, durations+durations)
+
+    # using META functions
+    # some day...
