@@ -64,13 +64,16 @@ class BluePrint():
             tslist (list): List of timesteps for each segment
         """
 
-        # TO-DO: infer names from signature if not given
-
-        namelist = self._make_names_unique(namelist)
+        # Infer names from signature if not given, i.e. allow for '' names
+        for ii, name in enumerate(namelist):
+            if name == '':
+                namelist[ii] = funlist[ii].__name__
 
         self._funlist = funlist
         self._argslist = argslist
         self._namelist = namelist
+        namelist = self._make_names_unique(namelist)
+
         if tslist is None:
             self._tslist = [1]*len(namelist)
         else:
@@ -99,9 +102,10 @@ class BluePrint():
         """
         Pretty-print the contents of the BluePrint.
         """
-        lzip = zip(self._namelist, self._funlist, self._argslist)
-        for ind, (name, fun, args) in enumerate(lzip):
-            print('Segment {}: {}, {}, {}'.format(ind+1, name, fun, args))
+        lzip = zip(self._namelist, self._funlist, self._argslist, self._tslist)
+        for ind, (name, fun, args, ts) in enumerate(lzip):
+            print('Segment {}: {}, {}, {}, {}'.format(ind+1,
+                                                      name, fun, args, ts))
 
     def changeArg(self, name, arg, value):
         """
@@ -111,6 +115,9 @@ class BluePrint():
         """
         # TODO: is there any reason to use tuples internally?
         # TODO: add input validation
+
+        if not isinstance(value, tuple):
+            value = (value,)
 
         position = self._namelist.index(name)
 
@@ -151,9 +158,9 @@ class BluePrint():
                          self._namelist.copy(),
                          self._tslist.copy())
 
-    def addSegment(self, pos, func, args=(), name=None, ts=1):
+    def insertSegment(self, pos, func, args=(), name=None, ts=1):
         """
-        Add a segment to the bluePrint.
+        Insert a segment into the bluePrint.
 
         Args:
             pos (int): The position at which to add the segment. Counts like
@@ -168,6 +175,10 @@ class BluePrint():
             ts (int): Number of time segments this segment should last.
                 Default: 1.
         """
+
+        # allow users to input single values
+        if not isinstance(args, tuple):
+            args = (args,)
 
         if pos < -1:
             raise ValueError('Position must be strictly larger than -1')
@@ -206,6 +217,15 @@ class BluePrint():
         """
         Add two BluePrints. The second argument is appended to the first
         and a new BluePrint is returned.
+
+        Args:
+            other (BluePrint): A BluePrint instance
+
+        Returns:
+            BluePrint: A new blueprint.
+
+        Raises:
+            ValueError: If the input is not a BluePrint instance
         """
         if not isinstance(other, BluePrint):
             raise ValueError("""
@@ -218,6 +238,46 @@ class BluePrint():
         fl = self._funlist + self._funlist
 
         return BluePrint(fl, al, nl)
+
+    def __eq__(self, other):
+        """
+        Compare two blueprints. They are the same iff all four
+        lists are identical.
+
+        Args:
+            other (BluePrint): A BluePrint instance
+
+        Returns:
+            bool: whether the two blueprints are identical
+
+        Raises:
+            ValueError: If the input is not a BluePrint instance
+        """
+        if not isinstance(other, BluePrint):
+            raise ValueError("""
+                             Blueprint can only be compared to another
+                             Blueprint.
+                             Received an object of type {}
+                             """.format(type(other)))
+
+        if not self._namelist == other._namelist:
+            return False
+        if not self._funlist == other._funlist:
+            return False
+        if not self._argslist == other._argslist:
+            return False
+        if not self._tslist == other._tslist:
+            return False
+        return True
+
+# testing another call signature for __init__
+
+
+class BluePrint_alt(BluePrint):
+    """
+    test class for testing an alternative call signature for __init__.
+    """
+    pass
 
 
 def elementBuilder(blueprint, durations):
@@ -318,8 +378,8 @@ if __name__ == '__main__':
     bp3 = bp1 + bp2
     bp3.removeSegment('up2')
     bp3.changeDuration('wiggle', 2)
-    bp1.addSegment(-1, sine, (24, 1, 1))
-    bp1.addSegment(0, sine, (24, 1, 1), ts=2)
+    bp1.insertSegment(-1, sine, (24, 1, 1))
+    bp1.insertSegment(0, sine, (24, 1, 1), ts=2)
     bluePrintPlotter([bp3, bp1], durations+durations)
 
     # using META functions
