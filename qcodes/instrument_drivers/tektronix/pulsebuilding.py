@@ -9,6 +9,8 @@
 from inspect import signature
 import functools as ft
 import numpy as np
+import matplotlib.pyplot as plt  # why does this break the tests? MAC OSX framework blah blah
+plt.ion()
 
 # "global" variable, the sample rate
 # TODO: figure out where to get this from (obviously the AWG SR, but how?)
@@ -27,17 +29,17 @@ class PulseAtoms:
     @staticmethod
     def sine(freq, ampl, off, dur):
         time = np.linspace(0, dur, dur*SR)
-
+        freq *= 2*np.pi
         return list(ampl*np.sin(freq*time)+off)
 
     @staticmethod
     def ramp(slope, dur):
         time = np.linspace(0, dur, dur*SR)
-
         return list(slope*time)
 
     @staticmethod
-    def waituntil(dur):
+    def waituntil(dummy, dur):
+        # for internal call signature consistency, a dummy variable is needed
         return list(np.zeros(dur*SR))
 
     @staticmethod
@@ -71,12 +73,17 @@ class BluePrint():
             tslist (list): List of timesteps for each segment
         """
 
+        self._funlist = funlist
+
+        # Make special functions live in the funlist but transfer their names
+        # to the namelist
         # Infer names from signature if not given, i.e. allow for '' names
         for ii, name in enumerate(namelist):
-            if name == '':
+            if isinstance(funlist[ii], str):
+                namelist[ii] = funlist[ii]
+            elif name == '':
                 namelist[ii] = funlist[ii].__name__
 
-        self._funlist = funlist
         self._argslist = argslist
         self._namelist = namelist
         namelist = self._make_names_unique(namelist)
@@ -89,7 +96,7 @@ class BluePrint():
     @staticmethod
     def _basename(string):
         """
-        Remove trailing numbers from a string.
+        Remove trailing numbers from a string. (currently removes all numbers)
         """
         lst = [letter for letter in string if not letter.isdigit()]
         return ''.join(lst)
@@ -118,19 +125,6 @@ class BluePrint():
                     lst[ind] = '{}{}'.format(un, ii+1)
 
         return lst
-
-        # baselst.reverse()
-        # lst.reverse()
-        # for el in lst:
-        #     baseel = BluePrint._basename(el)
-        #     if baselst.count(baseel) > 1:
-        #         print('Found {} more than once'.format(el))
-        #         for ii in range(baselst.count(baseel), 1, -1):
-        #             print(lst, el)
-        #             # TODO: what is the appropriate formatter here?
-        #             lst[lst.index(el)] = '{}{}'.format(baseel, ii)
-        # lst.reverse()
-        # return lst
 
     def showPrint(self):
         """
@@ -196,8 +190,11 @@ class BluePrint():
             name (str): The name of a segment of the blueprint.
             n (int): The number of timesteps for this segment to last.
         """
-
         position = self._namelist.index(name)
+
+        if self._funlist[position] == 'waituntil':
+            raise ValueError('Special function waituntil can not last more' +
+                             'than one time step')
 
         n_is_whole_number = float(n).is_integer()
         if not (n >= 1 and n_is_whole_number):
@@ -343,41 +340,35 @@ def elementBuilder(blueprint, durations):
     TO-DO: add proper behaviour for META functions like 'wait until X'
     """
 
-    funlist = blueprint._funlist
-    argslist = blueprint._argslist
-    namelist = blueprint._namelist
-    tslist = blueprint._tslist
+    # Important: building the element must NOT modify the bluePrint, therefore
+    # all lists are copied
+    funlist = blueprint._funlist.copy()
+    argslist = blueprint._argslist.copy()
+    namelist = blueprint._namelist.copy()
+    tslist = blueprint._tslist.copy()
 
-    #TODO: make 'waituntil' not break this validation
-    if sum(tslist) != len(durations):
+    no_of_waits = funlist.count('waituntil')
+
+    if sum(tslist) != len(durations)+no_of_waits:
         raise ValueError('The specified timesteps do not match the number ' +
                          'of durations. ({} and {})'.format(sum(tslist),
-                                                            len(durations)))
+                                                            len(durations) +
+                                                            no_of_waits))
 
-    # Take care of 'meta'-function inputs before proceeding
-    # all 'actions' return the same things; new lists
-
-    def waituntilaction(durations, funlist, n, tau):
-        timesofar = sum(durations[:n])
-        if tau-timesofar < 0:
-            raise ValueError("""
-                             Inconsistent duration specifications.
-                             Can not wait until {} s at segment {}, since
-                             the waveform is already {} s long at this point.
-                             """.format(tau, n, timesofar))
-
-        funlist.insert(n, PulseAtoms.waituntil)  # if meta func lives in names
-        # funlist[n] = PulseAtoms.waituntil  # if meta func lives in funcs
-        durations.insert(n, tau-timesofar)
-
-        return durations, funlist
-
-    metaactions = {'waituntil': waituntilaction}
-
-    # TODO: perhaps meta functions should live in funlist, not namelist?
-    for name in namelist:
-        if name in metaactions:
-            (durations, funlist) = metaactions[name]  # where are tau and n?
+    # handle waituntil
+    waitpositions = [ii for ii, el in enumerate(funlist) if el == 'waituntil']
+    for nw in range(no_of_waits):
+        pos = waitpositions[nw]
+        funlist[pos] = PulseAtoms.waituntil
+        elapsed_time = sum(durations[:pos])
+        wait_time = argslist[pos][0]
+        dur = wait_time - elapsed_time
+        if dur < 0:
+            raise ValueError('Inconsistent timing. Can not wait until ' +
+                             '{} at position {}.'.format(wait_time, pos) +
+                             ' {} elapsed already'.format(elapsed_time))
+        else:
+            durations.insert(pos, dur)
 
     # update the durations to accomodate for some segments having
     # timesteps larger than 1
@@ -392,7 +383,7 @@ def elementBuilder(blueprint, durations):
     blocks = [p(d) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
 
-    return np.array(output)
+    return np.array(output), newdurations
 
 
 def bluePrintPlotter(blueprints, durations):
@@ -406,11 +397,14 @@ def bluePrintPlotter(blueprints, durations):
 
     fig = plt.figure()
     N = len(blueprints)
-    time = np.linspace(0, np.sum(durations), np.sum(durations)*SR)
+
     for ii in range(N):
         ax = fig.add_subplot(N, 1, ii+1)
-        wfm = elementBuilder(blueprints[ii], durations)
-        for dur in np.cumsum(durations):
+        wfm, newdurations = elementBuilder(blueprints[ii], durations)
+        time = np.linspace(0, np.sum(newdurations), np.sum(newdurations)*SR)
+
+        # plot lines indicating the durations
+        for dur in np.cumsum(newdurations):
             ax.plot([dur, dur], [wfm.min(), wfm.max()],
                     color=(0.312, 0.2, 0.33),
                     alpha=0.3)
