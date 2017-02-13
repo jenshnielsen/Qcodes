@@ -6,12 +6,9 @@
 #
 # In this iteration, we do it in a horribly object-oriented way
 
-from collections import OrderedDict
 from inspect import signature
 import functools as ft
 import numpy as np
-import matplotlib.pyplot as plt
-plt.ion()
 
 # "global" variable, the sample rate
 # TODO: figure out where to get this from (obviously the AWG SR, but how?)
@@ -42,6 +39,16 @@ class PulseAtoms:
     @staticmethod
     def waituntil(dur):
         return list(np.zeros(dur*SR))
+
+    @staticmethod
+    def gaussian(ampl, sigma, mu, offset, dur):
+        """
+        Returns a Gaussian of integral ampl (when offset==0)
+        """
+        time = np.linspace(0, dur, dur*SR)
+        baregauss = np.exp((-(time-mu)**2/(2*sigma**2)))
+        normalisation = 1/np.sqrt(2*sigma**2*np.pi)
+        return ampl*baregauss*normalisation
 
 
 class BluePrint():
@@ -80,6 +87,14 @@ class BluePrint():
             self._tslist = tslist
 
     @staticmethod
+    def _basename(string):
+        """
+        Remove trailing numbers from a string.
+        """
+        lst = [letter for letter in string if not letter.isdigit()]
+        return ''.join(lst)
+
+    @staticmethod
     def _make_names_unique(lst):
         """
         Make all strings in the input list unique
@@ -89,14 +104,33 @@ class BluePrint():
             lst (list): List of strings. Intended for the _namelist
 
         """
-        lst.reverse()
-        for el in lst:
-            if lst.count(el) > 1:
-                for ii in range(lst.count(el), 1, -1):
-                    # TODO: what is the appropriate formatter here?
-                    lst[lst.index(el)] += '{}'.format(ii)
-        lst.reverse()
+
+        baselst = [BluePrint._basename(lstel) for lstel in lst]
+        uns = np.unique(baselst)
+
+        for un in uns:
+            inds = [ii for ii, el in enumerate(baselst) if el == un]
+            for ii, ind in enumerate(inds):
+                # Do not append numbers to the first occurence
+                if ii == 0:
+                    lst[ind] = '{}'.format(un)
+                else:
+                    lst[ind] = '{}{}'.format(un, ii+1)
+
         return lst
+
+        # baselst.reverse()
+        # lst.reverse()
+        # for el in lst:
+        #     baseel = BluePrint._basename(el)
+        #     if baselst.count(baseel) > 1:
+        #         print('Found {} more than once'.format(el))
+        #         for ii in range(baselst.count(baseel), 1, -1):
+        #             print(lst, el)
+        #             # TODO: what is the appropriate formatter here?
+        #             lst[lst.index(el)] = '{}{}'.format(baseel, ii)
+        # lst.reverse()
+        # return lst
 
     def showPrint(self):
         """
@@ -107,31 +141,51 @@ class BluePrint():
             print('Segment {}: {}, {}, {}, {}'.format(ind+1,
                                                       name, fun, args, ts))
 
-    def changeArg(self, name, arg, value):
+    def changeArg(self, name, arg, value, replaceeverywhere=False):
         """
-        Change an argument of one of the functions in the blueprint.
-        The input argument may be a string (the name of the argument)
-        or an int specifying the arg's position.
+        Change an argument of one or more of the functions in the blueprint.
+
+        Args:
+            name (str): The name of the segment in which to change an argument
+            arg (Union[int, str]): Either the position (int) or name (str) of
+                the argument to change
+            value (Union[int, float]): The new value of the argument
+            replaceeverywhere (bool): If True, the same argument is overwritten
+                in ALL segments where the name matches. E.g. 'gaussian1' will
+                match 'gaussian', 'gaussian2', etc. If False, only the segment
+                with exact name match gets a replacement.
         """
         # TODO: is there any reason to use tuples internally?
         # TODO: add input validation
 
-        if not isinstance(value, tuple):
-            value = (value,)
+        if replaceeverywhere:
+            basename = BluePrint._basename
+            name = basename(name)
+            nmlst = self._namelist
+            replacelist = [nm for nm in nmlst if basename(nm) == name]
+        else:
+            replacelist = [name]
 
-        position = self._namelist.index(name)
+        for name in replacelist:
 
-        if isinstance(arg, str):
-            sig = signature(self._funlist[position])
-            for ii, param in enumerate(sig.parameters):
-                if arg == param:
-                    arg = ii
-                    break
+            position = self._namelist.index(name)
 
-        # Mutating the immutable...
-        larg = list(self._argslist[position])
-        larg[arg] = value
-        self._argslist[position] = tuple(larg)
+            # allow the user to input single values instead of (val,)
+            no_of_args = len(self._argslist[position])
+            if not isinstance(value, tuple) and no_of_args == 1:
+                value = (value,)
+
+            if isinstance(arg, str):
+                sig = signature(self._funlist[position])
+                for ii, param in enumerate(sig.parameters):
+                    if arg == param:
+                        arg = ii
+                        break
+
+            # Mutating the immutable...
+            larg = list(self._argslist[position])
+            larg[arg] = value
+            self._argslist[position] = tuple(larg)
 
     def changeDuration(self, name, n):
         """
@@ -292,6 +346,13 @@ def elementBuilder(blueprint, durations):
     funlist = blueprint._funlist
     argslist = blueprint._argslist
     namelist = blueprint._namelist
+    tslist = blueprint._tslist
+
+    #TODO: make 'waituntil' not break this validation
+    if sum(tslist) != len(durations):
+        raise ValueError('The specified timesteps do not match the number ' +
+                         'of durations. ({} and {})'.format(sum(tslist),
+                                                            len(durations)))
 
     # Take care of 'meta'-function inputs before proceeding
     # all 'actions' return the same things; new lists
@@ -354,33 +415,3 @@ def bluePrintPlotter(blueprints, durations):
                     color=(0.312, 0.2, 0.33),
                     alpha=0.3)
         ax.plot(time, wfm, lw=2, color=(0.6, 0.3, 0.3), alpha=0.4)
-
-
-if __name__ == '__main__':
-
-    ramp = PulseAtoms.ramp
-    sine = PulseAtoms.sine
-
-    durations = [1, 2, 1]
-
-    # BASIC usage
-    bp1 = BluePrint([ramp, sine, ramp],
-                    [(-1,), (40, 1, 1), (2,)],
-                    ['down', 'wiggle', 'up'])
-
-    elem1 = elementBuilder(bp1, durations)
-    bp2 = bp1.copy()
-    bp2.changeArg('wiggle', 'freq', 20)
-    elem2 = elementBuilder(bp2, durations)
-    bluePrintPlotter([bp1, bp2], durations)
-
-    # ADDING two blueprints and EXTENDING durations
-    bp3 = bp1 + bp2
-    bp3.removeSegment('up2')
-    bp3.changeDuration('wiggle', 2)
-    bp1.insertSegment(-1, sine, (24, 1, 1))
-    bp1.insertSegment(0, sine, (24, 1, 1), ts=2)
-    bluePrintPlotter([bp3, bp1], durations+durations)
-
-    # using META functions
-    # some day...
