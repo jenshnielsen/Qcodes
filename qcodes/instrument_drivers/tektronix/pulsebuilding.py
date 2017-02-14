@@ -61,7 +61,9 @@ class BluePrint():
     them into numpy arrays.
     """
 
-    def __init__(self, funlist, argslist, namelist, tslist=None):
+    def __init__(self, funlist, argslist, namelist, tslist=None,
+                 marker1=None, marker2=None, segmentmarker1=None,
+                 segmentmarker2=None):
         """
         TO-DO: (probably) change the call signature ot take in single
         segments and not the full lists.
@@ -71,7 +73,10 @@ class BluePrint():
             argslist (list): List of tuples of arguments
             namelist (list): List of names for the functions
             tslist (list): List of timesteps for each segment
+            marker1 (list): List of marker1 specification tuples
+            marker2 (list): List of marker2 specifiation tuples
         """
+        # TODO: validate input
 
         self._funlist = funlist
 
@@ -84,7 +89,12 @@ class BluePrint():
             elif name == '':
                 namelist[ii] = funlist[ii].__name__
 
+        # Allow single arguments to be given as not tuples
+        for ii, args in enumerate(argslist):
+            if not isinstance(args, tuple):
+                argslist = (args)
         self._argslist = argslist
+
         self._namelist = namelist
         namelist = self._make_names_unique(namelist)
 
@@ -94,8 +104,22 @@ class BluePrint():
             self._tslist = tslist
 
         # initialise markers
-        self.marker1 = []
-        self.marker2 = []
+        if marker1 is None:
+            self.marker1 = [(0, 0)]*len(funlist)
+        else:
+            self.marker1 = marker1
+        if marker2 is None:
+            self.marker2 = [(0, 0)]*len(funlist)
+        else:
+            self.marker2 = marker2
+        if segmentmarker1 is None:
+            self._segmark1 = [(0, 0)]*len(funlist)
+        else:
+            self._segmark1 = segmentmarker1
+        if segmentmarker2 is None:
+            self._segmark2 = [(0, 0)]*len(funlist)
+        else:
+            self._segmark2 = segmentmarker2
 
     @staticmethod
     def _basename(string):
@@ -132,8 +156,10 @@ class BluePrint():
 
     def showPrint(self):
         """
-        Pretty-print the contents of the BluePrint.
+        Pretty-print the contents of the BluePrint. Not finished.
         """
+        # TODO: tidy up this method
+
         lzip = zip(self._namelist, self._funlist, self._argslist, self._tslist)
         for ind, (name, fun, args, ts) in enumerate(lzip):
             print('Segment {}: {}, {}, {}, {}'.format(ind+1,
@@ -185,6 +211,24 @@ class BluePrint():
             larg[arg] = value
             self._argslist[position] = tuple(larg)
 
+    def setSegmentMarker(self, name, specs, markerID):
+        """
+        Bind a marker to a specific segment.
+
+        Args:
+            name (str): Name of the segment
+            specs (tuple): Marker specification tuple, (delay, duration),
+                where the delay is relative to the segment start
+            markerID (int): Which marker channel to output on. Must be 1 or 2.
+        """
+        if markerID not in [1, 2]:
+            raise ValueError('MarkerID must be either 1 or 2.'
+                             ' Received {}.'.format(markerID))
+
+        markerselect = {1: self._segmark1, 2: self._segmark2}
+        position = self._namelist.index(name)
+        markerselect[markerID][position] = specs
+
     def changeDuration(self, name, n):
         """
         Change the duration (in number of timesteps) of the blueprint segment
@@ -211,7 +255,9 @@ class BluePrint():
         return BluePrint(self._funlist.copy(),
                          self._argslist.copy(),
                          self._namelist.copy(),
-                         self._tslist.copy())
+                         self._tslist.copy(),
+                         self.marker1.copy(),
+                         self.marker2.copy())
 
     def insertSegment(self, pos, func, args=(), name=None, ts=1):
         """
@@ -247,12 +293,16 @@ class BluePrint():
             self._funlist.append(func)
             self._argslist.append(args)
             self._tslist.append(ts)
+            self._segmark1.append((0, 0))
+            self._segmark2.append((0, 0))
         else:
             self._namelist.insert(pos, name)
             self._namelist = self._make_names_unique(self._namelist)
             self._funlist.insert(pos, func)
             self._argslist.insert(pos, args)
             self._tslist.insert(pos, ts)
+            self._segmark1.insert(pos, (0, 0))
+            self._segmark2.insert(pos, (0, 0))
 
     def removeSegment(self, name):
         """
@@ -267,6 +317,8 @@ class BluePrint():
         del self._argslist[position]
         del self._tslist[position]
         del self._namelist[position]
+        del self._segmark1[position]
+        del self._segmark2[position]
 
     def __add__(self, other):
         """
@@ -290,13 +342,16 @@ class BluePrint():
 
         nl = self._namelist + other._namelist
         al = self._argslist + other._argslist
-        fl = self._funlist + self._funlist
+        fl = self._funlist + other._funlist
+        tl = self._tslist + other._tslist
+        m1 = self.marker1 + other.marker1
+        m2 = self.marker2 + other.marker2
 
-        return BluePrint(fl, al, nl)
+        return BluePrint(fl, al, nl, tl, m1, m2)
 
     def __eq__(self, other):
         """
-        Compare two blueprints. They are the same iff all four
+        Compare two blueprints. They are the same iff all
         lists are identical.
 
         Args:
@@ -322,6 +377,10 @@ class BluePrint():
         if not self._argslist == other._argslist:
             return False
         if not self._tslist == other._tslist:
+            return False
+        if not self.marker1 == other.marker2:
+            return False
+        if not self.marker2 == other.marker2:
             return False
         return True
 
@@ -350,6 +409,10 @@ def elementBuilder(blueprint, durations):
     argslist = blueprint._argslist.copy()
     namelist = blueprint._namelist.copy()
     tslist = blueprint._tslist.copy()
+    marker1 = blueprint.marker1.copy()
+    marker2 = blueprint.marker2.copy()
+    segmark1 = blueprint._segmark1.copy()
+    segmark2 = blueprint._segmark2.copy()
 
     no_of_waits = funlist.count('waituntil')
 
@@ -359,7 +422,7 @@ def elementBuilder(blueprint, durations):
                                                             len(durations) +
                                                             no_of_waits))
 
-    # handle waituntil
+    # handle waituntil by translating it into a normal function
     waitpositions = [ii for ii, el in enumerate(funlist) if el == 'waituntil']
     for nw in range(no_of_waits):
         pos = waitpositions[nw]
@@ -382,7 +445,7 @@ def elementBuilder(blueprint, durations):
         dur = sum(durations[steps[ii]:steps[ii+1]])
         newdurations.append(dur)
 
-    # The actual forging
+    # The actual forging of the waveform
     parts = [ft.partial(fun, *args) for (fun, args) in zip(funlist, argslist)]
     blocks = [p(d) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
@@ -392,7 +455,18 @@ def elementBuilder(blueprint, durations):
     m1 = np.zeros_like(time)
     m2 = m1.copy()
     dt = time[1] - time[0]
-    msettings = [blueprint.marker1, blueprint.marker2]
+    # update the 'absolute time' marker list with 'relative time'
+    # (segment bound) markers converted to absolute time
+    elapsed_times = np.cumsum([0] + newdurations)
+    for pos, spec in enumerate(segmark1):
+        if spec[1] is not 0:
+            ontime = elapsed_times[pos] + spec[0]  # spec is (delay, duration)
+            marker1.append((ontime, spec[1]))
+    for pos, spec in enumerate(segmark2):
+        if spec[1] is not 0:
+            ontime = elapsed_times[pos] + spec[0]  # spec is (delay, duration)
+            marker2.append((ontime, spec[1]))
+    msettings = [marker1, marker2]
     marks = [m1, m2]
     for marker, setting in zip(marks, msettings):
         for (t, dur) in setting:
@@ -440,7 +514,6 @@ def bluePrintPlotter(blueprints, durations):
         marker_on = np.ones_like(m1)
         marker_on[m1 == 0] = np.nan
         marker_off = np.ones_like(m1)
-        marker_off[m1 == 1] = np.nan
         ax.plot(time, y_m1*marker_off, color=(0.6, 0.1, 0.1), alpha=0.2, lw=2)
         ax.plot(time, y_m1*marker_on, color=(0.6, 0.1, 0.1), alpha=0.6, lw=2)
         #
@@ -448,6 +521,5 @@ def bluePrintPlotter(blueprints, durations):
         marker_on = np.ones_like(m2)
         marker_on[m2 == 0] = np.nan
         marker_off = np.ones_like(m2)
-        marker_off[m2 == 1] = np.nan
         ax.plot(time, y_m2*marker_off, color=(0.1, 0.1, 0.6), alpha=0.2, lw=2)
         ax.plot(time, y_m2*marker_on, color=(0.1, 0.1, 0.6), alpha=0.6, lw=2)
