@@ -93,6 +93,10 @@ class BluePrint():
         else:
             self._tslist = tslist
 
+        # initialise markers
+        self.marker1 = []
+        self.marker2 = []
+
     @staticmethod
     def _basename(string):
         """
@@ -383,7 +387,20 @@ def elementBuilder(blueprint, durations):
     blocks = [p(d) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
 
-    return np.array(output), newdurations
+    # now make the markers
+    time = np.linspace(0, sum(newdurations), sum(newdurations)*SR)  # round off
+    m1 = np.zeros_like(time)
+    m2 = m1.copy()
+    dt = time[1] - time[0]
+    msettings = [blueprint.marker1, blueprint.marker2]
+    marks = [m1, m2]
+    for marker, setting in zip(marks, msettings):
+        for (t, dur) in setting:
+            ind = np.abs(time-t).argmin()
+            chunk = int(np.round(dur/dt))
+            marker[ind:ind+chunk] = 1
+
+    return np.array([output, m1, m2]), newdurations
 
 
 def bluePrintPlotter(blueprints, durations):
@@ -400,12 +417,37 @@ def bluePrintPlotter(blueprints, durations):
 
     for ii in range(N):
         ax = fig.add_subplot(N, 1, ii+1)
-        wfm, newdurations = elementBuilder(blueprints[ii], durations)
+        arrays, newdurations = elementBuilder(blueprints[ii], durations)
+        wfm = arrays[0, :]
+        m1 = arrays[1, :]
+        m2 = arrays[2, :]
+        yrange = wfm.max() - wfm.min()
+        ax.set_ylim([wfm.min()-0.05*yrange, wfm.max()+0.2*yrange])
         time = np.linspace(0, np.sum(newdurations), np.sum(newdurations)*SR)
 
         # plot lines indicating the durations
         for dur in np.cumsum(newdurations):
-            ax.plot([dur, dur], [wfm.min(), wfm.max()],
+            ax.plot([dur, dur], [ax.get_ylim()[0],
+                                 ax.get_ylim()[1]],
                     color=(0.312, 0.2, 0.33),
                     alpha=0.3)
-        ax.plot(time, wfm, lw=2, color=(0.6, 0.3, 0.3), alpha=0.4)
+
+        # plot the waveform
+        ax.plot(time, wfm, lw=3, color=(0.6, 0.4, 0.3), alpha=0.4)
+
+        # plot the markers
+        y_m1 = wfm.max()+0.15*yrange
+        marker_on = np.ones_like(m1)
+        marker_on[m1 == 0] = np.nan
+        marker_off = np.ones_like(m1)
+        marker_off[m1 == 1] = np.nan
+        ax.plot(time, y_m1*marker_off, color=(0.6, 0.1, 0.1), alpha=0.2, lw=2)
+        ax.plot(time, y_m1*marker_on, color=(0.6, 0.1, 0.1), alpha=0.6, lw=2)
+        #
+        y_m2 = wfm.max()+0.10*yrange
+        marker_on = np.ones_like(m2)
+        marker_on[m2 == 0] = np.nan
+        marker_off = np.ones_like(m2)
+        marker_off[m2 == 1] = np.nan
+        ax.plot(time, y_m2*marker_off, color=(0.1, 0.1, 0.6), alpha=0.2, lw=2)
+        ax.plot(time, y_m2*marker_on, color=(0.1, 0.1, 0.6), alpha=0.6, lw=2)
