@@ -1,20 +1,12 @@
-# implementing what Filip asked for...
-#
-# Terminology:
-# Segments are collected in a blueprint. One or more blueprints are forged
-# into an element.
+# implementing what Filip and Natalie asked for...
 #
 # In this iteration, we do it in a horribly object-oriented way
 
 from inspect import signature
 import functools as ft
 import numpy as np
-import matplotlib.pyplot as plt  # why does this break the tests? MAC OSX framework blah blah
+import matplotlib.pyplot as plt
 plt.ion()
-
-# "global" variable, the sample rate
-# TODO: figure out where to get this from (obviously the AWG SR, but how?)
-SR = 100
 
 
 class PulseAtoms:
@@ -22,33 +14,36 @@ class PulseAtoms:
     A class full of static methods.
     The basic pulse shapes.
 
-    Any pulse shape function must return a list and have duration as its
-    final argument.
+    Any pulse shape function must return a list and have SR, duration as its
+    final two arguments.
     """
 
     @staticmethod
-    def sine(freq, ampl, off, dur):
+    def sine(freq, ampl, off, SR, dur):
         time = np.linspace(0, dur, dur*SR)
         freq *= 2*np.pi
         return list(ampl*np.sin(freq*time)+off)
 
     @staticmethod
-    def ramp(slope, dur):
+    def ramp(slope, offset, SR, dur):
         time = np.linspace(0, dur, dur*SR)
-        return list(slope*time)
+        return list(slope*time+offset)
 
     @staticmethod
-    def waituntil(dummy, dur):
+    def waituntil(dummy, SR, dur):
         # for internal call signature consistency, a dummy variable is needed
         return list(np.zeros(dur*SR))
 
     @staticmethod
-    def gaussian(ampl, sigma, mu, offset, dur):
+    def gaussian(ampl, sigma, mu, offset, SR, dur):
         """
         Returns a Gaussian of integral ampl (when offset==0)
+
+        Is by default centred in the middle of the interval
         """
         time = np.linspace(0, dur, dur*SR)
-        baregauss = np.exp((-(time-mu)**2/(2*sigma**2)))
+        centre = dur/2
+        baregauss = np.exp((-(time-mu-centre)**2/(2*sigma**2)))
         normalisation = 1/np.sqrt(2*sigma**2*np.pi)
         return ampl*baregauss*normalisation
 
@@ -105,11 +100,11 @@ class BluePrint():
 
         # initialise markers
         if marker1 is None:
-            self.marker1 = [(0, 0)]*len(funlist)
+            self.marker1 = []
         else:
             self.marker1 = marker1
         if marker2 is None:
-            self.marker2 = [(0, 0)]*len(funlist)
+            self.marker2 = []
         else:
             self.marker2 = marker2
         if segmentmarker1 is None:
@@ -320,6 +315,62 @@ class BluePrint():
         del self._segmark1[position]
         del self._segmark2[position]
 
+    def _validateDurations(self, durations):
+        """
+        Checks wether the number of durations matches the number of segments
+        and their specified lengths (including 'waituntils')
+
+        Args:
+            durations (list): List of durations
+
+        Raises:
+            ValueError: If the length of durations does not match the
+                blueprint.
+        """
+        no_of_waits = self._funlist.count('waituntil')
+        if sum(self._tslist) != len(durations)+no_of_waits:
+            raise ValueError('The specified timesteps do not match the number '
+                             'of durations. '
+                             '({} and {})'.format(sum(self._tslist),
+                                                  len(durations) +
+                                                  no_of_waits))
+
+    def getLength(self, SR, durations):
+        """
+        Calculate the length of the BluePrint, where it to be forged with
+        the specified durations.
+
+        Args:
+            durations (list): List of durations
+
+        Returns:
+            int: The number of points of the element
+
+        Raises:
+            ValueError: If the length of durations does not match the
+                blueprint.
+        """
+        self._validateDurations(durations)
+
+        no_of_waits = self._funlist.count('waituntil')
+        waitpositions = [ii for ii, el in enumerate(self._funlist)
+                         if el == 'waituntil']
+
+        # TODO: This is reuse of elementBuilder code... Refactor?
+        for nw in range(no_of_waits):
+            pos = waitpositions[nw]
+            elapsed_time = sum(durations[:pos])
+            wait_time = argslist[pos][0]
+            dur = wait_time - elapsed_time
+            if dur < 0:
+                raise ValueError('Inconsistent timing. Can not wait until ' +
+                                 '{} at position {}.'.format(wait_time, pos) +
+                                 ' {} elapsed already'.format(elapsed_time))
+            else:
+                durations.insert(pos, dur)
+
+        return(sum(durations)*SR)
+
     def __add__(self, other):
         """
         Add two BluePrints. The second argument is appended to the first
@@ -384,17 +435,56 @@ class BluePrint():
             return False
         return True
 
-# testing another call signature for __init__
 
-
-class BluePrint_alt(BluePrint):
+class Sequence:
     """
-    test class for testing an alternative call signature for __init__.
+    Object representing a sequence
     """
-    pass
+
+    def __init__(self):
+        """
+        Not much to see here...
+        """
+
+        # the internal data structure, a list of lists of tuples
+        # The outer list represents channels, the next a sequence and finally
+        # tuples of (bluedprint, durations)
+        # self._data = [[(None, None)]]
+
+        # the internal data structure, a dict with tuples as keys and values
+        # the key is (channel, sequence position), the value is
+        # (blueprint, durations)
+        self._data = {}
+
+    def addElement(self, channel, position, blueprint, durations):
+        """
+        Add an element to the sequence
+
+        Args:
+            channel (int): The channel to add the element to (lowest: 1)
+            position (int): The sequence position of the element (lowest: 1)
+            blueprint (BluePrint): A blueprint object
+            durations (list): A list of durations
+
+        Raises:
+            ValueError: If the blueprint and the durations can not be forged.
+                A descriptive error message is issued.
+        """
+
+        # Validation
+        blueprint._validateDurations(durations)
+
+        # Data mutation
+        self._data.update({(channel, position): (blueprint, durations)})
+
+    def checkConsistency(self):
+        """
+        Checks wether the sequence can be built, i.e. if all channels with
+        elements on them have elements of the same length in the same places
+        """
 
 
-def elementBuilder(blueprint, durations):
+def elementBuilder(blueprint, SR, durations):
     """
     The function building a blueprint, returning a numpy array.
 
@@ -447,7 +537,7 @@ def elementBuilder(blueprint, durations):
 
     # The actual forging of the waveform
     parts = [ft.partial(fun, *args) for (fun, args) in zip(funlist, argslist)]
-    blocks = [p(d) for (p, d) in zip(parts, newdurations)]
+    blocks = [p(SR, d) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
 
     # now make the markers
@@ -477,7 +567,7 @@ def elementBuilder(blueprint, durations):
     return np.array([output, m1, m2]), newdurations
 
 
-def bluePrintPlotter(blueprints, durations):
+def bluePrintPlotter(blueprints, SR, durations):
     """
     Plots a bluePrint or list of blueprints for easy overview.
 
@@ -491,7 +581,7 @@ def bluePrintPlotter(blueprints, durations):
 
     for ii in range(N):
         ax = fig.add_subplot(N, 1, ii+1)
-        arrays, newdurations = elementBuilder(blueprints[ii], durations)
+        arrays, newdurations = elementBuilder(blueprints[ii], SR, durations)
         wfm = arrays[0, :]
         m1 = arrays[1, :]
         m2 = arrays[2, :]
