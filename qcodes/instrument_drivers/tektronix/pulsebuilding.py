@@ -2,11 +2,14 @@
 #
 # In this iteration, we do it in a horribly object-oriented way
 
+import logging
 from inspect import signature
 import functools as ft
 import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()
+
+log = logging.getLogger(__name__)
 
 
 class PulseAtoms:
@@ -45,7 +48,7 @@ class PulseAtoms:
         centre = dur/2
         baregauss = np.exp((-(time-mu-centre)**2/(2*sigma**2)))
         normalisation = 1/np.sqrt(2*sigma**2*np.pi)
-        return ampl*baregauss*normalisation
+        return ampl*baregauss*normalisation+offset
 
 
 class BluePrint():
@@ -456,6 +459,42 @@ class Sequence:
         # (blueprint, durations)
         self._data = {}
 
+        # Here goes the sequencing info. Key: position, value: list
+        # where list = [wait, nrep, jump, goto]
+        self._sequencing = {}
+
+        # The dictionary to store AWG settings
+        # Keys will include:
+        # 'SR', 'channelXampl'
+        self._awgspecs = {}
+
+    def setSequenceSettings(self, pos, wait, nreps, jump, goto):
+        """
+        Set the sequence setting for the sequence element at pos.
+
+        Args:
+            pos (int): The sequence element (counting from 1)
+            wait (int): The wait state specifying whether to wait for a
+                trigger. 0: OFF, don't wait, 1: ON, wait.
+            nreps (int): Number of repetitions. 0 corresponds to infinite
+                repetitions
+            jump (int): Jump target, the position of a sequence element
+            goto (int): Goto target, the position of a sequence element
+        """
+
+        # Validation (some validation 'postponed' and put in checkConsistency)
+        if wait not in [0, 1]:
+            raise ValueError('Can not set wait to {}.'.format(wait) +
+                             ' Must be either 0 or 1.')
+
+        self._sequencing[pos] = [wait, nreps, jump, goto]
+
+    def setSR(self, SR):
+        """
+        Set the sample rate for the sequence
+        """
+        self._awgspecs['SR'] = SR
+
     def addElement(self, channel, position, blueprint, durations):
         """
         Add an element to the sequence
@@ -477,14 +516,100 @@ class Sequence:
         # Data mutation
         self._data.update({(channel, position): (blueprint, durations)})
 
-    def checkConsistency(self):
+    def checkConsistency(self, verbose=False):
         """
         Checks wether the sequence can be built, i.e. if all channels with
         elements on them have elements of the same length in the same places
         """
+        # TODO: Give helpful info if the check fails
+
+        try:
+            SR = self._awgspecs['SR']
+        except KeyError:
+            raise KeyError('No sample rate specified. Can not perform check')
+
+        # First check that all channels have elements in the same positions
+        chans = set([tup[0] for tup in self._data.keys()])
+        positions = [[]]*len(chans)
+        for ind, chan in enumerate(chans):
+            positions[ind-1] = [t[1] for t in self._data.keys()
+                                if t[0] == chan]
+            positions[ind-1] = set(positions[ind-1])
+        if not positions.count(positions[0]) == len(positions):
+            failmssg = ('checkConsistency failed: not the same number of '
+                        'elements on all channels')
+            log.info(failmssg)
+            if verbose:
+                print(failmssg)
+            return False
+
+        # Then check that all channels specify all sequence elements
+        if not positions[0] == set(range(1, len(positions[0])+1)):
+            failmssg = ('checkConsistency failed: Missing sequence element(s)')
+            log.info(failmssg)
+            if verbose:
+                print(failmssg)
+            return False
+
+        # Finally, check that all elements have the same length
+        for pos in positions[0]:
+            lens = []
+            for chan in chans:
+                bp = self._data[(chan, pos)][0]
+                durs = self._data[(chan, pos)][1]
+                lens.append(bp.getLength(SR, durs))
+            if not lens.count(lens[0]) == len(lens):
+                failmssg = ('checkConsistency failed: elements at position'
+                            ' {} are not of same length'.format(pos) +
+                            ' Lengths are (no. of points): {}'.format(lens))
+                log.info(failmssg)
+                if verbose:
+                    print(failmssg)
+                return False
+
+        # If all three tests pass...
+        return True
+
+    def plotSequence(self):
+        """
+        Visualise the sequence
+        """
+        if not self.checkConsistency():
+            raise ValueError('Can not plot sequence: Something is '
+                             'inconsistent. Please run '
+                             'checkConsistency(verbose=True) for more details')
+
+        fig = plt.figure()
+
+        # Now get the dimensions. Since the check passed, we may be slobby
+        chans = set([tup[0] for tup in self._data.keys()])
+        seqlen = len([t for t in self._data.keys() if t[0] == list(chans)[0]])
+
+        # loop through the sequence
+        # TODO: major indexing problems
+        for seqel in range(1, seqlen+1):
+            axs = []
+            bps = []
+            for ii, chan in enumerate(chans):
+                axs.append(fig.add_subplot(len(chans), seqlen,
+                                           ii*seqlen+seqel))
+                bps.append(self._data[(chan, seqel)][0])
+            durations = self._data[(chan, seqel)][1]  # all durations the same
+            bluePrintPlotter(bps, self._awgspecs['SR'], durations, fig, axs)
+            # aesthetics
+            for ax in axs[:-1]:
+                ax.set_xticks([])
+            # If sequencing settings are set, print them on the plot
+            try:
+                seqinfo = self._sequencing[seqel]
+                axs[0].set_title('w:{}, reps:{}, jump:{}, goto:{}'.format(*seqinfo))
+            except KeyError:
+                pass
+        # aesthetics
+        fig.subplots_adjust(hspace=0)
 
 
-def elementBuilder(blueprint, SR, durations):
+def _subelementBuilder(blueprint, SR, durations):
     """
     The function building a blueprint, returning a numpy array.
 
@@ -567,7 +692,42 @@ def elementBuilder(blueprint, SR, durations):
     return np.array([output, m1, m2]), newdurations
 
 
-def bluePrintPlotter(blueprints, SR, durations):
+def elementBuilder(blueprints, SR, durations, channels=None):
+    """
+    Forge blueprints into an element
+
+    Args:
+        blueprints (Union[BluePrint, list]): A single blueprint or a list of
+            blueprints.
+        SR (int): The sample rate (Sa/s)
+        durations (list): List of durations
+        channels (Union[list, None]): A list specifying the channels of the
+            blueprints in the list. If None, channels 1, 2, .. are assigned
+
+    Returns:
+        dict: Dictionary with channel numbers (ints) as keys and forged
+            blueprints as values. A forged blueprint is a numpy array
+            given by np.array([wfm, m1, m2]).
+    """
+
+    # Validation
+    if not (isinstance(blueprints, BluePrint) or isinstance(blueprints, list)):
+        raise ValueError('blueprints must be a BluePrint object or a list of '
+                         'BluePrint objects. '
+                         'Received {}.'.format(type(blueprints)))
+    if isinstance(blueprints, BluePrint):
+        blueprints = [blueprints]
+
+    if channels is None:
+        channels = [ii for ii in range(len(blueprints))]
+
+    subelems = [_subelementBuilder(bp, SR, durations)[0] for bp in blueprints]
+    outdict = dict(zip(channels, subelems))
+
+    return outdict
+
+
+def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
     """
     Plots a bluePrint or list of blueprints for easy overview.
 
@@ -576,21 +736,25 @@ def bluePrintPlotter(blueprints, SR, durations):
     if not isinstance(blueprints, list):
         blueprints = [blueprints]
 
-    fig = plt.figure()
+    if fig is None:
+        fig = plt.figure()
     N = len(blueprints)
 
     for ii in range(N):
-        ax = fig.add_subplot(N, 1, ii+1)
-        arrays, newdurations = elementBuilder(blueprints[ii], SR, durations)
+        if axs is None:
+            ax = fig.add_subplot(N, 1, ii+1)
+        else:
+            ax = axs[ii]
+        arrays, newdurs = _subelementBuilder(blueprints[ii], SR, durations)
         wfm = arrays[0, :]
         m1 = arrays[1, :]
         m2 = arrays[2, :]
         yrange = wfm.max() - wfm.min()
         ax.set_ylim([wfm.min()-0.05*yrange, wfm.max()+0.2*yrange])
-        time = np.linspace(0, np.sum(newdurations), np.sum(newdurations)*SR)
+        time = np.linspace(0, np.sum(newdurs), np.sum(newdurs)*SR)
 
         # plot lines indicating the durations
-        for dur in np.cumsum(newdurations):
+        for dur in np.cumsum(newdurs):
             ax.plot([dur, dur], [ax.get_ylim()[0],
                                  ax.get_ylim()[1]],
                     color=(0.312, 0.2, 0.33),
