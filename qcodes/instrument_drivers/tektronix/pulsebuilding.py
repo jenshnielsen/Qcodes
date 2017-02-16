@@ -176,6 +176,9 @@ class BluePrint():
                 in ALL segments where the name matches. E.g. 'gaussian1' will
                 match 'gaussian', 'gaussian2', etc. If False, only the segment
                 with exact name match gets a replacement.
+
+        Raises:
+
         """
         # TODO: is there any reason to use tuples internally?
         # TODO: add input validation
@@ -191,6 +194,21 @@ class BluePrint():
         for name in replacelist:
 
             position = self._namelist.index(name)
+            function = self._funlist[position]
+            sig = signature(function)
+
+            # Validation
+            if isinstance(arg, str):
+                if arg not in sig.parameters:
+                    raise ValueError('No such argument of function '
+                                     '{}.'.format(function.__name__) +
+                                     'Has arguments '
+                                     '{}.'.format(sig.parameters))
+            if isinstance(arg, int) and arg > len(sig.parameters):
+                raise ValueError('No argument {} '.format(arg) +
+                                 'of function {}.'.format(function.__name__) +
+                                 'Has {} '.format(len(sig.parameters)) +
+                                 'arguments.')
 
             # allow the user to input single values instead of (val,)
             no_of_args = len(self._argslist[position])
@@ -198,7 +216,6 @@ class BluePrint():
                 value = (value,)
 
             if isinstance(arg, str):
-                sig = signature(self._funlist[position])
                 for ii, param in enumerate(sig.parameters):
                     if arg == param:
                         arg = ii
@@ -569,6 +586,38 @@ class Sequence:
 
         # If all three tests pass...
         return True
+
+    def setSeveralElements(self, channel, baseblueprint, variable, durations,
+                           iterable):
+        """
+        Set all (subelements) on the specified channel to be variations of
+        a basic blueprint. Note: this overwrites everything on that channel.
+
+        Args:
+            channel (int): The channel to assign the (sub)elements to.
+            baseblueprint (BluePrint): The basic blueprint.
+            variable (tuple): A tuple specifying the parameter to vary. Must
+                be either (name (str), arg (str)) or (name (str), pos (int),
+                where name is the name of the segment in the blueprint and
+                arg/pos is the name/position of the argument to change.
+            durations (list): List of durations
+            iterable (iterable): An iterable object containing the argument
+                values. The first value will be the value of the first
+                element.
+        """
+
+        # Validation
+        try:
+            baseblueprint.changeArg(variable[0], variable[1], 0)
+        except ValueError as err:
+            raise ValueError('Can not make specified variation. '
+                             'Got the following error message: {}'.format(err))
+
+        # Make the sequence by adding blueprints one-by-one
+        for pos, value in enumerate(iterable):
+            bp = baseblueprint.copy()
+            bp.changeArg(variable[0], variable[1], value)
+            self.addElement(channel, pos+1, bp, durations)
 
     def plotSequence(self):
         """
