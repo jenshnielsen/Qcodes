@@ -512,6 +512,24 @@ class Sequence:
         """
         self._awgspecs['SR'] = SR
 
+    def setChannelVoltageRange(self, channel, ampl, offset):
+        """
+        Assign the physical voltages of the channel. This is used when making
+        output for .awg files. The corresponding parameters in the QCoDeS
+        AWG5014 driver are called chXX_amp and chXX_offset. Please ensure that
+        the channel in question is indeed in ampl/offset mode and not in
+        high/low mode.
+
+        Args:
+            channel (int): The channel number
+            ampl (float): The channel peak-to-peak amplitude (V)
+            offset (float): The channel offset (V)
+        """
+        keystr = 'channel{}_amplitude'.format(channel)
+        self._awgspecs[keystr] = ampl
+        keystr = 'channel{}_offset'.format(channel)
+        self._awgspecs[keystr] = offset
+
     def addElement(self, channel, position, blueprint, durations):
         """
         Add an element to the sequence
@@ -590,8 +608,9 @@ class Sequence:
     def setSeveralElements(self, channel, baseblueprint, variable, durations,
                            iterable):
         """
-        Set all (subelements) on the specified channel to be variations of
-        a basic blueprint. Note: this overwrites everything on that channel.
+        Set all (sub)elements on the specified channel to be variations of
+        a basic blueprint. Note: this overwrites any (sub)elements that were
+        previously assigned to the relevant positions.
 
         Args:
             channel (int): The channel to assign the (sub)elements to.
@@ -622,47 +641,175 @@ class Sequence:
     def plotSequence(self):
         """
         Visualise the sequence
+
+        TODO: Re-implement plotting here with no reuse to get uniform scaling everywhere.
         """
         if not self.checkConsistency():
             raise ValueError('Can not plot sequence: Something is '
                              'inconsistent. Please run '
                              'checkConsistency(verbose=True) for more details')
 
-        fig = plt.figure()
+        chans = set([tup[0] for tup in self._data.keys()])
+
+        # First forge all elements
+        SR = self._awgspecs['SR']
+        seqlen = len([t for t in self._data.keys() if t[0] == list(chans)[0]])
+        elements = []  # the forged elements
+        for pos in range(1, seqlen+1):
+            blueprints = [self._data[(chan, pos)][0] for chan in chans]
+            durations = [self._data[(chan, pos)][1] for chan in chans]
+            elements.append(elementBuilder(blueprints, SR, durations,
+                                           chans, returnnewdurs=True))
 
         # Now get the dimensions. Since the check passed, we may be slobby
         chans = set([tup[0] for tup in self._data.keys()])
         seqlen = len([t for t in self._data.keys() if t[0] == list(chans)[0]])
 
-        # loop through the sequence
-        # TODO: major indexing problems
-        for seqel in range(1, seqlen+1):
-            axs = []
-            bps = []
-            for ii, chan in enumerate(chans):
-                axs.append(fig.add_subplot(len(chans), seqlen,
-                                           ii*seqlen+seqel))
-                bps.append(self._data[(chan, seqel)][0])
-            durations = self._data[(chan, seqel)][1]  # all durations the same
-            bluePrintPlotter(bps, self._awgspecs['SR'], durations, fig, axs)
-            # aesthetics
-            for ax in axs[:-1]:
-                ax.set_xticks([])
-            # If sequencing settings are set, print them on the plot
-            try:
-                seqinfo = self._sequencing[seqel]
-                axs[0].set_title('w:{}, reps:{}, jump:{}, goto:{}'.format(*seqinfo))
-            except KeyError:
-                pass
-        # aesthetics
-        fig.subplots_adjust(hspace=0)
+        # Then figure out the figure scalings
+        chanminmax = [[np.inf, -np.inf]]*len(chans)
+        for chanind, chan in enumerate(chans):
+            for pos in range(seqlen):
+                wfmdata = elements[pos][chan][0]
+                (thismin, thismax) = (wfmdata.min(), wfmdata.max())
+                if thismin < chanminmax[chanind][0]:
+                    chanminmax[chanind] = [thismin, chanminmax[chanind][1]]
+                if thismax > chanminmax[chanind][1]:
+                    chanminmax[chanind] = [chanminmax[chanind][0], thismax]
+
+        fig, axs = plt.subplots(len(chans), seqlen)
+
+        # ...and do the plotting
+        for chanind, chan in enumerate(chans):
+            for pos in range(seqlen):
+                # 1 by N arrays are indexed differently than M by N arrays
+                # and 1 by 1 arrays are not arrays at all...
+                if len(chans) == 1 and seqlen > 1:
+                    ax = axs[pos]
+                if len(chans) > 1 and seqlen == 1:
+                    ax = axs[chanind]
+                if len(chans) == 1 and seqlen == 1:
+                    ax = axs
+                if len(chans) > 1 and seqlen > 1:
+                    ax = axs[chanind, pos]
+
+                wfm = elements[pos][chan][0]
+                m1 = elements[pos][chan][1]
+                m2 = elements[pos][chan][2]
+                time = elements[pos][chan][3]
+                newdurs = elements[pos][chan][4]
+
+                # waveform
+                ax.plot(time, wfm, lw=3, color=(0.6, 0.4, 0.3), alpha=0.4)
+                ymax = chanminmax[chanind][1]
+                ymin = chanminmax[chanind][0]
+                yrange = ymax - ymin
+                ax.set_ylim([ymin-0.05*yrange, ymax+0.2*yrange])
+
+                # marker1 (red, on top)
+                y_m1 = ymax+0.15*yrange
+                marker_on = np.ones_like(m1)
+                marker_on[m1 == 0] = np.nan
+                marker_off = np.ones_like(m1)
+                ax.plot(time, y_m1*marker_off, color=(0.6, 0.1, 0.1),
+                        alpha=0.2, lw=2)
+                ax.plot(time, y_m1*marker_on, color=(0.6, 0.1, 0.1),
+                        alpha=0.6, lw=2)
+
+                # marker 2 (blue, below the red)
+                y_m2 = ymax+0.10*yrange
+                marker_on = np.ones_like(m2)
+                marker_on[m2 == 0] = np.nan
+                marker_off = np.ones_like(m2)
+                ax.plot(time, y_m2*marker_off, color=(0.1, 0.1, 0.6),
+                        alpha=0.2, lw=2)
+                ax.plot(time, y_m2*marker_on, color=(0.1, 0.1, 0.6),
+                        alpha=0.6, lw=2)
+
+                # time step lines
+                for dur in np.cumsum(newdurs):
+                    ax.plot([dur, dur], [ax.get_ylim()[0],
+                                         ax.get_ylim()[1]],
+                            color=(0.312, 0.2, 0.33),
+                            alpha=0.3)
+
+                # remove excess space from the plot
+                if not chanind+1 == len(chans):
+                    ax.set_xticks([])
+                if not pos == 0:
+                    ax.set_yticks([])
+                fig.subplots_adjust(hspace=0, wspace=0)
+
+    def outputForAWGFile(self):
+        """
+        Returns an output matching the call signature of the 'make_*_awg_file'
+        functions of the QCoDeS AWG5014 driver. One may then construct an awg
+        file as follows (assuming that seq is the sequence object):
+
+        make_awg_file(*seq.outputForAWGFile(), **kwargs)
+
+        The outputForAWGFile applies all specified signal corrections.
+        """
+        # TODO: implement corrections
+
+        # Validation
+        if not self.checkConsistency():
+            raise ValueError('Can not generate output. Something is '
+                             'inconsistent. Please run '
+                             'checkConsistency(verbose=True) for more details')
+
+        channels = set([tup[0] for tup in self._data.keys()])
+
+        for chan in channels:
+            ampkey = 'channel{}_amplitude'.format(chan)
+            if ampkey not in self._awgspecs.keys():
+                raise KeyError('No amplitude specified for channel '
+                               '{}. Can not continue.'.format(chan))
+            offkey = 'channel{}_offset'.format(chan)
+            if offkey not in self._awgspecs.keys():
+                raise KeyError('No offset specified for channel '
+                               '{}. Can not continue.'.format(chan))
+
+        # Now forge all the elements as specified
+        SR = self._awgspecs['SR']
+        seqlen = len([t for t in self._data.keys() if t[0] == list(channels)[0]])
+        elements = []  # the forged elements
+        for pos in range(1, seqlen+1):
+            blueprints = [self._data[(chan, pos)][0] for chan in channels]
+            durations = [self._data[(chan, pos)][1] for chan in channels]
+            elements.append(elementBuilder(blueprints, SR, durations,
+                                           channels))
+
+        # Apply channel scaling
+        # We must rescale to the interval -1, 1 where 1 is ampl/2+off and -1 is
+        # -ampl/2+off.
+        def rescaler (val, ampl, off):
+            return val/ampl*2-off
+        for pos in range(1, seqlen+1):
+            element = elements[pos-1]
+            for chan in channels:
+                ampl = self._awgspecs['channel{}_amplitude'.format(chan)]
+                off = self._awgspecs['channel{}_offset'.format(chan)]
+                wfm = element[chan][0]
+                # check whether the wafeform voltages can be realised
+                if wfm.max() > ampl/2+off:
+                    raise ValueError('Waveform voltages exceed channel range '
+                                     'on channel {}'.format(chan) +
+                                     ' sequence element {}.'.format(pos) +
+                                     ' {} > {}!'.format(wfm.max(), ampl/2+off))
+                if wfm.min() < -ampl/2+off:
+                    raise ValueError('Waveform voltages exceed channel range '
+                                     'on channel {}'.format(chan) +
+                                     ' sequence element {}.'.format(pos) +
+                                     ' {} < {}!'.format(wfm.min(), -ampl/2+off))
+                wfm = rescaler(wfm, ampl, off)
 
 
 def _subelementBuilder(blueprint, SR, durations):
     """
     The function building a blueprint, returning a numpy array.
 
-    This is a single-blueprint forger. It should be easy to stack several.
+    This is a single-blueprint forger. Multiple blueprints are forged with
+    elementBuilder.
 
     TO-DO: add proper behaviour for META functions like 'wait until X'
     """
@@ -738,10 +885,11 @@ def _subelementBuilder(blueprint, SR, durations):
             chunk = int(np.round(dur/dt))
             marker[ind:ind+chunk] = 1
 
-    return np.array([output, m1, m2]), newdurations
+    return np.array([output, m1, m2, time]), newdurations
 
 
-def elementBuilder(blueprints, SR, durations, channels=None):
+def elementBuilder(blueprints, SR, durations, channels=None,
+                   returnnewdurs=False):
     """
     Forge blueprints into an element
 
@@ -749,14 +897,23 @@ def elementBuilder(blueprints, SR, durations, channels=None):
         blueprints (Union[BluePrint, list]): A single blueprint or a list of
             blueprints.
         SR (int): The sample rate (Sa/s)
-        durations (list): List of durations
+        durations (list): List of durations or a list of lists of durations
+            if different blueprints have different durations. If a single list
+            is given, this list is used for all blueprints.
         channels (Union[list, None]): A list specifying the channels of the
             blueprints in the list. If None, channels 1, 2, .. are assigned
+        returnnewdurs (bool): If True, the returned dictionary contains the
+            newdurations.
 
     Returns:
         dict: Dictionary with channel numbers (ints) as keys and forged
             blueprints as values. A forged blueprint is a numpy array
-            given by np.array([wfm, m1, m2]).
+            given by np.array([wfm, m1, m2, time]). If returnnewdurs is True,
+            a list of [wfm, m1, m2, time, newdurs] is returned instead.
+
+    Raises:
+        ValueError: if blueprints does not contain BluePrints
+        ValueError: if the wrong number of blueprints/durations is given
     """
 
     # Validation
@@ -766,11 +923,22 @@ def elementBuilder(blueprints, SR, durations, channels=None):
                          'Received {}.'.format(type(blueprints)))
     if isinstance(blueprints, BluePrint):
         blueprints = [blueprints]
+    # Allow for using a single durations list for all blueprints
+    if not isinstance(durations[0], list):
+        durations = [durations]*len(blueprints)
 
     if channels is None:
         channels = [ii for ii in range(len(blueprints))]
 
-    subelems = [_subelementBuilder(bp, SR, durations)[0] for bp in blueprints]
+    bpdurs = zip(blueprints, durations)
+    if not returnnewdurs:
+        subelems = [_subelementBuilder(bp, SR, dur)[0] for (bp, dur) in bpdurs]
+    else:
+        subelems = []
+        for (bp, dur) in bpdurs:
+            subelems.append(list(_subelementBuilder(bp, SR, dur)[0]) +
+                            [_subelementBuilder(bp, SR, dur)[1]])
+
     outdict = dict(zip(channels, subelems))
 
     return outdict
@@ -780,10 +948,35 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
     """
     Plots a bluePrint or list of blueprints for easy overview.
 
+    Args:
+        blueprints (Union[BluePrint, list]): A single BluePrint or a
+            list of blueprints to plot.
+        SR (int): The sample rate (Sa/s)
+        durations (list): Either a list of durations or a list of lists
+            of durations in case the blueprints have different durations.
+            If only a single list of durations is given, this list is used
+            for all blueprints.
+        fig (Union[matplotlib.figure.Figure, None]): The figure on which to
+            plot. If None is given, a new instance is created.
+        axs (Union[list, None]): A list of
+            matplotlib.axes._subplots.AxesSubplot to plot onto. If None is
+            given, a new list is created.
+
     TODO: all sorts of validation on lengths of blueprint and the like
     """
+    # Allow single blueprint
     if not isinstance(blueprints, list):
         blueprints = [blueprints]
+    # Allow a single durations list for all blueprint
+    if not isinstance(durations[0], list):
+        durations = [durations]*len(blueprints)
+
+    # Validation
+    if not len(durations) == len(blueprints):
+        raise ValueError('Number of specified blueprints does not match '
+                         'number of specified (sets of) durations '
+                         '({} and {})'.format(len(blueprints),
+                                              len(durations)))
 
     if fig is None:
         fig = plt.figure()
@@ -794,7 +987,7 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
             ax = fig.add_subplot(N, 1, ii+1)
         else:
             ax = axs[ii]
-        arrays, newdurs = _subelementBuilder(blueprints[ii], SR, durations)
+        arrays, newdurs = _subelementBuilder(blueprints[ii], SR, durations[ii])
         wfm = arrays[0, :]
         m1 = arrays[1, :]
         m2 = arrays[2, :]
