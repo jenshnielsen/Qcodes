@@ -17,25 +17,25 @@ class PulseAtoms:
     A class full of static methods.
     The basic pulse shapes.
 
-    Any pulse shape function must return a list and have SR, duration as its
-    final two arguments.
+    Any pulse shape function should return a list or an np.array
+    and have SR, duration as its final two arguments.
     """
 
     @staticmethod
     def sine(freq, ampl, off, SR, dur):
         time = np.linspace(0, dur, dur*SR)
         freq *= 2*np.pi
-        return list(ampl*np.sin(freq*time)+off)
+        return (ampl*np.sin(freq*time)+off)
 
     @staticmethod
     def ramp(slope, offset, SR, dur):
         time = np.linspace(0, dur, dur*SR)
-        return list(slope*time+offset)
+        return (slope*time+offset)
 
     @staticmethod
     def waituntil(dummy, SR, dur):
         # for internal call signature consistency, a dummy variable is needed
-        return list(np.zeros(dur*SR))
+        return (np.zeros(dur*SR))
 
     @staticmethod
     def gaussian(ampl, sigma, mu, offset, SR, dur):
@@ -63,8 +63,7 @@ class BluePrint():
                  marker1=None, marker2=None, segmentmarker1=None,
                  segmentmarker2=None):
         """
-        TO-DO: (probably) change the call signature ot take in single
-        segments and not the full lists.
+        Create a BluePrint instance.
 
         Args:
             funlist (list): List of functions
@@ -73,8 +72,31 @@ class BluePrint():
             tslist (list): List of timesteps for each segment
             marker1 (list): List of marker1 specification tuples
             marker2 (list): List of marker2 specifiation tuples
+
+        Returns:
+            BluePrint
         """
         # TODO: validate input
+
+        # Validation
+        #
+        # Are the lists of matching lengths?
+        lenlist = [len(funlist), len(argslist), len(namelist)]
+        if tslist is not None:
+            lenlist.append(len(tslist))
+        if len(set(lenlist)) is not 1:
+            raise ValueError('All input lists must be of same length. '
+                             'Received lengths: {}'.format(lenlist))
+        # Are the names valid names?
+        for name in namelist:
+            if not isinstance(name, str):
+                raise ValueError('All segment names must be strings. '
+                                 'Received {}'.format(name))
+            elif name is not '':
+                if name[-1].isdigit():
+                    raise ValueError('Segment names are not allowed to end'
+                                     ' in a number. {} is '.format(name) +
+                                     'therefore not a valid name.')
 
         self._funlist = funlist
 
@@ -124,8 +146,19 @@ class BluePrint():
         """
         Remove trailing numbers from a string. (currently removes all numbers)
         """
-        lst = [letter for letter in string if not letter.isdigit()]
-        return ''.join(lst)
+        if not(string[-1].isdigit()):
+            return string
+        else:
+            counter = 0
+            for ss in string[::-1]:
+                if ss.isdigit():
+                    counter += 1
+                else:
+                    break
+            return string[:-counter]
+
+        # lst = [letter for letter in string if not letter.isdigit()]
+        # return ''.join(lst)
 
     @staticmethod
     def _make_names_unique(lst):
@@ -151,6 +184,13 @@ class BluePrint():
                     lst[ind] = '{}{}'.format(un, ii+1)
 
         return lst
+
+    @property
+    def length(self):
+        """
+        Returns the number of assigned time steps currently in the blueprint.
+        """
+        return len(self._tslist)
 
     def showPrint(self):
         """
@@ -242,7 +282,27 @@ class BluePrint():
 
         markerselect = {1: self._segmark1, 2: self._segmark2}
         position = self._namelist.index(name)
+
+        # TODO: Do we need more than one bound marker per segment?
         markerselect[markerID][position] = specs
+
+    def removeSegmentMarker(self, name, markerID):
+        """
+        Remove a bound marker from a specific segment
+
+        Args:
+            name (str): Name of the segment
+            markerID (int): Which marker channel to remove from (1 or 2).
+            number (int): The number of the marker, in case several markers are
+                bound to one element. Default: 1 (the first marker).
+        """
+        if markerID not in [1, 2]:
+            raise ValueError('MarkerID must be either 1 or 2.'
+                             ' Received {}.'.format(markerID))
+
+        markerselect = {1: self._segmark1, 2: self._segmark2}
+        position = self._namelist.index(name)
+        markerselect[markerID][position] = (0, 0)
 
     def changeDuration(self, name, n):
         """
@@ -267,9 +327,16 @@ class BluePrint():
         self._tslist[position] = n
 
     def copy(self):
+        """
+        Returns a copy of the BluePrint
+        """
+
+        # Needed because of input validation in __init__
+        namelist = [self._basename(name) for name in self._namelist.copy()]
+
         return BluePrint(self._funlist.copy(),
                          self._argslist.copy(),
-                         self._namelist.copy(),
+                         namelist,
                          self._tslist.copy(),
                          self.marker1.copy(),
                          self.marker2.copy())
@@ -301,6 +368,10 @@ class BluePrint():
 
         if name is None:
             name = func.__name__
+        elif isinstance(name, str):
+            if len(name) > 0:
+                if name[-1].isdigit():
+                    raise ValueError('Segment name must not end in a number')
 
         if pos == -1:
             self._namelist.append(name)
@@ -411,7 +482,8 @@ class BluePrint():
                              Received an object of type {}
                              """.format(type(other)))
 
-        nl = self._namelist + other._namelist
+        nl = [self._basename(name) for name in self._namelist]
+        nl += [self._basename(name) for name in other._namelist]
         al = self._argslist + other._argslist
         fl = self._funlist + other._funlist
         tl = self._tslist + other._tslist
@@ -530,6 +602,28 @@ class Sequence:
         keystr = 'channel{}_offset'.format(channel)
         self._awgspecs[keystr] = offset
 
+    def setChannelDelay(self, channel, delay):
+        """
+        Assign a delay to a channel. This is used when making output for .awg
+        files. Use the delay to compensate for cable length differences etc.
+        Zeros are prepended to the waveforms to delay them and correspondingly
+        appended to non (or less) delayed channels.
+
+        Args:
+            channel (int): The channel number
+            delay (float): The required delay (s)
+
+        Raises:
+            ValueError: If a non-integer or non-non-negative channel number is
+                given.
+        """
+
+        if not isinstance(channel, int) or channel < 1:
+            raise ValueError('{} is not a valid '.format(channel) +
+                             'channel number.')
+
+        self._awgspecs['channel{}_delay'.format(channel)] = delay
+
     def addElement(self, channel, position, blueprint, durations):
         """
         Add an element to the sequence
@@ -638,11 +732,19 @@ class Sequence:
             bp.changeArg(variable[0], variable[1], value)
             self.addElement(channel, pos+1, bp, durations)
 
+    @property
+    def lenght(self):
+        """
+        Returns the current number of specified sequence elements
+        """
+        chans = set([tup[0] for tup in self._data.keys()])
+        seqlen = len([t for t in self._data.keys() if t[0] == list(chans)[0]])
+        return seqlen
+
     def plotSequence(self):
         """
         Visualise the sequence
 
-        TODO: Re-implement plotting here with no reuse to get uniform scaling everywhere.
         """
         if not self.checkConsistency():
             raise ValueError('Can not plot sequence: Something is '
@@ -748,6 +850,7 @@ class Sequence:
         make_awg_file(*seq.outputForAWGFile(), **kwargs)
 
         The outputForAWGFile applies all specified signal corrections.
+          delay of channels
         """
         # TODO: implement corrections
 
@@ -758,6 +861,13 @@ class Sequence:
                              'checkConsistency(verbose=True) for more details')
 
         channels = set([tup[0] for tup in self._data.keys()])
+        # We copy the data so that the state of the Sequence is left unaltered
+        # by outputting for AWG
+        data = self._data.copy()
+        seqlen = len([t for t in data.keys() if t[0] == list(channels)[0]])
+        if not list(self._sequencing.keys()) == list(range(1, seqlen+1)):
+            raise ValueError('Can not generate output for .awg file; '
+                             'incorrect sequencer information.')
 
         for chan in channels:
             ampkey = 'channel{}_amplitude'.format(chan)
@@ -769,20 +879,49 @@ class Sequence:
                 raise KeyError('No offset specified for channel '
                                '{}. Can not continue.'.format(chan))
 
+        # Apply channel delays. This is most elegantly done before forging.
+        # Add waituntil at the beginning, update all waituntils inside, add a
+        # zeros segment at the end.
+        delays = []
+        for chan in channels:
+            try:
+                delays.append(self._awgspecs['channel{}_delay'.format(chan)])
+            except KeyError:
+                delays.append(0)
+        maxdelay = max(delays)
+        seqlen = len([t for t in data.keys() if t[0] == list(channels)[0]])
+        for pos in range(1, seqlen+1):
+            for chanind, chan in enumerate(channels):
+                # it is also necessary to copy the blueprint
+                blueprint = data[(chan, pos)][0].copy()
+                delay = delays[chanind]
+                # update existing waituntils
+                for segpos in range(blueprint.length):
+                    if isinstance(blueprint._funlist[segpos], str):
+                        if 'waituntil' in blueprint._funlist[segpos]:
+                            oldwait = blueprint._argslist[segpos](0)
+                            blueprint._argslist[segpos] = (oldwait+delay,)
+                # insert delay before the waveform
+                blueprint.insertSegment(0, 'waituntil', (delay,), 'waituntil')
+                # add zeros at the end
+                blueprint.insertSegment(-1, PulseAtoms.ramp, (0, 0))
+                newdurs = data[(chan, pos)][1]+[maxdelay-delay]
+                data[(chan, pos)] = (blueprint, newdurs)
+
         # Now forge all the elements as specified
         SR = self._awgspecs['SR']
-        seqlen = len([t for t in self._data.keys() if t[0] == list(channels)[0]])
+        seqlen = len([t for t in data.keys() if t[0] == list(channels)[0]])
         elements = []  # the forged elements
         for pos in range(1, seqlen+1):
-            blueprints = [self._data[(chan, pos)][0] for chan in channels]
-            durations = [self._data[(chan, pos)][1] for chan in channels]
+            blueprints = [data[(chan, pos)][0] for chan in channels]
+            durations = [data[(chan, pos)][1] for chan in channels]
             elements.append(elementBuilder(blueprints, SR, durations,
                                            channels))
 
         # Apply channel scaling
         # We must rescale to the interval -1, 1 where 1 is ampl/2+off and -1 is
         # -ampl/2+off.
-        def rescaler (val, ampl, off):
+        def rescaler(val, ampl, off):
             return val/ampl*2-off
         for pos in range(1, seqlen+1):
             element = elements[pos-1]
@@ -799,9 +938,33 @@ class Sequence:
                 if wfm.min() < -ampl/2+off:
                     raise ValueError('Waveform voltages exceed channel range '
                                      'on channel {}'.format(chan) +
-                                     ' sequence element {}.'.format(pos) +
-                                     ' {} < {}!'.format(wfm.min(), -ampl/2+off))
+                                     ' sequence element {}. '.format(pos) +
+                                     '{} < {}!'.format(wfm.min(), -ampl/2+off))
                 wfm = rescaler(wfm, ampl, off)
+
+        # Finally cast the lists into the shapes required by the AWG driver
+        waveforms = [[]]*len(channels)
+        m1s = [[]]*len(channels)
+        m2s = [[]]*len(channels)
+        nreps = []
+        trig_waits = []
+        goto_states = []
+        jump_tos = []
+        chans = []
+
+        for pos in range(1, seqlen+1):
+            for chanind, chan in enumerate(channels):
+                waveforms[chanind].append(elements[pos-1][chan][0])
+                m1s[chanind].append(elements[pos-1][chan][1])
+                m2s[chanind].append(elements[pos-1][chan][2])
+                nreps.append(self._sequencing[pos][1])
+                trig_waits.append(self._sequencing[pos][0])
+                jump_tos.append(self._sequencing[pos][2])
+                goto_states.append(self._sequencing[pos][3])
+                chans.append(chan)
+
+        return (waveforms, m1s, m2s, nreps, trig_waits, goto_states,
+                jump_tos, channels)
 
 
 def _subelementBuilder(blueprint, SR, durations):
@@ -810,8 +973,6 @@ def _subelementBuilder(blueprint, SR, durations):
 
     This is a single-blueprint forger. Multiple blueprints are forged with
     elementBuilder.
-
-    TO-DO: add proper behaviour for META functions like 'wait until X'
     """
 
     # Important: building the element must NOT modify the bluePrint, therefore
@@ -828,6 +989,9 @@ def _subelementBuilder(blueprint, SR, durations):
     no_of_waits = funlist.count('waituntil')
 
     if sum(tslist) != len(durations)+no_of_waits:
+        print('-'*45)
+        print(tslist, durations, no_of_waits)
+
         raise ValueError('The specified timesteps do not match the number ' +
                          'of durations. ({} and {})'.format(sum(tslist),
                                                             len(durations) +
@@ -858,7 +1022,7 @@ def _subelementBuilder(blueprint, SR, durations):
 
     # The actual forging of the waveform
     parts = [ft.partial(fun, *args) for (fun, args) in zip(funlist, argslist)]
-    blocks = [p(SR, d) for (p, d) in zip(parts, newdurations)]
+    blocks = [list(p(SR, d)) for (p, d) in zip(parts, newdurations)]
     output = [block for sl in blocks for block in sl]
 
     # now make the markers
@@ -982,11 +1146,11 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
         fig = plt.figure()
     N = len(blueprints)
 
+    if axs is None:
+        axs = [fig.add_subplot(N, 1, ii+1) for ii in range(N)]
+
     for ii in range(N):
-        if axs is None:
-            ax = fig.add_subplot(N, 1, ii+1)
-        else:
-            ax = axs[ii]
+        ax = axs[ii]
         arrays, newdurs = _subelementBuilder(blueprints[ii], SR, durations[ii])
         wfm = arrays[0, :]
         m1 = arrays[1, :]
@@ -1019,3 +1183,13 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
         marker_off = np.ones_like(m2)
         ax.plot(time, y_m2*marker_off, color=(0.1, 0.1, 0.6), alpha=0.2, lw=2)
         ax.plot(time, y_m2*marker_on, color=(0.1, 0.1, 0.6), alpha=0.6, lw=2)
+
+    # Prettify a bit
+    for ax in axs[:-1]:
+        ax.set_xticks([])
+    axs[-1].set_xlabel('Time (s)')
+    for ax in axs:
+        yt = ax.get_yticks()
+        ax.set_yticks(yt[2:-2])
+        ax.set_ylabel('Signal (V)')
+    fig.subplots_adjust(hspace=0)
