@@ -339,7 +339,9 @@ class BluePrint():
                          namelist,
                          self._tslist.copy(),
                          self.marker1.copy(),
-                         self.marker2.copy())
+                         self.marker2.copy(),
+                         self._segmark1.copy(),
+                         self._segmark2.copy())
 
     def insertSegment(self, pos, func, args=(), name=None, ts=1):
         """
@@ -943,14 +945,13 @@ class Sequence:
                 wfm = rescaler(wfm, ampl, off)
 
         # Finally cast the lists into the shapes required by the AWG driver
-        waveforms = [[]]*len(channels)
-        m1s = [[]]*len(channels)
-        m2s = [[]]*len(channels)
+        waveforms = [[] for dummy in range(len(channels))]
+        m1s = [[] for dummy in range(len(channels))]
+        m2s = [[] for dummy in range(len(channels))]
         nreps = []
         trig_waits = []
         goto_states = []
         jump_tos = []
-        chans = []
 
         for pos in range(1, seqlen+1):
             for chanind, chan in enumerate(channels):
@@ -961,10 +962,9 @@ class Sequence:
                 trig_waits.append(self._sequencing[pos][0])
                 jump_tos.append(self._sequencing[pos][2])
                 goto_states.append(self._sequencing[pos][3])
-                chans.append(chan)
 
         return (waveforms, m1s, m2s, nreps, trig_waits, goto_states,
-                jump_tos, channels)
+                jump_tos, list(channels))
 
 
 def _subelementBuilder(blueprint, SR, durations):
