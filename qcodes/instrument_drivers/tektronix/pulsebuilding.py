@@ -23,19 +23,19 @@ class PulseAtoms:
 
     @staticmethod
     def sine(freq, ampl, off, SR, dur):
-        time = np.linspace(0, dur, dur*SR)
+        time = np.linspace(0, dur, int(dur*SR))
         freq *= 2*np.pi
         return (ampl*np.sin(freq*time)+off)
 
     @staticmethod
     def ramp(slope, offset, SR, dur):
-        time = np.linspace(0, dur, dur*SR)
+        time = np.linspace(0, dur, int(dur*SR))
         return (slope*time+offset)
 
     @staticmethod
     def waituntil(dummy, SR, dur):
         # for internal call signature consistency, a dummy variable is needed
-        return (np.zeros(dur*SR))
+        return (np.zeros(int(dur*SR)))
 
     @staticmethod
     def gaussian(ampl, sigma, mu, offset, SR, dur):
@@ -44,7 +44,7 @@ class PulseAtoms:
 
         Is by default centred in the middle of the interval
         """
-        time = np.linspace(0, dur, dur*SR)
+        time = np.linspace(0, dur, int(dur*SR))
         centre = dur/2
         baregauss = np.exp((-(time-mu-centre)**2/(2*sigma**2)))
         normalisation = 1/np.sqrt(2*sigma**2*np.pi)
