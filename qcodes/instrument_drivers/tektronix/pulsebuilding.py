@@ -967,7 +967,7 @@ class Sequence:
                 jump_tos, list(channels))
 
 
-def _subelementBuilder(blueprint, SR, durations):
+def _subelementBuilder(blueprint, SR, durs):
     """
     The function building a blueprint, returning a numpy array.
 
@@ -975,8 +975,8 @@ def _subelementBuilder(blueprint, SR, durations):
     elementBuilder.
     """
 
-    # Important: building the element must NOT modify the bluePrint, therefore
-    # all lists are copied
+    # Important: building the element must NOT modify any of the mutable
+    # inputs, therefore all lists are copied
     funlist = blueprint._funlist.copy()
     argslist = blueprint._argslist.copy()
     namelist = blueprint._namelist.copy()
@@ -985,6 +985,8 @@ def _subelementBuilder(blueprint, SR, durations):
     marker2 = blueprint.marker2.copy()
     segmark1 = blueprint._segmark1.copy()
     segmark2 = blueprint._segmark2.copy()
+
+    durations = durs.copy()
 
     no_of_waits = funlist.count('waituntil')
 
@@ -1090,6 +1092,7 @@ def elementBuilder(blueprints, SR, durations, channels=None,
     # Allow for using a single durations list for all blueprints
     if not isinstance(durations[0], list):
         durations = [durations]*len(blueprints)
+        # durations = [durations for _ in range(len(blueprints))]
 
     if channels is None:
         channels = [ii for ii in range(len(blueprints))]
