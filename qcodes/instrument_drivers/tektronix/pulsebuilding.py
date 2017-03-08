@@ -112,7 +112,7 @@ class BluePrint():
         # Allow single arguments to be given as not tuples
         for ii, args in enumerate(argslist):
             if not isinstance(args, tuple):
-                argslist = (args,)
+                argslist[ii] = (args,)
         self._argslist = argslist
 
         self._namelist = namelist
