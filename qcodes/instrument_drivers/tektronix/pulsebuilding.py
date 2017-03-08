@@ -61,7 +61,7 @@ class BluePrint():
 
     def __init__(self, funlist, argslist, namelist, tslist=None,
                  marker1=None, marker2=None, segmentmarker1=None,
-                 segmentmarker2=None):
+                 segmentmarker2=None, SR=None, durations=None):
         """
         Create a BluePrint instance.
 
@@ -141,6 +141,9 @@ class BluePrint():
         else:
             self._segmark2 = segmentmarker2
 
+        self._SR = SR
+        self._durations = durations
+
     @staticmethod
     def _basename(string):
         """
@@ -186,11 +189,25 @@ class BluePrint():
         return lst
 
     @property
-    def length(self):
+    def length_timesteps(self):
         """
         Returns the number of assigned time steps currently in the blueprint.
         """
         return len(self._tslist)
+
+    @property
+    def length_seconds(self):
+        """
+        If possible, returns the length of the blueprint in seconds.
+        Returns -1 if insufficient information is specified.
+        """
+        if (self._SR is None) or (self._durations is None):
+            length_secs = -1
+        else:
+            # TODO: add calculation
+            length_secs = 0
+
+        return length_secs
 
     def showPrint(self):
         """
@@ -990,14 +1007,13 @@ def _subelementBuilder(blueprint, SR, durs):
 
     no_of_waits = funlist.count('waituntil')
 
-    if sum(tslist) != len(durations)+no_of_waits:
+    if sum(tslist) != len(durations):
         print('-'*45)
-        print(tslist, durations, no_of_waits)
+        print(tslist, durations)
 
         raise ValueError('The specified timesteps do not match the number ' +
                          'of durations. ({} and {})'.format(sum(tslist),
-                                                            len(durations) +
-                                                            no_of_waits))
+                                                            len(durations))
 
     # handle waituntil by translating it into a normal function
     waitpositions = [ii for ii, el in enumerate(funlist) if el == 'waituntil']
@@ -1012,7 +1028,7 @@ def _subelementBuilder(blueprint, SR, durs):
                              '{} at position {}.'.format(wait_time, pos) +
                              ' {} elapsed already'.format(elapsed_time))
         else:
-            durations.insert(pos, dur)
+            durations[pos] = dur
 
     # update the durations to accomodate for some segments having
     # timesteps larger than 1
