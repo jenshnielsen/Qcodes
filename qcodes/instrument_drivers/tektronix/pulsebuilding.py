@@ -4,12 +4,17 @@
 
 import logging
 from inspect import signature
+from copy import deepcopy
 import functools as ft
 import numpy as np
 import matplotlib.pyplot as plt
 plt.ion()
 
 log = logging.getLogger(__name__)
+
+
+class ElementDurationError(Exception):
+    pass
 
 
 class PulseAtoms:
@@ -59,7 +64,7 @@ class BluePrint():
     them into numpy arrays.
     """
 
-    def __init__(self, funlist, argslist, namelist, tslist=None,
+    def __init__(self, funlist=None, argslist=None, namelist=None, tslist=None,
                  marker1=None, marker2=None, segmentmarker1=None,
                  segmentmarker2=None, SR=None, durations=None):
         """
@@ -78,8 +83,14 @@ class BluePrint():
         """
         # TODO: validate input
 
-        # Validation
-        #
+        # Sanitising
+        if funlist is None:
+            funlist = []
+        if argslist is None:
+            argslist = []
+        if namelist is None:
+            namelist = []
+
         # Are the lists of matching lengths?
         lenlist = [len(funlist), len(argslist), len(namelist)]
         if tslist is not None:
@@ -141,14 +152,23 @@ class BluePrint():
         else:
             self._segmark2 = segmentmarker2
 
+        if durations is not None:
+            self._durslist = []
+            steps = [0] + list(np.cumsum(self._tslist))
+            for ii in range(len(steps)-1):
+                self._durslist.append(tuple(durations[steps[ii]:steps[ii+1]]))
+        else:
+            self._durslist = None
+
         self._SR = SR
-        self._durations = durations
 
     @staticmethod
     def _basename(string):
         """
         Remove trailing numbers from a string. (currently removes all numbers)
         """
+        if string == '':
+            return string
         if not(string[-1].isdigit()):
             return string
         else:
@@ -201,13 +221,44 @@ class BluePrint():
         If possible, returns the length of the blueprint in seconds.
         Returns -1 if insufficient information is specified.
         """
-        if (self._SR is None) or (self._durations is None):
+        if (self._SR is None) or (self._durslist is None):
             length_secs = -1
         else:
-            # TODO: add calculation
-            length_secs = 0
+            durs = [d for dur in self._durslist for d in dur]
+            length_secs = self.getLength(self._SR, durs)/self._SR
 
         return length_secs
+
+    @property
+    def length_numpoints(self):
+        """
+        If possible, returns the length of the blueprint in seconds.
+        Returns -1 if insufficient information is specified.
+        """
+        if (self._SR is None) or (self._durslist is None):
+            length_npts = -1
+        else:
+            durs = [d for dur in self._durslist for d in dur]
+            length_npts = self.getLength(self._SR, durs)
+
+        return length_npts
+
+    @property
+    def durations(self):
+        """
+        The flattened list of durations
+
+        (legacy for old API where durations where specified independently)
+        """
+        durs = [d for dur in self._durslist for d in dur]
+        return durs
+
+    @property
+    def SR(self):
+        """
+        Sample rate of the element
+        """
+        return self._SR
 
     def showPrint(self):
         """
@@ -235,6 +286,8 @@ class BluePrint():
                 with exact name match gets a replacement.
 
         Raises:
+            ValueError: If the argument can not be matched (either the argument
+                name does not match or the argument number is wrong).
 
         """
         # TODO: is there any reason to use tuples internally?
@@ -283,6 +336,64 @@ class BluePrint():
             larg[arg] = value
             self._argslist[position] = tuple(larg)
 
+    def changeDuration(self, name, dur, replaceeverywhere=False):
+        """
+        Change the duration(s) of one or more segments in the blueprint
+
+        Args:
+            name (str): The name of the segment in which to change duration
+            dur (Union[float, tuple]): The new duration(s). If the segment has
+                multiple durations assigned to it, dur must be a tuple. For
+                single durations, both a float and a tuple is acceptable.
+            replaceeverywhere (Optional[bool]): If True, the duration(s)
+                is(are) overwritten in ALL segments where the name matches.
+                E.g. 'gaussian1' will match 'gaussian', 'gaussian2',
+                etc. If False, only the segment with exact name match
+                gets a replacement.
+
+        Raises:
+            ValueError: If durations are not specified for the blueprint
+            ValueError: If too many or too few durations are given.
+            ValueError: If no segment matches the name.
+        """
+
+        # Opt-out if blueprint is 'old' style
+        if self._durslist is None:
+            raise ValueError('Not that kind of blueprint! No durations')
+
+        if replaceeverywhere:
+            basename = BluePrint._basename
+            name = basename(name)
+            nmlst = self._namelist
+            replacelist = [nm for nm in nmlst if basename(nm) == name]
+        else:
+            replacelist = [name]
+
+        for name in replacelist:
+            position = self._namelist.index(name)
+
+            # Validation and sanitising
+            oldlen = len(self._durslist[position])
+            if not isinstance(dur, tuple):
+                dur = (dur,)
+
+            if not len(dur) == oldlen:
+                raise ValueError('Wrong number of durations! Segment named'
+                                 ' {} has '.format(name) +
+                                 '{} duration(s).'.format(oldlen) +
+                                 ' Received {}.'.format(len(dur)))
+
+            self._durslist[position] = dur
+
+    def setSR(self, SR):
+        """
+        Set the associated sample rate
+
+        Args:
+            SR (Union[int, float]): The sample rate in Sa/S.
+        """
+        self._SR = SR
+
     def setSegmentMarker(self, name, specs, markerID):
         """
         Bind a marker to a specific segment.
@@ -321,7 +432,7 @@ class BluePrint():
         position = self._namelist.index(name)
         markerselect[markerID][position] = (0, 0)
 
-    def changeDuration(self, name, n):
+    def changeTimeSteps(self, name, n):
         """
         Change the duration (in number of timesteps) of the blueprint segment
         with the specified name.
@@ -351,6 +462,12 @@ class BluePrint():
         # Needed because of input validation in __init__
         namelist = [self._basename(name) for name in self._namelist.copy()]
 
+        # needed because of __init__'s internal workings
+        if self._durslist is not None:
+            flatdurlist = [d for dur in self._durslist for d in dur]
+        else:
+            flatdurlist = None
+
         return BluePrint(self._funlist.copy(),
                          self._argslist.copy(),
                          namelist,
@@ -358,9 +475,11 @@ class BluePrint():
                          self.marker1.copy(),
                          self.marker2.copy(),
                          self._segmark1.copy(),
-                         self._segmark2.copy())
+                         self._segmark2.copy(),
+                         self._SR,
+                         flatdurlist)
 
-    def insertSegment(self, pos, func, args=(), name=None, ts=1):
+    def insertSegment(self, pos, func, args=(), name=None, ts=1, durs=None):
         """
         Insert a segment into the bluePrint.
 
@@ -376,7 +495,17 @@ class BluePrint():
                 appended.
             ts (int): Number of time segments this segment should last.
                 Default: 1.
+            durs (Optional[Union[float, tuple]]): The duration(s) of the
+                segment. Must be a tuple if more than one is specified,
+                else both a float and a tuple is acceptable.
         """
+
+        # Validation
+        if (durs is not None) and not isinstance(durs, tuple):
+            durs = (durs,)
+        if isinstance(durs, tuple) and (len(durs) != ts):
+            raise ValueError('Inconsistent number of timesteps and'
+                             ' durations')
 
         # allow users to input single values
         if not isinstance(args, tuple):
@@ -392,6 +521,10 @@ class BluePrint():
                 if name[-1].isdigit():
                     raise ValueError('Segment name must not end in a number')
 
+        # Unfortunate side effect of having durations non-mandatory
+        if (durs is not None) and (self._durslist is None):
+            self._durslist = []
+
         if pos == -1:
             self._namelist.append(name)
             self._namelist = self._make_names_unique(self._namelist)
@@ -400,6 +533,9 @@ class BluePrint():
             self._tslist.append(ts)
             self._segmark1.append((0, 0))
             self._segmark2.append((0, 0))
+            # allow for old-style duration specification
+            if self._durslist is not None:
+                self._durslist.append(durs)
         else:
             self._namelist.insert(pos, name)
             self._namelist = self._make_names_unique(self._namelist)
@@ -408,6 +544,9 @@ class BluePrint():
             self._tslist.insert(pos, ts)
             self._segmark1.insert(pos, (0, 0))
             self._segmark2.insert(pos, (0, 0))
+            # allow for old-style duration specifiation
+            if self._durslist is not None:
+                self._durslist.insert(pos, durs)
 
     def removeSegment(self, name):
         """
@@ -437,21 +576,20 @@ class BluePrint():
             ValueError: If the length of durations does not match the
                 blueprint.
         """
-        no_of_waits = self._funlist.count('waituntil')
-        if sum(self._tslist) != len(durations)+no_of_waits:
+
+        if sum(self._tslist) != len(durations):
             raise ValueError('The specified timesteps do not match the number '
                              'of durations. '
                              '({} and {})'.format(sum(self._tslist),
-                                                  len(durations) +
-                                                  no_of_waits))
+                                                  len(durations)))
 
-    def getLength(self, SR, durations):
+    def getLength(self, SR, durs):
         """
         Calculate the length of the BluePrint, where it to be forged with
         the specified durations.
 
         Args:
-            durations (list): List of durations
+            durs (list): List of durations
 
         Returns:
             int: The number of points of the element
@@ -460,6 +598,8 @@ class BluePrint():
             ValueError: If the length of durations does not match the
                 blueprint.
         """
+        durations = durs.copy()
+
         self._validateDurations(durations)
 
         no_of_waits = self._funlist.count('waituntil')
@@ -470,16 +610,16 @@ class BluePrint():
         for nw in range(no_of_waits):
             pos = waitpositions[nw]
             elapsed_time = sum(durations[:pos])
-            wait_time = argslist[pos][0]
+            wait_time = self._argslist[pos][0]
             dur = wait_time - elapsed_time
             if dur < 0:
                 raise ValueError('Inconsistent timing. Can not wait until ' +
                                  '{} at position {}.'.format(wait_time, pos) +
                                  ' {} elapsed already'.format(elapsed_time))
             else:
-                durations.insert(pos, dur)
+                durations[pos] = dur
 
-        return(sum(durations)*SR)
+        return(int(sum(durations)*SR))
 
     def __add__(self, other):
         """
@@ -545,6 +685,494 @@ class BluePrint():
         if not self.marker2 == other.marker2:
             return False
         return True
+
+
+class Element:
+    """
+    Object representing an element. An element is a collection of waves that
+    are to be run simultaneously. The element consists of a number of channels
+    that are then each filled with anything of the appropriate length.
+    """
+
+    def __init__(self):
+
+        # The internal data structure, a dict with key channel number
+        # Each value is a dict with the following possible keys, values:
+        # 'blueprint': a BluePrint
+        # 'channelname': channel name for later use with a Tektronix AWG5014
+        # 'array': an np.array
+        # 'SR': Sample rate. Used with array.
+        #
+        # Another dict is meta, which holds:
+        # 'duration': duration in seconds of the entire element.
+        # 'SR': sample rate of the element
+        # These two values are added/updated upon validation of the durations
+
+        self._data = {}
+        self._meta = {}
+
+    def addBluePrint(self, channel, blueprint):
+        """
+        Add a blueprint to the element on the specified channel.
+        Overwrites whatever was there before.
+        """
+        if not isinstance(blueprint, BluePrint):
+            raise ValueError('Invalid blueprint given. Must be an instance'
+                             ' of the BluePrint class.')
+
+        self._data[channel] = {}
+        self._data[channel]['blueprint'] = blueprint
+
+    def addArray(self, channel, array, SR, m1=None, m2=None):
+        """
+        Add an array of voltage value to the element on the specified channel.
+        Overwrites whatever was there before.
+
+        Args:
+            channel (int): The channel number
+            array (numpy.ndarray): The array of values
+            SR (int): The sample rate in Sa/s
+        """
+
+        # TODO: this is very Tektronix AWG-centric, that a channel has a
+        # waveform and two markers. Think about generalising.
+
+        time = np.linspace(0, int(len(array)/SR), len(array))
+        if m1 is None:
+            m1 = np.zeros_like(time)
+        elif len(m1) != len(array):
+            raise ValueError('Lengths of array and m1 do not match!')
+
+        if m2 is None:
+            m2 = np.zeros_like(time)
+        elif len(m2) != len(array):
+            raise ValueError('Lengths of array and m2 do not match!')
+
+        self._data[channel] = {}
+        self._data[channel]['array'] = [array, m1, m2, time]
+        self._data[channel]['SR'] = SR
+
+    def validateDurations(self):
+        """
+        Check that all channels have the same specified duration, number of
+        points and sample rate.
+        """
+
+        # pick out the channel entries
+        channels = self._data.values()
+
+        # First the sample rate
+        SRs = []
+        for channel in channels:
+            if 'blueprint' in channel.keys():
+                SRs.append(channel['blueprint'].SR)
+            elif 'array' in channel.keys():
+                SR = channel['SR']
+                SRs.append(SR)
+
+        if not SRs.count(SRs[0]) == len(SRs):
+            errmssglst = zip(list(self._data.keys()), SRs)
+            raise ElementDurationError('Different channels have different '
+                                       'SRs. Channel, SR: '
+                                       '{}, {} s'.format(*errmssglst))
+
+        # Next the total time
+        durations = []
+        for channel in channels:
+            if 'blueprint' in channel.keys():
+                durations.append(channel['blueprint'].length_seconds)
+            elif 'array' in channel.keys():
+                length = len(channel['array'])/channel['SR']
+                durations.append(length)
+
+        if not durations.count(durations[0]) == len(durations):
+            errmssglst = zip(list(self._data.keys()), durations)
+            raise ElementDurationError('Different channels have different '
+                                       'durations. Channel, duration: '
+                                       '{}, {} s'.format(*errmssglst))
+
+        # Finally the number of points
+        npts = []
+        for channel in channels:
+            if 'blueprint' in channel.keys():
+                npts.append(channel['blueprint'].length_numpoints)
+            elif 'array' in channel.keys():
+                length = len(channel['array'])
+                npts.append(length)
+
+        if not npts.count(npts[0]) == len(npts):
+            errmssglst = zip(list(self._data.keys()), npts)
+            raise ElementDurationError('Different channels have different '
+                                       'npts. Channel, npts: '
+                                       '{}, {}'.format(*errmssglst))
+
+        # If these three tests pass, we equip the dictionary with convenient
+        # info used by Sequence TODO: Currently sequence2
+        self._meta['SR'] = SRs[0]
+        self._meta['duration'] = durations[0]
+
+    def getArrays(self):
+        """
+        Return arrays of the element.
+
+        Returns:
+            dict: Dictionary with channel numbers (ints) as keys and forged
+                blueprints as values. A forged blueprint is a numpy
+                array given by np.array([wfm, m1, m2, time]).
+
+        """
+
+        outdict = {}
+        for channel, signal in self._data.items():
+            if 'array' in signal.keys():
+                outdict[channel] = signal['array']
+            elif 'blueprint' in signal.keys():
+                bp = signal['blueprint']
+                durs = bp.durations
+                SR = bp.SR
+                outdict[channel] = (list(_subelementBuilder(bp, SR, durs)[0]) +
+                                    [_subelementBuilder(bp, SR, durs)[1]])
+
+        return outdict
+
+    @property
+    def SR(self):
+        """
+        Returns the sample rate, if well-defined. Else raises
+        an error about what went wrong.
+        """
+        # Will either raise an error or set self._data['SR']
+        self.validateDurations()
+
+        return self._meta['SR']
+
+    @property
+    def duration(self):
+        """
+        Returns the duration in seconds of the element, if said duration is
+        well-defined. Else raises an error.
+        """
+        # Will either raise an error or set self._data['SR']
+        self.validateDurations()
+
+        return self._meta['duration']
+
+    @property
+    def channels(self):
+        """
+        The channels that has something on them
+        """
+        chans = [key for key in self._data.keys()]
+        return chans
+
+    def changeArg(self, channel, name, arg, value, replaceeverywhere=False):
+        """
+        Change the argument of a function of the blueprint on the specified
+        channel.
+
+        Args:
+            channel (int): The channel where the blueprint sits.
+            name (str): The name of the segment in which to change an argument
+            arg (Union[int, str]): Either the position (int) or name (str) of
+                the argument to change
+            value (Union[int, float]): The new value of the argument
+            replaceeverywhere (bool): If True, the same argument is overwritten
+                in ALL segments where the name matches. E.g. 'gaussian1' will
+                match 'gaussian', 'gaussian2', etc. If False, only the segment
+                with exact name match gets a replacement.
+
+        Raises:
+            ValueError: If the specified channel has no blueprint.
+            ValueError: If the argument can not be matched (either the argument
+                name does not match or the argument number is wrong).
+        """
+        # avoid a KeyError in the next if statement
+        if channel not in self.channels:
+            self._data[channel] = {'': ''}
+
+        if 'blueprint' not in self._data[channel].keys():
+            raise ValueError('No blueprint on channel {}.'.format(channel))
+
+        bp = self._data[channel]['blueprint']
+
+        bp.changeArg(name, arg, value, replaceeverywhere)
+
+    def copy(self):
+        """
+        Return a copy of the element
+        """
+        new = Element()
+        new._data = deepcopy(self._data)
+        new._meta = deepcopy(self._meta)
+        return new
+
+
+class Sequence2:
+    """
+    New style sequence.
+    """
+
+    def __init__(self):
+        """
+        Not much to see here...
+        """
+
+        # the internal data structure, a dict with tuples as keys and values
+        # the key is sequence position (int), the value is element (Element)
+        self._data = {}
+
+        # Here goes the sequencing info. Key: position, value: list
+        # where list = [wait, nrep, jump, goto]
+        self._sequencing = {}
+
+        # The dictionary to store AWG settings
+        # Keys will include:
+        # 'SR', 'channelXampl'
+        self._awgspecs = {}
+
+        # The metainfo to be extracted by measurements
+        self._meta = {}
+
+    def setSequenceSettings(self, pos, wait, nreps, jump, goto):
+        """
+        Set the sequence setting for the sequence element at pos.
+
+        Args:
+            pos (int): The sequence element (counting from 1)
+            wait (int): The wait state specifying whether to wait for a
+                trigger. 0: OFF, don't wait, 1: ON, wait.
+            nreps (int): Number of repetitions. 0 corresponds to infinite
+                repetitions
+            jump (int): Jump target, the position of a sequence element
+            goto (int): Goto target, the position of a sequence element
+        """
+
+        # Validation (some validation 'postponed' and put in checkConsistency)
+        if wait not in [0, 1]:
+            raise ValueError('Can not set wait to {}.'.format(wait) +
+                             ' Must be either 0 or 1.')
+
+        self._sequencing[pos] = [wait, nreps, jump, goto]
+
+    def setSR(self, SR):
+        """
+        Set the sample rate for the sequence
+        """
+        self._awgspecs['SR'] = SR
+
+    def setChannelVoltageRange(self, channel, ampl, offset):
+        """
+        Assign the physical voltages of the channel. This is used when making
+        output for .awg files. The corresponding parameters in the QCoDeS
+        AWG5014 driver are called chXX_amp and chXX_offset. Please ensure that
+        the channel in question is indeed in ampl/offset mode and not in
+        high/low mode.
+
+        Args:
+            channel (int): The channel number
+            ampl (float): The channel peak-to-peak amplitude (V)
+            offset (float): The channel offset (V)
+        """
+        keystr = 'channel{}_amplitude'.format(channel)
+        self._awgspecs[keystr] = ampl
+        keystr = 'channel{}_offset'.format(channel)
+        self._awgspecs[keystr] = offset
+
+    def setChannelDelay(self, channel, delay):
+        """
+        Assign a delay to a channel. This is used when making output for .awg
+        files. Use the delay to compensate for cable length differences etc.
+        Zeros are prepended to the waveforms to delay them and correspondingly
+        appended to non (or less) delayed channels.
+
+        Args:
+            channel (int): The channel number
+            delay (float): The required delay (s)
+
+        Raises:
+            ValueError: If a non-integer or non-non-negative channel number is
+                given.
+        """
+
+        if not isinstance(channel, int) or channel < 1:
+            raise ValueError('{} is not a valid '.format(channel) +
+                             'channel number.')
+
+        self._awgspecs['channel{}_delay'.format(channel)] = delay
+
+    def addElement(self, position, element):
+        """
+        Add an element to the sequence. Overwrites previous values.
+
+        Args:
+            position (int): The sequence position of the element (lowest: 1)
+            element (Element): An element instance
+
+        Raises:
+            ValueError: If the element has inconsistent durations
+        """
+
+        # Validation
+        element.validateDurations()
+
+        # Data mutation
+        self._data.update({position: element})
+
+    def checkConsistency(self, verbose=False):
+        """
+        Checks wether the sequence can be built, i.e. wether all elements
+        have waveforms on the same channels and of the same length.
+        """
+        # TODO: Give helpful info if the check fails
+
+        try:
+            SR = self._awgspecs['SR']
+        except KeyError:
+            raise KeyError('No sample rate specified. Can not perform check')
+
+        # First check that all sample rates agree
+        # Since all elements are validated on input, the SR exists
+        SRs = [elem.SR for elem in self._data.values()]
+        if SRs.count(SRs[0]) != len(SRs):
+            failmssg = ('checkConsistency failed: inconsistent sample rates.')
+            log.info(failmssg)
+            if verbose:
+                print(failmssg)
+            return False
+
+        # Then check that elements use the same channels
+        specchans = []
+        for elem in self._data.values():
+            chans = elem.channels
+            specchans.append(chans)
+        if specchans.count(chans) != len(specchans):
+            failmssg = ('checkConsistency failed: different elements specify '
+                        'different channels')
+            log.info(failmssg)
+            if verbose:
+                print(failmssg)
+            return False
+
+        # TODO: must all elements have same length? Does any AWG require this?
+
+        # Finally, check that all positions are filled
+        positions = list(self._data.keys())
+        if not positions == list(range(1, len(positions)+1)):
+            failmssg = ('checkConsistency failed: inconsistent sequence'
+                        'positions. Must be 1, 2, 3, ...')
+            log.info(failmssg)
+            if verbose:
+                print(failmssg)
+            return False
+
+        # If all three tests pass...
+        return True
+
+    @property
+    def length_sequenceelements(self):
+        """
+        Returns the current number of specified sequence elements
+        """
+        return len(self._data)
+
+    def plotSequence(self):
+        """
+        Visualise the sequence
+
+        """
+        if not self.checkConsistency():
+            raise ValueError('Can not plot sequence: Something is '
+                             'inconsistent. Please run '
+                             'checkConsistency(verbose=True) for more details')
+
+        # First forge all elements that are blueprints
+        seqlen = self.length_sequenceelements
+        # the elements as dicts with channel: [wfm, m1, m2, time] structure
+        elements = []
+        for pos in range(1, seqlen+1):
+            rawelem = self._data[pos]
+            elements.append(rawelem.getArrays())
+
+        # Now get the dimensions.
+        chans = self._data[1].channels  # All element have the same channels
+
+        # Then figure out the figure scalings
+        chanminmax = [[np.inf, -np.inf]]*len(chans)
+        for chanind, chan in enumerate(chans):
+            for pos in range(seqlen):
+                wfmdata = elements[pos][chan][0]
+                (thismin, thismax) = (wfmdata.min(), wfmdata.max())
+                if thismin < chanminmax[chanind][0]:
+                    chanminmax[chanind] = [thismin, chanminmax[chanind][1]]
+                if thismax > chanminmax[chanind][1]:
+                    chanminmax[chanind] = [chanminmax[chanind][0], thismax]
+
+        fig, axs = plt.subplots(len(chans), seqlen)
+
+        # ...and do the plotting
+        for chanind, chan in enumerate(chans):
+            for pos in range(seqlen):
+                # 1 by N arrays are indexed differently than M by N arrays
+                # and 1 by 1 arrays are not arrays at all...
+                if len(chans) == 1 and seqlen > 1:
+                    ax = axs[pos]
+                if len(chans) > 1 and seqlen == 1:
+                    ax = axs[chanind]
+                if len(chans) == 1 and seqlen == 1:
+                    ax = axs
+                if len(chans) > 1 and seqlen > 1:
+                    ax = axs[chanind, pos]
+
+                wfm = elements[pos][chan][0]
+                m1 = elements[pos][chan][1]
+                m2 = elements[pos][chan][2]
+                time = elements[pos][chan][3]
+                # get the durations if they are specified
+                try:
+                    newdurs = elements[pos][chan][4]
+                except IndexError:
+                    newdurs = []
+
+                # waveform
+                ax.plot(time, wfm, lw=3, color=(0.6, 0.4, 0.3), alpha=0.4)
+                ymax = chanminmax[chanind][1]
+                ymin = chanminmax[chanind][0]
+                yrange = ymax - ymin
+                ax.set_ylim([ymin-0.05*yrange, ymax+0.2*yrange])
+
+                # marker1 (red, on top)
+                y_m1 = ymax+0.15*yrange
+                marker_on = np.ones_like(m1)
+                marker_on[m1 == 0] = np.nan
+                marker_off = np.ones_like(m1)
+                ax.plot(time, y_m1*marker_off, color=(0.6, 0.1, 0.1),
+                        alpha=0.2, lw=2)
+                ax.plot(time, y_m1*marker_on, color=(0.6, 0.1, 0.1),
+                        alpha=0.6, lw=2)
+
+                # marker 2 (blue, below the red)
+                y_m2 = ymax+0.10*yrange
+                marker_on = np.ones_like(m2)
+                marker_on[m2 == 0] = np.nan
+                marker_off = np.ones_like(m2)
+                ax.plot(time, y_m2*marker_off, color=(0.1, 0.1, 0.6),
+                        alpha=0.2, lw=2)
+                ax.plot(time, y_m2*marker_on, color=(0.1, 0.1, 0.6),
+                        alpha=0.6, lw=2)
+
+                # time step lines
+                for dur in np.cumsum(newdurs):
+                    ax.plot([dur, dur], [ax.get_ylim()[0],
+                                         ax.get_ylim()[1]],
+                            color=(0.312, 0.2, 0.33),
+                            alpha=0.3)
+
+                # remove excess space from the plot
+                if not chanind+1 == len(chans):
+                    ax.set_xticks([])
+                if not pos == 0:
+                    ax.set_yticks([])
+                fig.subplots_adjust(hspace=0, wspace=0)
 
 
 class Sequence:
@@ -752,7 +1380,7 @@ class Sequence:
             self.addElement(channel, pos+1, bp, durations)
 
     @property
-    def lenght(self):
+    def length(self):
         """
         Returns the current number of specified sequence elements
         """
@@ -1013,7 +1641,7 @@ def _subelementBuilder(blueprint, SR, durs):
 
         raise ValueError('The specified timesteps do not match the number ' +
                          'of durations. ({} and {})'.format(sum(tslist),
-                                                            len(durations))
+                                                            len(durations)))
 
     # handle waituntil by translating it into a normal function
     waitpositions = [ii for ii, el in enumerate(funlist) if el == 'waituntil']
@@ -1147,6 +1775,7 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
 
     TODO: all sorts of validation on lengths of blueprint and the like
     """
+
     # Allow single blueprint
     if not isinstance(blueprints, list):
         blueprints = [blueprints]
@@ -1212,3 +1841,37 @@ def bluePrintPlotter(blueprints, SR, durations, fig=None, axs=None):
         ax.set_yticks(yt[2:-2])
         ax.set_ylabel('Signal (V)')
     fig.subplots_adjust(hspace=0)
+
+
+def makeLinearlyVaryingSequence(baseelement, channel, name, arg, start, stop,
+                                step):
+    """
+    Make a pulse sequence where a single parameter varies linearly.
+    The pulse sequence will consist of N copies of the same element with just
+    the specified argument changed (N = abs(stop-start)/steps)
+
+    Args:
+        baseelement (Element): The basic element.
+        channel (int): The channel where the change should happen
+        name (str): Name of the blueprint segment to change
+        arg (Union[str, int]): Name (str) or position (int) of the argument
+            to change.
+        start (float): Start point of the variation (included)
+        stop (float): Stop point of the variation (included)
+        step (float): Increment of the variation
+    """
+
+    # TODO: validation
+
+    sequence = Sequence2()
+
+    sequence.setSR(baseelement.SR)
+
+    iterator = np.linspace(start, stop, round(abs(stop-start)/step))
+
+    for ind, val in enumerate(iterator):
+        element = baseelement.copy()
+        element.changeArg(channel, name, arg, val)
+        sequence.addElement(ind+1, element)
+
+    return sequence
