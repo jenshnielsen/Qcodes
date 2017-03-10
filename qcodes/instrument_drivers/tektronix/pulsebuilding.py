@@ -224,6 +224,10 @@ class BluePrint():
         if (self._SR is None) or (self._durslist is None):
             length_secs = -1
         else:
+            # take care of 'waituntils'
+            waitinds = [ind for (ind, fun) in enumerate(self._funlist) if
+                        fun == 'waituntil']
+            durlist = self._durslist[max(waitinds + [0]):]
             durs = [d for dur in self._durslist for d in dur]
             length_secs = self.getLength(self._SR, durs)/self._SR
 
@@ -390,7 +394,7 @@ class BluePrint():
         Set the associated sample rate
 
         Args:
-            SR (Union[int, float]): The sample rate in Sa/S.
+            SR (Union[int, float]): The sample rate in Sa/s.
         """
         self._SR = SR
 
@@ -506,6 +510,10 @@ class BluePrint():
         if isinstance(durs, tuple) and (len(durs) != ts):
             raise ValueError('Inconsistent number of timesteps and'
                              ' durations')
+
+        # Take care of 'waituntil'
+        if func == 'waituntil':
+            durs = (None,)
 
         # allow users to input single values
         if not isinstance(args, tuple):
@@ -897,6 +905,27 @@ class Element:
 
         bp.changeArg(name, arg, value, replaceeverywhere)
 
+    def changeDuration(self, channel, name, newdur, replaceeverywhere=False):
+        """
+        Change the duration(s) of a segment of the blueprint on the specified
+        channel
+
+        Args: go figure
+        """
+
+        #TODO: docstring and dur(s) validation
+
+        # avoid a KeyError in the next if statement
+        if channel not in self.channels:
+            self._data[channel] = {'': ''}
+
+        if 'blueprint' not in self._data[channel].keys():
+            raise ValueError('No blueprint on channel {}.'.format(channel))
+
+        bp = self._data[channel]['blueprint']
+
+        bp.changeDuration(name, newdur, replaceeverywhere)
+
     def copy(self):
         """
         Return a copy of the element
@@ -1075,6 +1104,38 @@ class Sequence2:
         """
         return len(self._data)
 
+    @property
+    def SR(self):
+        """
+        Returns the sample rate, if defined. Else returns -1.
+        """
+        try:
+            SR = self._awgspecs['SR']
+        except KeyError:
+            SR = -1
+
+        return SR
+
+    def element(self, pos):
+        """
+        Returns the element at the given position. Changes made to the return
+        value of this methods will apply to the sequence. If this is undesired,
+        make a copy of the returned element using Element.copy
+
+        Args:
+            pos (int): The sequence position
+
+        Raises:
+            KeyError: If no element is specified at the given position
+        """
+        try:
+            elem = self._data[pos]
+        except KeyError:
+            raise KeyError('No element specified at sequence '
+                           'position {}'.format(pos))
+
+        return elem
+
     def plotSequence(self):
         """
         Visualise the sequence
@@ -1087,10 +1148,11 @@ class Sequence2:
 
         # First forge all elements that are blueprints
         seqlen = self.length_sequenceelements
-        # the elements as dicts with channel: [wfm, m1, m2, time] structure
         elements = []
         for pos in range(1, seqlen+1):
             rawelem = self._data[pos]
+            # returns the elements as dicts with
+            # {channel: [wfm, m1, m2, time, newdurations]} structure
             elements.append(rawelem.getArrays())
 
         # Now get the dimensions.
@@ -1100,6 +1162,7 @@ class Sequence2:
         chanminmax = [[np.inf, -np.inf]]*len(chans)
         for chanind, chan in enumerate(chans):
             for pos in range(seqlen):
+                print('DEBUG: {}, {}'.format(pos, chan))
                 wfmdata = elements[pos][chan][0]
                 (thismin, thismax) = (wfmdata.min(), wfmdata.max())
                 if thismin < chanminmax[chanind][0]:
@@ -1173,6 +1236,141 @@ class Sequence2:
                 if not pos == 0:
                     ax.set_yticks([])
                 fig.subplots_adjust(hspace=0, wspace=0)
+
+    def outputForAWGFile(self):
+        """
+        Returns an output matching the call signature of the 'make_*_awg_file'
+        functions of the QCoDeS AWG5014 driver. One may then construct an awg
+        file as follows (assuming that seq is the sequence object):
+
+        make_awg_file(*seq.outputForAWGFile(), **kwargs)
+
+        The outputForAWGFile applies all specified signal corrections.
+          delay of channels
+        """
+        # TODO: implement corrections
+
+        # Validation
+        if not self.checkConsistency():
+            raise ValueError('Can not generate output. Something is '
+                             'inconsistent. Please run '
+                             'checkConsistency(verbose=True) for more details')
+        #
+        #  CHANGE CODE FROM THIS POINT
+        #
+        channels = self.element(1).channels  # all elements have ident. chans
+        # We copy the data so that the state of the Sequence is left unaltered
+        # by outputting for AWG
+        data = deepcopy(self._data)
+        seqlen = len(data.keys())
+        # check if sequencing information is specified for each element
+        if not list(self._sequencing.keys()) == list(range(1, seqlen+1)):
+            raise ValueError('Can not generate output for .awg file; '
+                             'incorrect sequencer information.')
+
+        # Verify physical amplitude and offset specifiations
+        for chan in channels:
+            ampkey = 'channel{}_amplitude'.format(chan)
+            if ampkey not in self._awgspecs.keys():
+                raise KeyError('No amplitude specified for channel '
+                               '{}. Can not continue.'.format(chan))
+            offkey = 'channel{}_offset'.format(chan)
+            if offkey not in self._awgspecs.keys():
+                raise KeyError('No offset specified for channel '
+                               '{}. Can not continue.'.format(chan))
+
+        # Apply channel delays. This is most elegantly done before forging.
+        # Add waituntil at the beginning, update all waituntils inside, add a
+        # zeros segment at the end.
+        # If already-forged arrays are found, simply append and prepend zeros
+        delays = []
+        for chan in channels:
+            try:
+                delays.append(self._awgspecs['channel{}_delay'.format(chan)])
+            except KeyError:
+                delays.append(0)
+        maxdelay = max(delays)
+
+        for pos in range(1, seqlen+1):
+            for chanind, chan in enumerate(channels):
+                element = data[pos]
+                delay = delays[chanind]
+
+                if 'blueprint' in element._data[chan].keys():
+                    blueprint = element._data[chan]['blueprint']
+
+                    # update existing waituntils
+                    for segpos in range(len(blueprint._funlist)):
+                        if blueprint._funlist[segpos] == 'waituntil':
+                            oldwait = blueprint._argslist[segpos](0)
+                            blueprint._argslist[segpos] = (oldwait+delay,)
+                    # insert delay before the waveform
+                    blueprint.insertSegment(0, 'waituntil', (delay,),
+                                            'waituntil')
+                    # add zeros at the end
+                    blueprint.insertSegment(-1, PulseAtoms.ramp, (0, 0),
+                                            durs=(maxdelay-delay,))
+                    # TODO: is the next line even needed?
+                    element.addBluePrint(chan, blueprint)
+
+                else:
+                    arrays = element[chan]['array']
+                    for ii, arr in enumerate(arrays):
+                        pre_wait = np.zeros(int(delay/self.SR))
+                        post_wait = np.zeros(int((maxdelay-delay)/self.SR))
+                        arrays[ii] = np.concatenate((pre_wait, arr, post_wait))
+
+        # Now forge all the elements as specified
+        SR = self._awgspecs['SR']
+        elements = []  # the forged elements
+        for pos in range(1, seqlen+1):
+            elements.append(self.element(pos).getArrays())
+
+        # Apply channel scaling
+        # We must rescale to the interval -1, 1 where 1 is ampl/2+off and -1 is
+        # -ampl/2+off.
+        def rescaler(val, ampl, off):
+            return val/ampl*2-off
+        for pos in range(1, seqlen+1):
+            element = elements[pos-1]
+            for chan in channels:
+                ampl = self._awgspecs['channel{}_amplitude'.format(chan)]
+                off = self._awgspecs['channel{}_offset'.format(chan)]
+                wfm = element[chan][0]
+                # check whether the wafeform voltages can be realised
+                if wfm.max() > ampl/2+off:
+                    raise ValueError('Waveform voltages exceed channel range '
+                                     'on channel {}'.format(chan) +
+                                     ' sequence element {}.'.format(pos) +
+                                     ' {} > {}!'.format(wfm.max(), ampl/2+off))
+                if wfm.min() < -ampl/2+off:
+                    raise ValueError('Waveform voltages exceed channel range '
+                                     'on channel {}'.format(chan) +
+                                     ' sequence element {}. '.format(pos) +
+                                     '{} < {}!'.format(wfm.min(), -ampl/2+off))
+                wfm = rescaler(wfm, ampl, off)
+
+        # Finally cast the lists into the shapes required by the AWG driver
+        waveforms = [[] for dummy in range(len(channels))]
+        m1s = [[] for dummy in range(len(channels))]
+        m2s = [[] for dummy in range(len(channels))]
+        nreps = []
+        trig_waits = []
+        goto_states = []
+        jump_tos = []
+
+        for pos in range(1, seqlen+1):
+            for chanind, chan in enumerate(channels):
+                waveforms[chanind].append(elements[pos-1][chan][0])
+                m1s[chanind].append(elements[pos-1][chan][1])
+                m2s[chanind].append(elements[pos-1][chan][2])
+                nreps.append(self._sequencing[pos][1])
+                trig_waits.append(self._sequencing[pos][0])
+                jump_tos.append(self._sequencing[pos][2])
+                goto_states.append(self._sequencing[pos][3])
+
+        return (waveforms, m1s, m2s, nreps, trig_waits, goto_states,
+                jump_tos, list(channels))
 
 
 class Sequence:
@@ -1695,6 +1893,8 @@ def _subelementBuilder(blueprint, SR, durs):
             chunk = int(np.round(dur/dt))
             marker[ind:ind+chunk] = 1
 
+    output = np.array(output)  # TODO: Why is this sometimes needed?
+
     return np.array([output, m1, m2, time]), newdurations
 
 
@@ -1855,23 +2055,28 @@ def makeLinearlyVaryingSequence(baseelement, channel, name, arg, start, stop,
         channel (int): The channel where the change should happen
         name (str): Name of the blueprint segment to change
         arg (Union[str, int]): Name (str) or position (int) of the argument
-            to change.
+            to change. If the arg is 'duration', the duration is changed
+            instead.
         start (float): Start point of the variation (included)
         stop (float): Stop point of the variation (included)
         step (float): Increment of the variation
     """
 
     # TODO: validation
+    # TODO: Make more general varyer and refactor code
 
     sequence = Sequence2()
 
     sequence.setSR(baseelement.SR)
 
-    iterator = np.linspace(start, stop, round(abs(stop-start)/step))
+    iterator = np.linspace(start, stop, round(abs(stop-start)/step)+1)
 
     for ind, val in enumerate(iterator):
         element = baseelement.copy()
-        element.changeArg(channel, name, arg, val)
+        if arg == 'duration':
+            element.changeDuration(channel, name, val)
+        else:
+            element.changeArg(channel, name, arg, val)
         sequence.addElement(ind+1, element)
 
     return sequence
