@@ -620,8 +620,6 @@ class BluePrint():
         waitpositions = [ii for ii, el in enumerate(self._funlist)
                          if el == 'waituntil']
 
-        print(durations)
-
         # TODO: This is reuse of elementBuilder code... Refactor?
 
         # Note: the durations here are the flattened list of tuples of
@@ -639,8 +637,6 @@ class BluePrint():
                                  ' {} elapsed already'.format(elapsed_time))
             else:
                 durations[flatpos] = dur
-
-        print(durations)
 
         return(int(sum(durations)*SR))
 
@@ -2156,7 +2152,7 @@ def makeVaryingSequence(baseelement, channels, names, args, iters):
     sequence = Sequence2()
     sequence.setSR(baseelement.SR)
 
-    for elnum in range(1, noofvals+1):
+    for elnum in range(1, noofvals[0]+1):
         sequence.addElement(elnum, baseelement.copy())
 
     for (chan, name, arg, vals) in zip(channels, names, args, iters):
