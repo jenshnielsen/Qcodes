@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 class ElementDurationError(Exception):
     pass
 
+class SequenceConsistencyError(Exception):
+    pass
+
 
 class PulseAtoms:
     """
@@ -523,7 +526,10 @@ class BluePrint():
             raise ValueError('Position must be strictly larger than -1')
 
         if name is None:
-            name = func.__name__
+            if func == 'waituntil':
+                name = 'waituntil'
+            else:
+                name = func.__name__
         elif isinstance(name, str):
             if len(name) > 0:
                 if name[-1].isdigit():
@@ -614,10 +620,17 @@ class BluePrint():
         waitpositions = [ii for ii, el in enumerate(self._funlist)
                          if el == 'waituntil']
 
+        print(durations)
+
         # TODO: This is reuse of elementBuilder code... Refactor?
+
+        # Note: the durations here are the flattened list of tuples of
+        # durations, therefore we have pos and flatpos
+
         for nw in range(no_of_waits):
+            flatpos = np.cumsum(self._tslist)[waitpositions[nw]]-1
             pos = waitpositions[nw]
-            elapsed_time = sum(durations[:pos])
+            elapsed_time = sum(durations[:flatpos])
             wait_time = self._argslist[pos][0]
             dur = wait_time - elapsed_time
             if dur < 0:
@@ -625,7 +638,9 @@ class BluePrint():
                                  '{} at position {}.'.format(wait_time, pos) +
                                  ' {} elapsed already'.format(elapsed_time))
             else:
-                durations[pos] = dur
+                durations[flatpos] = dur
+
+        print(durations)
 
         return(int(sum(durations)*SR))
 
@@ -821,7 +836,7 @@ class Element:
 
     def getArrays(self):
         """
-        Return arrays of the element.
+        Return arrays of the element. Heavily used by the Sequence.
 
         Returns:
             dict: Dictionary with channel numbers (ints) as keys and forged
@@ -913,7 +928,7 @@ class Element:
         Args: go figure
         """
 
-        #TODO: docstring and dur(s) validation
+        # TODO: docstring and dur(s) validation
 
         # avoid a KeyError in the next if statement
         if channel not in self.channels:
@@ -934,6 +949,19 @@ class Element:
         new._data = deepcopy(self._data)
         new._meta = deepcopy(self._meta)
         return new
+
+    def plotElement(self):
+        """
+        Plot the element. Currently only works if ONLY BluePrints are added.
+        """
+
+        # First check that the element is valid
+        self.validateDurations()
+
+        blueprints = [val['blueprint'] for val in self._data.values()]
+        durs = [bp.durations for bp in blueprints]
+
+        bluePrintPlotter(blueprints, self.SR, durs)
 
 
 class Sequence2:
@@ -1162,7 +1190,6 @@ class Sequence2:
         chanminmax = [[np.inf, -np.inf]]*len(chans)
         for chanind, chan in enumerate(chans):
             for pos in range(seqlen):
-                print('DEBUG: {}, {}'.format(pos, chan))
                 wfmdata = elements[pos][chan][0]
                 (thismin, thismax) = (wfmdata.min(), wfmdata.max())
                 if thismin < chanminmax[chanind][0]:
@@ -1843,10 +1870,15 @@ def _subelementBuilder(blueprint, SR, durs):
 
     # handle waituntil by translating it into a normal function
     waitpositions = [ii for ii, el in enumerate(funlist) if el == 'waituntil']
+
+    # Note: the durations here are the flattened list of tuples of
+    # durations, therefore we have pos and flatpos
+
     for nw in range(no_of_waits):
+        flatpos = np.cumsum(tslist)[waitpositions[nw]]-1
         pos = waitpositions[nw]
         funlist[pos] = PulseAtoms.waituntil
-        elapsed_time = sum(durations[:pos])
+        elapsed_time = sum(durations[:flatpos])
         wait_time = argslist[pos][0]
         dur = wait_time - elapsed_time
         if dur < 0:
@@ -1854,7 +1886,7 @@ def _subelementBuilder(blueprint, SR, durs):
                              '{} at position {}.'.format(wait_time, pos) +
                              ' {} elapsed already'.format(elapsed_time))
         else:
-            durations[pos] = dur
+            durations[flatpos] = dur
 
     # update the durations to accomodate for some segments having
     # timesteps larger than 1
@@ -2080,3 +2112,67 @@ def makeLinearlyVaryingSequence(baseelement, channel, name, arg, start, stop,
         sequence.addElement(ind+1, element)
 
     return sequence
+
+
+def makeVaryingSequence(baseelement, channels, names, args, iters):
+    """
+    Make a pulse sequence where N parameters vary simultaneously in M steps.
+    The user inputs a baseelement which is copied M times and changed
+    according to the given inputs.
+
+    Args:
+        baseelement (Element): The basic element.
+        channels (Union[list, tuple]): Either a list or a tuple of channels on
+            which to find the blueprint to change. Must have length N.
+        names (Union[list, tuple]): Either a list or a tuple of names of the
+            segment to change. Must have length N.
+        args (Union[list, tuple]): Either a list or a tuple of argument
+            specifications for the argument to change. Use 'duration' to change
+            the segment duration. Must have length N.
+        iters (Union[list, tuple]): Either a list or a tuple of length N
+            containing Union[list, tuple, range] of length M.
+
+    Raises:
+        ValueError: If not channels, names, args, and iters are of the same
+            length.
+        ValueError: If not each iter in iters specifies the same number of
+            values.
+    """
+
+    # validation
+
+    baseelement.validateDurations()
+
+    inputlengths = [len(channels), len(names), len(args), len(iters)]
+    if not inputlengths.count(inputlengths[0]) == len(inputlengths):
+        raise ValueError('Inconsistent number of channel, names, args, and '
+                         'parameter sequences. Please specify the same number '
+                         'of each.')
+    noofvals = [len(itr) for itr in iters]
+    if not noofvals.count(noofvals[0]) == len(iters):
+        raise ValueError('Not the same number of values in each parameter '
+                         'value sequence (input argument: iters)')
+
+    sequence = Sequence2()
+    sequence.setSR(baseelement.SR)
+
+    for elnum in range(1, noofvals+1):
+        sequence.addElement(elnum, baseelement.copy())
+
+    for (chan, name, arg, vals) in zip(channels, names, args, iters):
+        for mpos, val in enumerate(vals):
+            element = sequence.element(mpos+1)
+            if arg == 'duration':
+                element.changeDuration(chan, name, val)
+            else:
+                element.changeArg(chan, name, arg, val)
+
+    log.info('Created varying sequence using makeVaryingSequence.'
+             ' Now validating it...')
+
+    if not sequence.checkConsistency():
+        raise SequenceConsistencyError('Invalid sequence. See log for '
+                                       'details.')
+
+    else:
+        return sequence
