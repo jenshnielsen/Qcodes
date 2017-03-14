@@ -5,6 +5,7 @@ import os
 import time
 import PyQt5.QtWidgets as qt
 import PyQt5.QtGui as gui
+import PyQt5.QtCore as core
 
 from functools import partial
 
@@ -33,7 +34,7 @@ class MakeDeviceImage(qt.QWidget):
         self.labelButton = qt.QPushButton('Insert Label')
         self.annotButton = qt.QPushButton('Place annotation')
         self.channelLabel = qt.QLabel('Channel number')
-        self.channelNumber = qt.QLineEdit
+        self.channelNumber = qt.QLineEdit()
 
         self.loadButton.clicked.connect(self.loadimage)
         self.labelButton.clicked.connect(partial(self.setlabel_or_annotation,
@@ -48,6 +49,7 @@ class MakeDeviceImage(qt.QWidget):
         grid.addWidget(self.labelButton, 4, 1)
         grid.addWidget(self.annotButton, 4, 2)
         grid.addWidget(self.channelLabel, 4, 3)
+        grid.addWidget(self.channelNumber, 4, 4)
 
         self.resize(500, 500)
         self.move(100, 100)
@@ -62,11 +64,12 @@ class MakeDeviceImage(qt.QWidget):
         filename = fd.getOpenFileName(self, 'Select device image',
                                       os.getcwd(),
                                       "Image files(*.jpg *png *.jpeg)")
-        pixmap = gui.QPixmap(filename[0])
-        width = pixmap.width()
-        height = pixmap.height()
+        self.filename = filename[0]
+        self.pixmap = gui.QPixmap(filename[0])
+        width = self.pixmap.width()
+        height = self.pixmap.height()
 
-        self.imageCanvas.setPixmap(pixmap)
+        self.imageCanvas.setPixmap(self.pixmap)
 
         print(self.imageCanvas.frameSize())
 
@@ -74,6 +77,9 @@ class MakeDeviceImage(qt.QWidget):
         # unambiguous
         self.imageCanvas.setMaximumWidth(width)
         self.imageCanvas.setMaximumHeight(height)
+
+        self.label_size = min(height/10, width/10)
+
 
     def setlabel_or_annotation(self, argument):
         """
@@ -83,7 +89,7 @@ class MakeDeviceImage(qt.QWidget):
         if argument not in ['label', 'annotation']:
             raise ValueError('Only labels and annotations may be saved!')
 
-        number = self.channelLabel.getText()
+        number = self.channelNumber.text()
 
         self.imageCanvas.mousePressEvent = self._getpos
         self.gotclick = False
@@ -97,6 +103,11 @@ class MakeDeviceImage(qt.QWidget):
             self._data[number] = {}
         self._data[number][argument] = (self.click_x, self.click_y)
 
+        # draw it
+        self._drawitall()
+
+        print(self._data)
+
     def _getpos(self, event):
         self.gotclick = True
         self.click_x = event.pos().x()
@@ -105,8 +116,46 @@ class MakeDeviceImage(qt.QWidget):
     def _drawitall(self):
         """
         Draws stuff... probably reusable.
+
         """
-        pass
+        self.pixmap = gui.QPixmap(self.filename)
+
+        painter = gui.QPainter(self.pixmap)
+        for channum, channel in self._data.items():
+            if 'label' in channel.keys():
+                (lx, ly) = channel['label']
+                chanstr = '{:02}'.format(int(channum))
+
+                painter.setBrush(gui.QColor(255, 255, 255, 100))
+
+                spacing = int(self.label_size*0.1)
+                textfont = gui.QFont('Decorative', self.label_size)
+                textwidth = gui.QFontMetrics(textfont).width(chanstr)
+
+                painter.drawRect(lx-spacing, ly-spacing,
+                                 textwidth+2*spacing,
+                                 self.label_size+2*spacing)
+                painter.setBrush(gui.QColor(25, 25, 25))
+
+                painter.setFont(textfont)
+                painter.drawText(core.QRectF(lx, ly, textwidth,
+                                             self.label_size),
+                                 chanstr)
+
+            if 'annotation' in channel.keys():
+                (ax, ay) = channel['annotation']
+                painter.setBrush(gui.QColor(255, 255, 255, 100))
+                painter.drawRect(ax, ay, 2*self.label_size, self.label_size)
+                textfont = gui.QFont('Decorative', 0.25*self.label_size)
+                painter.setBrush(gui.QColor(50, 50, 50))
+                painter.setFont(textfont)
+                painter.drawText(core.QRectF(ax+2, ay+0.4*self.label_size,
+                                             2*self.label_size,
+                                             self.label_size),
+                                 'Chan. {} Voltage'.format(chanstr))
+
+        self.imageCanvas.setPixmap(self.pixmap)
+
 
 class DeviceImage:
 
@@ -116,13 +165,16 @@ class DeviceImage:
 
     def __init__(self):
 
-        pass
+        self._data = {}
 
     def makeImage(self):
         """
         Launch a Qt Widget to click
         """
-        pass
+        app = qt.QApplication(sys.argv)
+        imagedrawer = MakeDeviceImage(app)
+        app.exec_()
+        self._data = imagedrawer._data
 
 
 def testgui():
