@@ -3,26 +3,29 @@
 import sys
 import os
 import time
+import json
 import PyQt5.QtWidgets as qt
 import PyQt5.QtGui as gui
 import PyQt5.QtCore as core
 
 from functools import partial
-
+from shutil import copyfile
 
 class MakeDeviceImage(qt.QWidget):
     """
     Class for clicking and adding labels
     """
 
-    def __init__(self, app):
+    def __init__(self, app, folder):
 
         super().__init__()
 
         self.qapp = app
+        self.folder = folder
 
         # BACKEND
         self._data = {}
+        self.filename = None
 
         # FRONTEND
 
@@ -35,6 +38,7 @@ class MakeDeviceImage(qt.QWidget):
         self.annotButton = qt.QPushButton('Place annotation')
         self.channelLabel = qt.QLabel('Channel number')
         self.channelNumber = qt.QLineEdit()
+        self.okButton = qt.QPushButton('Save and close')
 
         self.loadButton.clicked.connect(self.loadimage)
         self.labelButton.clicked.connect(partial(self.setlabel_or_annotation,
@@ -43,15 +47,17 @@ class MakeDeviceImage(qt.QWidget):
                                                  argument='annotation'))
         self.imageCanvas.mousePressEvent = None
         self.imageCanvas.setStyleSheet('background-color: red')
+        self.okButton.clicked.connect(self.saveAndClose)
 
-        grid.addWidget(self.imageCanvas, 0, 0, 4, 5)
+        grid.addWidget(self.imageCanvas, 0, 0, 4, 6)
         grid.addWidget(self.loadButton, 4, 0)
         grid.addWidget(self.labelButton, 4, 1)
         grid.addWidget(self.annotButton, 4, 2)
         grid.addWidget(self.channelLabel, 4, 3)
         grid.addWidget(self.channelNumber, 4, 4)
+        grid.addWidget(self.okButton, 4, 5)
 
-        self.resize(500, 500)
+        self.resize(600, 400)
         self.move(100, 100)
         self.setWindowTitle('Generate annotated device image')
         self.show()
@@ -76,8 +82,6 @@ class MakeDeviceImage(qt.QWidget):
         self.imageCanvas.setMaximumWidth(width)
         self.imageCanvas.setMaximumHeight(height)
 
-        self.label_size = min(height/10, width/10)
-
     def setlabel_or_annotation(self, argument):
         """
         Set the position for a channel label or annotation
@@ -99,69 +103,46 @@ class MakeDeviceImage(qt.QWidget):
         if number not in self._data.keys():
             self._data[number] = {}
         self._data[number][argument] = (self.click_x, self.click_y)
+        self._data[number]['value'] = 'Ch. {:02d} mV'.format(int(number))
 
         # draw it
-        #self._drawitall()
+
         self.imageCanvas, _ = self._renderImage(self._data,
                                                 self.imageCanvas,
-                                                self.filename,
-                                                self.label_size)
+                                                self.filename)
+
+    def saveAndClose(self):
+        """
+        Save and close
+        """
+        if self.filename is None:
+            return
+
+        fileformat = self.filename.split('.')[-1]
+        rawpath = os.path.join(self.folder, 'deviceimage_raw.'+fileformat)
+        copyfile(self.filename, rawpath)
+
+        # Now forget about the original
+        self.filename = rawpath
+
+        self.close()
 
     def _getpos(self, event):
         self.gotclick = True
         self.click_x = event.pos().x()
         self.click_y = event.pos().y()
 
-    def _drawitall(self):
-        """
-        Draws stuff... probably reusable.
-
-        """
-        self.pixmap = gui.QPixmap(self.filename)
-
-        painter = gui.QPainter(self.pixmap)
-        for channum, channel in self._data.items():
-            if 'label' in channel.keys():
-                (lx, ly) = channel['label']
-                chanstr = '{:02}'.format(int(channum))
-
-                painter.setBrush(gui.QColor(255, 255, 255, 100))
-
-                spacing = int(self.label_size*0.1)
-                textfont = gui.QFont('Decorative', self.label_size)
-                textwidth = gui.QFontMetrics(textfont).width(chanstr)
-
-                painter.drawRect(lx-spacing, ly-spacing,
-                                 textwidth+2*spacing,
-                                 self.label_size+2*spacing)
-                painter.setBrush(gui.QColor(25, 25, 25))
-
-                painter.setFont(textfont)
-                painter.drawText(core.QRectF(lx, ly, textwidth,
-                                             self.label_size),
-                                 chanstr)
-
-            if 'annotation' in channel.keys():
-                (ax, ay) = channel['annotation']
-                painter.setBrush(gui.QColor(255, 255, 255, 100))
-                painter.drawRect(ax, ay, 2*self.label_size, self.label_size)
-                textfont = gui.QFont('Decorative', 0.25*self.label_size)
-                painter.setBrush(gui.QColor(50, 50, 50))
-                painter.setFont(textfont)
-                painter.drawText(core.QRectF(ax+2, ay+0.4*self.label_size,
-                                             2*self.label_size,
-                                             self.label_size),
-                                 'Chan. {} Voltage'.format(chanstr))
-
-        self.imageCanvas.setPixmap(self.pixmap)
-
     @staticmethod
-    def _renderImage(data, canvas, filename, label_size):
+    def _renderImage(data, canvas, filename):
         """
         Render an image
         """
 
         pixmap = gui.QPixmap(filename)
+        width = pixmap.width()
+        height = pixmap.height()
+
+        label_size = min(height/10, width/10)
 
         painter = gui.QPainter(pixmap)
         for channum, channel in data.items():
@@ -189,14 +170,14 @@ class MakeDeviceImage(qt.QWidget):
             if 'annotation' in channel.keys():
                 (ax, ay) = channel['annotation']
                 painter.setBrush(gui.QColor(255, 255, 255, 100))
-                painter.drawRect(ax, ay, 2*label_size, label_size)
-                textfont = gui.QFont('Decorative', 0.25*label_size)
+                painter.drawRect(ax, ay, 2.75*label_size, label_size)
+                textfont = gui.QFont('Decorative', 0.5*label_size)
                 painter.setBrush(gui.QColor(50, 50, 50))
                 painter.setFont(textfont)
                 painter.drawText(core.QRectF(ax+2, ay+0.4*label_size,
-                                             2*label_size,
+                                             3*label_size,
                                              label_size),
-                                 'Chan. {} Voltage'.format(chanstr))
+                                 channel['value'])
 
             canvas.setPixmap(pixmap)
 
@@ -209,30 +190,73 @@ class DeviceImage:
     Manage an image of a device
     """
 
-    def __init__(self):
+    def __init__(self, folder):
 
         self._data = {}
         self.filename = None
+        self.folder = folder
 
-    def makeImage(self):
+    def annotateImage(self):
         """
         Launch a Qt Widget to click
         """
         app = qt.QApplication(sys.argv)
-        imagedrawer = MakeDeviceImage(app)
+        imagedrawer = MakeDeviceImage(app, self.folder)
         app.exec_()
         self._data = imagedrawer._data
         self.filename = imagedrawer.filename
+        imagedrawer.close()
+        app.quit()
+        self.saveAnnotations()
 
-    def update(self, qdac):
+    def saveAnnotations(self):
+        """
+        Save annotated image to disk (image+instructions)
+        """
+        filename = os.path.join(self.folder, 'deviceimage_annotations.json')
+        with open(filename, 'w') as fid:
+            json.dump(self._data, fid)
+
+    def loadAnnotations(self):
+        """
+        Get the annotations. Only call this if the files exist
+        """
+        filename = os.path.join(self.folder, 'deviceimage_annotations.json')
+        with open(filename, 'r') as fid:
+            self._data = json.load(fid)
+
+    def updateValues(self, qdac):
         """
         Update the data with actual voltages from the QDac
         """
-        pass
+        for channum in self._data.keys():
+            param = qdac.parameters['ch{:02d}_v'.format(int(channum))]
+            voltage = param.get_latest()
+            fmtstr = '{:0.1f} mV'
+            self._data[channum]['value'] = fmtstr.format(1e3*voltage)
 
-    def plot(self):
+    def makePNG(self, counter):
         """
-        Plot the image with new voltage values.
-        Can we reuse a method from MakeDeviceImage?
+        Render the image with new voltage values and save it to disk
+
+        Args:
+            counter (int): A counter for the experimental run number
         """
-        pass
+        if self.filename is None:
+            raise ValueError('No image selected!')
+
+        app = qt.QApplication(sys.argv)
+
+        win = qt.QWidget()
+        grid = qt.QGridLayout()
+        win.setLayout(grid)
+        win.imageCanvas = qt.QLabel()
+        grid.addWidget(win.imageCanvas)
+
+        win.imageCanvas, pixmap = MakeDeviceImage._renderImage(self._data,
+                                                               win.imageCanvas,
+                                                               self.filename)
+
+        filename = 'deviceimage_{:03d}.png'.format(counter)
+        pixmap.save(filename, 'png')
+        app.quit()
