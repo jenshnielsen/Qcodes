@@ -71,15 +71,12 @@ class MakeDeviceImage(qt.QWidget):
 
         self.imageCanvas.setPixmap(self.pixmap)
 
-        print(self.imageCanvas.frameSize())
-
         # fix the image scale, so that the pixel values of the mouse are
         # unambiguous
         self.imageCanvas.setMaximumWidth(width)
         self.imageCanvas.setMaximumHeight(height)
 
         self.label_size = min(height/10, width/10)
-
 
     def setlabel_or_annotation(self, argument):
         """
@@ -104,9 +101,11 @@ class MakeDeviceImage(qt.QWidget):
         self._data[number][argument] = (self.click_x, self.click_y)
 
         # draw it
-        self._drawitall()
-
-        print(self._data)
+        #self._drawitall()
+        self.imageCanvas, _ = self._renderImage(self._data,
+                                                self.imageCanvas,
+                                                self.filename,
+                                                self.label_size)
 
     def _getpos(self, event):
         self.gotclick = True
@@ -156,6 +155,53 @@ class MakeDeviceImage(qt.QWidget):
 
         self.imageCanvas.setPixmap(self.pixmap)
 
+    @staticmethod
+    def _renderImage(data, canvas, filename, label_size):
+        """
+        Render an image
+        """
+
+        pixmap = gui.QPixmap(filename)
+
+        painter = gui.QPainter(pixmap)
+        for channum, channel in data.items():
+            chanstr = '{:02}'.format(int(channum))
+
+            if 'label' in channel.keys():
+                (lx, ly) = channel['label']
+
+                painter.setBrush(gui.QColor(255, 255, 255, 100))
+
+                spacing = int(label_size*0.1)
+                textfont = gui.QFont('Decorative', label_size)
+                textwidth = gui.QFontMetrics(textfont).width(chanstr)
+
+                painter.drawRect(lx-spacing, ly-spacing,
+                                 textwidth+2*spacing,
+                                 label_size+2*spacing)
+                painter.setBrush(gui.QColor(25, 25, 25))
+
+                painter.setFont(textfont)
+                painter.drawText(core.QRectF(lx, ly, textwidth,
+                                             label_size),
+                                 chanstr)
+
+            if 'annotation' in channel.keys():
+                (ax, ay) = channel['annotation']
+                painter.setBrush(gui.QColor(255, 255, 255, 100))
+                painter.drawRect(ax, ay, 2*label_size, label_size)
+                textfont = gui.QFont('Decorative', 0.25*label_size)
+                painter.setBrush(gui.QColor(50, 50, 50))
+                painter.setFont(textfont)
+                painter.drawText(core.QRectF(ax+2, ay+0.4*label_size,
+                                             2*label_size,
+                                             label_size),
+                                 'Chan. {} Voltage'.format(chanstr))
+
+            canvas.setPixmap(pixmap)
+
+        return canvas, pixmap
+
 
 class DeviceImage:
 
@@ -166,6 +212,7 @@ class DeviceImage:
     def __init__(self):
 
         self._data = {}
+        self.filename = None
 
     def makeImage(self):
         """
@@ -175,10 +222,17 @@ class DeviceImage:
         imagedrawer = MakeDeviceImage(app)
         app.exec_()
         self._data = imagedrawer._data
+        self.filename = imagedrawer.filename
 
+    def update(self, qdac):
+        """
+        Update the data with actual voltages from the QDac
+        """
+        pass
 
-def testgui():
-
-    app = qt.QApplication(sys.argv)
-    _ = MakeDeviceImage(app)
-    sys.exit(app.exec_())
+    def plot(self):
+        """
+        Plot the image with new voltage values.
+        Can we reuse a method from MakeDeviceImage?
+        """
+        pass
