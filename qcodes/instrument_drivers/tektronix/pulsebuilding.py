@@ -1764,7 +1764,7 @@ class Sequence:
                 blueprint = data[(chan, pos)][0].copy()
                 delay = delays[chanind]
                 # update existing waituntils
-                for segpos in range(blueprint.length):
+                for segpos in range(blueprint.length_timesteps):
                     if isinstance(blueprint._funlist[segpos], str):
                         if 'waituntil' in blueprint._funlist[segpos]:
                             oldwait = blueprint._argslist[segpos](0)
