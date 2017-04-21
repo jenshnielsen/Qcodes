@@ -1856,7 +1856,7 @@ def _subelementBuilder(blueprint, SR, durs):
 
     no_of_waits = funlist.count('waituntil')
 
-    if sum(tslist) != len(durations):
+    if sum(tslist) != len(durations) + no_of_waits:
         print('-'*45)
         print(tslist, durations)
 
