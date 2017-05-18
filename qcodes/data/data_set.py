@@ -11,6 +11,7 @@ from .io import DiskIO
 from .location import FormatLocation
 from qcodes.utils.helpers import DelegateAttributes, full_class, deep_update
 
+from uuid import uuid4
 
 def new_data(location=None, loc_record=None, name=None, overwrite=False,
              io=None, **kwargs):
@@ -185,6 +186,7 @@ class DataSet(DelegateAttributes):
         self.last_store = -1
 
         self.metadata = {}
+        self.uuid = uuid4().hex
 
         self.arrays = _PrettyPrintDict()
         if arrays:
@@ -575,7 +577,8 @@ class DataSet(DelegateAttributes):
             'location': self.location,
             'arrays': array_snaps,
             'formatter': full_class(self.formatter),
-            'io': repr(self.io)
+            'io': repr(self.io),
+            'uuid': self.uuid
         })
         return deepcopy(self.metadata)
 
