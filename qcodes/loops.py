@@ -335,6 +335,7 @@ class ActiveLoop(Metadatable):
         self.bg_final_task = bg_final_task
         self.bg_min_delay = bg_min_delay
         self.data_set = None
+        self.publisher = None
 
         # if the first action is another loop, it changes how delays
         # happen - the outer delay happens *after* the inner var gets
@@ -562,7 +563,7 @@ class ActiveLoop(Metadatable):
 
         return sp
 
-    def set_common_attrs(self, data_set, use_threads):
+    def set_common_attrs(self, data_set, publisher, use_threads):
         """
         set a couple of common attributes that the main and nested loops
         all need to have:
@@ -570,10 +571,11 @@ class ActiveLoop(Metadatable):
         - a queue for communicating with the main process
         """
         self.data_set = data_set
+        self.publisher = publisher
         self.use_threads = use_threads
         for action in self.actions:
             if hasattr(action, 'set_common_attrs'):
-                action.set_common_attrs(data_set, use_threads)
+                action.set_common_attrs(data_set, publisher, use_threads)
 
     def get_data_set(self, *args, **kwargs):
         """
@@ -621,6 +623,12 @@ class ActiveLoop(Metadatable):
                     'write_period, when the DataSet is first created.')
 
         return self.data_set
+
+    def get_publisher(self, *args, **kwargs):
+        """
+        TODO whatever
+        """
+        return self.publisher
 
     def run_temp(self, **kwargs):
         """
@@ -673,8 +681,11 @@ class ActiveLoop(Metadatable):
             self.progress_interval = progress_interval
 
         data_set = self.get_data_set(*args, **kwargs)
+        publisher = self.get_publisher(*args, **kwargs)
 
-        self.set_common_attrs(data_set=data_set, use_threads=use_threads)
+        self.set_common_attrs(data_set=data_set,
+                              publisher=publisher,
+                              use_threads=use_threads)
 
         station = station or self.station or Station.default
         if station:
@@ -690,6 +701,10 @@ class ActiveLoop(Metadatable):
         }})
 
         data_set.save_metadata()
+        if publisher is not None:
+            # We only need to send the  metadata once the
+            # dataset has collected it
+            publisher.save_metadata(data_set.metadata, uuid=data_set.uuid)
 
         try:
             self._run_wrapper()
@@ -718,14 +733,14 @@ class ActiveLoop(Metadatable):
                 continue
             elif measurement_group:
                 callables.append(_Measure(measurement_group, self.data_set,
-                                          self.use_threads))
+                                          self.use_threads, self.publisher))
                 measurement_group[:] = []
 
             callables.append(self._compile_one(action, new_action_indices))
 
         if measurement_group:
             callables.append(_Measure(measurement_group, self.data_set,
-                                      self.use_threads))
+                                      self.use_threads, self.publisher))
             measurement_group[:] = []
 
         return callables
@@ -749,6 +764,11 @@ class ActiveLoop(Metadatable):
             ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             self.data_set.add_metadata({'loop': {'ts_end': ts}})
             self.data_set.finalize()
+
+            if self.publisher is not None:
+                self.publisher.add_metadata({'loop': {'ts_end': ts}},
+                                            uuid=self.data_set.uuid)
+                self.publisher.finalize(uuid=self.data_set.uuid)
 
     def _run_loop(self, first_delay=0, action_indices=(),
                   loop_indices=(), current_values=(),
@@ -794,6 +814,7 @@ class ActiveLoop(Metadatable):
                 if hasattr(self.sweep_values, 'aggregate'):
                     value = self.sweep_values.aggregate(*set_val)
                 self.data_set.store(new_indices, {set_name: value})
+                self.publisher.store(new_indices, {set_name: value}, uuid=self.data_set.uuid)
                 for j, val in enumerate(set_val):
                     set_index = action_indices + (j+1, )
                     set_name = (self.data_set.action_id_map[set_index])
@@ -803,6 +824,7 @@ class ActiveLoop(Metadatable):
                 data_to_store[set_name] = value
 
             self.data_set.store(new_indices, data_to_store)
+            self.publisher.store(new_indices, data_to_store, uuid=self.data_set.uuid)
 
             if not self._nest_first:
                 # only wait the delay time if an inner loop will not inherit it
