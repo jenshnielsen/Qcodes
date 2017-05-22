@@ -2,10 +2,50 @@
 import sys
 import numpy as np
 
+from colors import color_cycle, colorscales, colorscales_raw
+# import qcodes.plots.colors.colorscales as colorscales
+
 import pyqtgraph as pg
+
+
+
+
+
+
+def make_rgba(colorscale):
+    dd = {}
+    dd['ticks'] = [(v, one_rgba(c)) for v, c in colorscale]
+    dd['mode'] = 'rgb'
+    return dd
+
+
+def one_rgba(c):
+    '''
+    convert a single color value to (r, g, b, a)
+    input can be an rgb string 'rgb(r,g,b)', '#rrggbb'
+    if we decide we want more we can make more, but for now this is just
+    to convert plotly colorscales to pyqtgraph tuples
+    '''
+    if c[0] == '#' and len(c) == 7:
+        return (int(c[1:3], 16), int(c[3:5], 16), int(c[5:7], 16), 255)
+    if c[:4] == 'rgb(':
+        return tuple(map(int, c[4:-1].split(','))) + (255,)
+    raise ValueError('one_rgba only supports rgb(r,g,b) and #rrggbb colors')
+
+
+__colorscales = {}
+
+for scale_name, scale in colorscales_raw.items():
+    __colorscales[scale_name] = make_rgba(scale)
+
+__colorscales['grey'] = __colorscales.pop('Greys') #pg.graphicsItems.GradientEditorItem.Gradients['grey']
+cc = pg.pgcollections.OrderedDict(__colorscales)
+
+
+pg.graphicsItems.GradientEditorItem.Gradients = cc
+
 from pyqtgraph import dockarea
 
-from colors import color_cycle, colorscales
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget, QShortcut, QHBoxLayout
@@ -347,7 +387,7 @@ class PlotDock(dockarea.Dock):
         self.hist_item.axis.setPen(self.theme[0])
         self.hist_item.hide()
 
-        cmap = getattr(kwargs, 'cmap', None)
+        cmap = getattr(kwargs, 'cmap', 'viridis')
         self.set_cmap(cmap)
 
         # self.hist_item.setLevels()
@@ -644,7 +684,7 @@ class QtPlot(QWidget):
             title = self._subplot_title(num, title)
             self.area.docks[dock].setTitle(title)
 
-        self.area.docks[dock].set_cmap(self._cmap)
+        # self.area.docks[dock].set_cmap(self._cmap)
 
         return self.area.docks[dock]
 
