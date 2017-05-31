@@ -370,7 +370,7 @@ class PlotDock(dockarea.Dock):
     '''
     def __init__(self, *args, **kwargs):
         self.theme = ((60, 60, 60), 'w')
-        self.grid = 40
+        self.grid = 20
         # self.theme = ((0, 0, 0), 'w')
         if 'theme' in kwargs.keys():
             self.theme = kwargs.pop('theme')
@@ -491,14 +491,12 @@ class PlotDock(dockarea.Dock):
             self.hist_item.show()
 
         else:
-
-
             if 'pen' not in kwargs:
                 if color is None:
                     cycle = color_cycle
                     color = cycle[len(self.plot_item.listDataItems()) % len(cycle)]
                 if width is None:
-                    width = 1
+                    width = 1.5
                 kwargs['pen'] = pg.mkPen(color, width=width)
 
             # If a marker symbol is desired use the same color as the line
@@ -574,6 +572,7 @@ class QtPlot(QWidget):
         self.theme = theme
         self._cmap = cmap
 
+
         # if title:
         self.setWindowTitle(title or 'QtPlot')
 
@@ -584,9 +583,14 @@ class QtPlot(QWidget):
             self.resize(*figsize)
 
         self.area = dockarea.DockArea()
+        # self.setStyleSheet("background-color:w;")
+        p = self.palette()
+        # p.setColor(self.backgroundRole(), QtGui.QColor('white'))
+        p.setColor(self.backgroundRole(), QtCore.Qt.white)
+        self.setPalette(p)
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.addWidget(self.area)
         self.setLayout(layout)
 
@@ -653,12 +657,13 @@ class QtPlot(QWidget):
 
     def _get_dock(self, num, **kwargs):
 
-        docks = [i for i in self.subplots.keys()]
+        docks = [i for i in self.area.docks.keys()]
         title = kwargs.get('title', None)
         position = kwargs.pop('position', 'right')
         relativeto = kwargs.pop('relativeto', None)
 
-        if num > len(docks):
+        print(num, len(docks))
+        if num >= len(docks):
             # TODO this is not fully bug free, somehow sometimes it doeos not udate :(
             # Maybe some processEvents?
             for i in range(num - len(docks)):
@@ -674,19 +679,29 @@ class QtPlot(QWidget):
             if relativeto is not None:
                 print('TODO we should move the dock here now...')
 
-        docks = [i for i in self.subplots.keys()]
-        # print(docks, num)
-        if num == -1:
-            num = 0
-        dock = docks[num-1]
+        docks = [i for i in self.area.docks.keys()]
+        dock_indices = [int(i.split(' - ')[0][1:]) for i in docks]
+        print(docks, num)
+
+
+
+        if num <= 0:
+            num = sorted(dock_indices)[num]
+        #     dockindex = dock_indices.index(num)
+        # else:
+        dockindex = dock_indices.index(num)
+
+
+
+        print(dockindex)
 
         if title:
             title = self._subplot_title(num, title)
-            self.area.docks[dock].setTitle(title)
+            self.area.docks[docks[dockindex]].setTitle(title)
 
         # self.area.docks[dock].set_cmap(self._cmap)
 
-        return self.area.docks[dock]
+        return self.area.docks[docks[dockindex]]
 
     def add(self, *args, subplot=1, **kwargs):
         dock = self._get_dock(subplot, **kwargs)
@@ -706,7 +721,7 @@ if __name__ == '__main__':
 
     dd = np.empty(100)
     dd[:] = np.nan
-    pi = plot.add(dd, name='test', subplot=-1, title='JUNK', position='bottom', relativeto=1,
+    pi = plot.add(dd, name='test', subplot=-1, title='JUNK', position='bottom',
                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
     # for nm, sp in plot.subplots.items():
 
@@ -716,10 +731,20 @@ if __name__ == '__main__':
     #     print(sp.plot_item.listDataItems())
     #     print()
     #     sp.clear()
-    plot.clear()
-    pi3 = plot.add(dd, name='test2', subplot=-1, title='JUNK', position='bottom', relativeto=1,
+    # plot.clear()
+    pi3 = plot.add(dd, name='testA', subplot=-2, title='JUNK', position='bottom',
                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi2 = plot.add(name='test2', subplot=3, title='JUNK2',
+    pi2 = plot.add(name='testB', subplot=2, title='JUNK2',
+                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    pi3 = plot.add(name='testC', subplot=3, title='JUNK2',
+                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    pi4 = plot.add(name='testD', subplot=4, title='JUNK2',
+                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    pi5 = plot.add(name='testE', subplot=5, title='JUNK2',
+                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    pi2 = plot.add(name='testB', subplot=-2, title='JUNK2',
+                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    pi3 = plot.add(name='testC', subplot=3, title='JUNK2',
                    config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
 
 
