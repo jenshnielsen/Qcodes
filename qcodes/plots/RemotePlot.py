@@ -165,6 +165,7 @@ class Plot():
                 arguments['x_info'] = snap
                 arguments['x_info']['label'] = snap.get('label', xlabel)
                 arguments['x_info']['unit'] = snap.get('unit', xunit)
+                arguments['x_info']['location'] = x.data_set.location
                 arguments['name'] = name or snap.get('array_id', None)
             else:
                 print('Fail on x')
@@ -178,6 +179,7 @@ class Plot():
                 # arguments['y_info']['uuid'] = y.data_set.uuid
                 arguments['y_info']['label'] = snap.get('label', ylabel)
                 arguments['y_info']['unit'] = snap.get('unit', yunit)
+                arguments['y_info']['location'] = x.data_set.location
                 arguments['name'] = name or snap.get('array_id', None)
             else:
                 print('Fail on y')
@@ -191,6 +193,7 @@ class Plot():
                 # arguments['z_info']['uuid'] = z.data_set.uuid
                 arguments['z_info']['label'] = snap.get('label', zlabel)
                 arguments['z_info']['unit'] = snap.get('unit', zunit)
+                arguments['z_info']['location'] = x.data_set.location
                 arguments['name'] = name or snap.get('array_id', None)
             else:
                 print('Fail on z')

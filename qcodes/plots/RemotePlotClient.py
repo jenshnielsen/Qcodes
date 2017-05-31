@@ -1,4 +1,5 @@
 import sys
+import os
 import zmq
 import numpy as np
 import json
@@ -93,19 +94,24 @@ class ZeroMQ_Listener(QtCore.QObject):
 
 class QtPlotWindow(QtWidgets.QWidget):
 
-    def __init__(self, topic, port, control_port=None, parent=None):
+    def __init__(self, topic, port, control_port=None, parent=None, theme=((60, 60, 60), 'w'),):
         QtWidgets.QMainWindow.__init__(self, parent)
         self.control_port = control_port
 
         self.stores = {}
         self.plots = []
 
-        self.setWindowTitle('Plot')
+        self.theme = theme
+
+
+
+        self.set_title('Plot')
+        self.title_parts = []
 
         self.plot = QtPlot()
 
         layout = QHBoxLayout()
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.plot)
         self.setLayout(layout)
 
@@ -135,6 +141,9 @@ class QtPlotWindow(QtWidgets.QWidget):
                 "tcp://localhost:%s" % (self.control_port))
 
         self.control_send({'client_ready': True})
+        cwd = os.getcwd()
+        self.control_send({'client_dir': str(cwd)})
+
 
         # Only way on windows to make it open on top of others...
         # And it doesn't really work :O
@@ -169,6 +178,22 @@ class QtPlotWindow(QtWidgets.QWidget):
         if self.control_port is not None:
             self.control_socket.send_json(data)
 
+    def get_default_title(self):
+        self.title_parts =  sorted(list(set(self.title_parts)))
+        title = ', '.join(self.title_parts)
+        if title == '':
+            title = 'Plot'
+        return title
+
+
+    def set_title(self, title=None):
+
+        if title is None:
+            title = self.get_default_title()
+
+        self.setWindowTitle(title)
+
+
     def signal_received(self, topic, uuid, message):
 
         if uuid not in self.stores:
@@ -179,7 +204,9 @@ class QtPlotWindow(QtWidgets.QWidget):
             if key == 'new_dataset':
                 store.add_metadata(msg)
             elif key == 'clear_plot':
+                del self.stores
                 self.stores = {}
+
                 for p in self.plots:
                     del p
                 self.plots = []
@@ -199,6 +226,8 @@ class QtPlotWindow(QtWidgets.QWidget):
                 for ax in 'xyz':
                     array_info = msg.get(ax+'_info', None)
                     if array_info is not None:
+                        self.title_parts.append(array_info['location'])
+
                         msg[ax] = store.get_array(
                             array_info['array_id'], array_info['shape'])
                         if data_arrays is not None:
@@ -223,8 +252,7 @@ class QtPlotWindow(QtWidgets.QWidget):
                     self._do_update = True
 
             elif key == 'finalize':
-                # self.text_edit.append('Measurement finished')
-                pass
+                self.save()
             elif key == 'set_title':
                 self.setWindowTitle(msg)
             elif key == 'set_cmap':
@@ -240,6 +268,21 @@ class QtPlotWindow(QtWidgets.QWidget):
     def update_labels(self):
         # for array_id, plot in self.plots.items():
         pass
+
+    def save(self, filename=None):
+        """
+        Save current plot to filename, by default
+        to the location corresponding to the default
+        title.
+
+        Args:
+            filename (Optional[str]): Location of the file
+        """
+        default = "{}.png".format(self.get_default_title())
+        filename = filename or default
+        image = self.grab()
+        self.control_send({'plot_saved': filename})
+        image.save(filename, "PNG", 0)
 
     def closeEvent(self, event):
         self.zeromq_listener.running = False
@@ -264,6 +307,8 @@ if __name__ == '__main__':
 
 
     mw.signal_received(topic='qcodes.plot.b819197931cd4b25b27c26d3eb347a27', uuid=None, message ={'set_cmap': 'hot'})
+
+    mw.save()
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
