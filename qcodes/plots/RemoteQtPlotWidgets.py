@@ -691,15 +691,11 @@ class QtPlot(QWidget):
         # else:
         dockindex = dock_indices.index(num)
 
-
-
-        print(dockindex)
-
         if title:
             title = self._subplot_title(num, title)
             self.area.docks[docks[dockindex]].setTitle(title)
 
-        # self.area.docks[dock].set_cmap(self._cmap)
+        self.area.docks[docks[dockindex]].set_cmap(self._cmap)
 
         return self.area.docks[docks[dockindex]]
 

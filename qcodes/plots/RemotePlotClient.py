@@ -253,6 +253,8 @@ class QtPlotWindow(QtWidgets.QWidget):
 
             elif key == 'finalize':
                 self.save()
+            elif key == 'save_screenshot':
+                self.save()
             elif key == 'set_title':
                 self.setWindowTitle(msg)
             elif key == 'set_cmap':
