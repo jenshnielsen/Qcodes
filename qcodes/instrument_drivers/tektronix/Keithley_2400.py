@@ -82,6 +82,8 @@ class Keithley_2400(VisaInstrument):
                            label='Resistance',
                            unit='Ohm')
 
+        self.connect_message()
+
     def _set_mode_and_sense(self, msg):
         # This helps set the correct read out curr/volt
         if msg == 'VOLT':

@@ -11,6 +11,41 @@ from qcodes.utils.validators import Anything
 from .parameter import StandardParameter
 from .function import Function
 
+import signal
+import logging
+from itertools import count
+
+class DeferInterrupt(object):
+
+    def __enter__(self):
+        self.counter = count()
+        self.signal_received = None
+        self._handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, self.handler)
+
+
+    def handler(self, sig, frame):
+        """
+        Handler signint either by doing nothing
+        or if got twice in a row by re-signaling
+        """
+        count = next(self.counter)
+        self.signal_received = (sig, frame)
+        if count  == 0:
+            logging.debug('SIGINT received. Delaying KeyboardInterrupt.')
+        if count == 1:
+            logging.debug('SIGINT received Twice. Forcing exit.')
+            temp_signal = self.signal_received
+            self.signal_received = None
+            self._handler(*temp_signal)
+
+
+    def __exit__(self, type, value, traceback):
+        # restore old handler
+        signal.signal(signal.SIGINT, self._handler)
+        if self.signal_received:
+            self._handler(*self.signal_received)
+
 
 class Instrument(Metadatable, DelegateAttributes):
 
@@ -476,7 +511,8 @@ class Instrument(Metadatable, DelegateAttributes):
             param_name (str): The name of a parameter of this instrument.
             value (any): The new value to set.
         """
-        self.parameters[param_name].set(value)
+        with DeferInterrupt():
+        	self.parameters[param_name].set(value)
 
     def get(self, param_name):
         """

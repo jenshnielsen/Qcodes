@@ -240,6 +240,7 @@ class QtPlotWindow(QtWidgets.QWidget):
 
                 msg['plot_item'] = pi
                 self.plots.append(msg)
+                self.set_title()
 
             elif key == 'data':
                 if store.arrays == {}:
@@ -280,15 +281,18 @@ class QtPlotWindow(QtWidgets.QWidget):
         Args:
             filename (Optional[str]): Location of the file
         """
-        default = "{}.png".format(self.get_default_title())
+
+
+        default = "{}.png".format(self.title_parts[-1])
         filename = filename or default
         image = self.grab()
-        self.control_send({'plot_saved': filename})
 
         i = 0
         while os.path.isfile(filename+'.png'):
             filename = filename + '_%d'%i
             i+=1
+
+        self.control_send({'plot_saved': filename})
         image.save(filename, "PNG", 0)
 
     def closeEvent(self, event):

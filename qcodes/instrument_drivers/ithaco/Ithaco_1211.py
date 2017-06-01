@@ -1,5 +1,5 @@
 from qcodes import Instrument
-from qcodes.instrument.parameter import MultiParameter
+from qcodes.instrument.parameter import MultiParameter, StandardParameter
 from qcodes.instrument.parameter import ManualParameter
 from qcodes.utils.validators import Enum, Bool
 
@@ -51,6 +51,58 @@ class CurrentParameter(MultiParameter):
             current *= -1
 
         value = (volt, current)
+        self._save_val(value)
+        return value
+
+
+
+class CurrentParameter2(StandardParameter):
+    """
+    Current measurement via an Ithaco preamp and a measured voltage.
+
+    To be used when you feed a current into the Ithaco, send the Ithaco's
+    output voltage to a lockin or other voltage amplifier, and you have
+    the voltage reading from that amplifier as a qcodes parameter.
+
+    ``CurrentParameter.get()`` returns ``(voltage_raw, current)``
+
+    Args:
+        measured_param (Parameter): a gettable parameter returning the
+            voltage read from the Ithaco output.
+
+        c_amp_ins (Ithaco_1211): an Ithaco instance where you manually
+            maintain the present settings of the real Ithaco amp.
+
+            Note: it should be possible to use other current preamps, if they
+            define parameters ``sens`` (sensitivity, in A/V), ``sens_factor``
+            (an additional gain) and ``invert`` (bool, output is inverted)
+
+        name (str): the name of the current output. Default 'curr'.
+            Also used as the name of the whole parameter.
+    """
+    def __init__(self, measured_param, c_amp_ins, name='curr'):
+        p_name = measured_param.name
+
+        super().__init__(name=name)
+
+        self._measured_param = measured_param
+        self._instrument = c_amp_ins
+
+        # p_label = getattr(measured_param, 'label', None)
+        # p_unit = getattr(measured_param, 'unit', None)
+
+        self.label = 'Current'
+        self.unit = 'A'
+
+    def get(self):
+        volt = self._measured_param.get()
+        current = (self._instrument.sens.get() *
+                   self._instrument.sens_factor.get()) * volt
+
+        if self._instrument.invert.get():
+            current *= -1
+
+        value = current
         self._save_val(value)
         return value
 

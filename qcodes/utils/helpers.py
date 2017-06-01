@@ -235,7 +235,7 @@ def wait_secs(finish_clock):
     """
     delay = finish_clock - time.perf_counter()
     if delay < 0:
-        logging.warning('negative delay {:.6f} sec'.format(delay))
+        # logging.warning('negative delay {:.6f} sec'.format(delay))
         return 0
     return delay
 
