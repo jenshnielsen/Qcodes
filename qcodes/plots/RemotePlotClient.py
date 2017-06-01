@@ -282,6 +282,11 @@ class QtPlotWindow(QtWidgets.QWidget):
         filename = filename or default
         image = self.grab()
         self.control_send({'plot_saved': filename})
+
+        i = 0
+        while os.path.isfile(filename+'.png'):
+            filename = filename + '_%d'%i
+            i+=1
         image.save(filename, "PNG", 0)
 
     def closeEvent(self, event):
