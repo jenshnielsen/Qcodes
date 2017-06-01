@@ -66,7 +66,7 @@ class Plot():
                                       max_tries=100)
     encoding = 'utf-8'
 
-    def __init__(self, name=None):
+    def __init__(self, title=None, name=None):
         name = name or uuid4().hex
         topic = 'qcodes.plot.'+name
         self.topic = topic
@@ -82,6 +82,8 @@ class Plot():
 
         client_ready_event.wait()
         client_ready_event.clear()
+
+        self.set_title(title)
 
     def publish(self, data, uuid=None):
         jdata = json.dumps(data)
@@ -297,7 +299,7 @@ class Plot():
 
     def save(self, filename=None):
         self.publish({'save_screenshot': str(filename)})
-        print('Should save a screenshot of the plot now')
+        # print('Should save a screenshot of the plot now')
 
     def set_xlabel(self, label, subplot=1):
         print('Should set the x-label of a subplot now')
