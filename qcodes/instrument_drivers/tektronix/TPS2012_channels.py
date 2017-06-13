@@ -290,7 +290,7 @@ class TPS2012WithChannels(VisaInstrument):
                                           1, 2.5, 5, 10, 25, 50))
 
         # channel-specific parameters
-        channels = ChannelList(self, "ScopeChannels", TPS2012Channel, snapshotable=False)
+        channels = ChannelList(self, "ScopeChannels", TPS2012Channel, snapshotable=False, oneindexed=True)
         for ch_num in range(1, 3):
             ch_name = "ch{}".format(ch_num)
             channel = TPS2012Channel(self, ch_name, ch_num)
