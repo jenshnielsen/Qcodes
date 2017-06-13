@@ -7,14 +7,16 @@ from functools import partial
 
 from qcodes import VisaInstrument, validators as vals
 from qcodes import InstrumentChannel, ChannelList
-from .TPS2012 import TraceNotReady, ScopeArray
+from .TPS2012 import TraceNotReady
 from qcodes import ArrayParameter
 
 log = logging.getLogger(__name__)
 
+
 class ScopeArray(ArrayParameter):
     def __init__(self, name, instrument, channel):
-        super().__init__('scope_measurement', shape=(2500,),
+        super().__init__(name,
+                         shape=(2500,),
                          label='Voltage',
                          unit='V ',
                          setpoint_names=('Time', ),
@@ -35,6 +37,7 @@ class ScopeArray(ArrayParameter):
 
     def prepare_curvedata(self):
         """
+
         Prepare the scope for returning curve data
         """
         # To calculate set points, we must have the full preamble
@@ -77,9 +80,9 @@ class ScopeArray(ArrayParameter):
 
         Args:
             curve (str): the return value of 'CURVe?' when
-            DATa:ENCdg is set to RPBinary.
-            Note: The header and final newline character
-            must be removed.
+              DATa:ENCdg is set to RPBinary.
+              Note: The header and final newline character
+              must be removed.
 
         Returns:
             nparray: the curve in units where the digitisation range
@@ -168,6 +171,7 @@ class ScopeArray(ArrayParameter):
         xdata = np.linspace(xstart, len(ydata)*xinc+xstart, len(ydata))
         return xdata, ydata, preamble['no_of_points']
 
+
 class TPS2012Channel(InstrumentChannel):
 
     def __init__(self, parent, name, channel):
@@ -209,6 +213,7 @@ class TPS2012Channel(InstrumentChannel):
         selected = list(map(int, self.ask('SELect?').split(';')))
         state = selected[ch - 1]
         return state
+
 
 class TPS2012WithChannels(VisaInstrument):
     """
