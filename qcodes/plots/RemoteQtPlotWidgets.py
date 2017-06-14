@@ -152,19 +152,30 @@ class PlotImage(pg.ImageItem):
     def setImage(self, *args, **kwargs):
         # self._hist.region.sigRegionChanged.connect(self.regionChanging)
         # self._hist.region.sigRegionChangeFinished.connect(self.regionChanged)
+        x = kwargs.get('x', None)
+        y = kwargs.get('y', None)
+        z = kwargs.get('z', None)
 
-        self.x = kwargs.get('x', None)
-        self.y = kwargs.get('y', None)
-        self.z = kwargs.get('z', None)
+        if x is not None:
+            self.x = x
+        if y is not None:
+            self.y = y
+        if z is not None:
+            self.z = z
+
 
         # self.setOpts(axisOrder='row-major')
-        self.transpose = kwargs.get('transpose', False)
+        # self.transpose = kwargs.get('transpose', False)
         # TODO transpose does not work yet :O
         self.transpose = False
 
         # self.auto_range = True
         super().setImage(*args, **kwargs)
 
+        if any([x is not None,y is not None,z is not None]):
+            self.update_data()
+
+        # self.update_data()
         # if self.image is not None:
         #     self.z_range = (np.nanmin(self.image), np.nanmax(self.image))
         # else:
@@ -193,7 +204,6 @@ class PlotImage(pg.ImageItem):
 
     #     print('ooooo')
     #     print(self.z)
-    #     self.update_data()
 
     # def setLevels(self, *args, **kwargs):
         # print('setLevels')
@@ -203,44 +213,20 @@ class PlotImage(pg.ImageItem):
         # super().setLevels(*args, **kwargs)
 
     def update_data(self):
-        # print('update')
+        # print('x update')
 
-        # self.old_levels =
+        if self.image is None:
+            return
+
         hist_range = (np.nanmin(self.image), np.nanmax(self.image))
-
-        # if :
-        #     self._hist_range = hist_range
-        #     self._hist.setLevels(*self._hist_range)
 
         if (self._hist.getLevels() == self._hist_range) or np.isnan(self._hist_range).any():
             self._hist_range = hist_range
             self._hist.setLevels(*self._hist_range)
 
+        # old_range = self._hist.getLevels()
 
-        # if self._hist_range == hist_range:
-        #     old_range = self._hist.setLevels(*self._hist_range)
-        # print(self.z_range, z_range, self.levels, self._hist.getLevels())
-        # hist_range = self._hist.getLevels()
-
-        # print(self.z_range == hist_range)
-        # print(z_range == hist_range)
-        # print(self.z_range, z_range, hist_range)
-        # print(' ')
-
-
-        self._hist_range
-
-        self.updateImage() #, levels=(0,1)) #autoLevels=self.auto_range
-
-        # h = self.getHistogram()
-        # hi = tuple([h[0][0], h[0][-1]])
-        # print(self.z_range == hi)
-        # print(self.z_range, hi)
-        self._hist.imageChanged() #autoLevel=self.auto_range
-        # if self.auto_range:
-        self.sigImageChanged.emit()
-        old_range = self._hist.getLevels()
-
+        # return
         # if h[0] is not None:
         #     # return
         # # if autoLevel:
@@ -267,54 +253,67 @@ class PlotImage(pg.ImageItem):
         # self.z_range = hi
         # print('xxx')
 
-        return
+        # return
 
-        if self.image is None:
-            print('NONE')
-            # super().setImage(self.image)
-            return
+        # if self.image is None:
+        #     print('NONE')
+        #     # super().setImage(self.image)
+        #     return
 
-        finite = np.isfinite(self.image)
+        finite = np.isfinite(self.z)
 
         if not np.any(finite):
             return
 
-        minX = 0
-        maxX = -1
-        minY = 0
-        maxY = -1
-        z_range = (np.nanmin(self.image), np.nanmax(self.image))
+        f0, f1 = np.any(finite, axis=0), np.any(finite, axis=1)
 
-        maskX = np.any(finite, axis=1)
-        maskY = np.any(finite, axis=0)
+        min0, min1 = np.argmax(f0),np.argmax(f1)
 
-        minX, maxX = np.nanmin(np.where(maskX)), np.max((np.nanmax(np.where(maskX)), 1))
-        minY, maxY = np.nanmin(np.where(maskY)), np.max((np.nanmax(np.where(maskY)), 1))
+        max0, max1 = len(f0) - np.argmax(f0[::-1]), len(f1) - np.argmax(f1[::-1])
 
+        mask1 = slice(min1, max1)
+        mask0 = slice(min0, max0)
 
-        if self.transpose:
-            # self.x, self.y = self.y, self.x
-            super().setImage(self.image[minX:maxX+1,minY:maxY+1][::-1,::].T, levels=z_range)
-            # print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx')
-            finite = finite.T
-        else:
-            super().setImage(self.image[minX:maxX+1,minY:maxY+1][:,::-1], levels=z_range)
+        # if self.transpose:
+        #     # self.x, self.y = self.y, self.x
+        #     super().setImage(self.image[minX:maxX+1,minY:maxY+1][::-1,::].T, levels=z_range)
+        #     # print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx')
+        #     finite = finite.T
+        # else:
+        # super().setImage()
+
+        self.image = self.z[mask1, mask0]
+        self.updateImage()
+        self.sigImageChanged.emit()  # updateimage does not know about the new data
+
+        # return
 
         if (self.x is not None) and (self.y is not None):
 
-            x0 = np.nanmin([np.nanmax(self.x), np.nanmin(self.x)])
-            width = np.nanmax(self.x) - np.nanmin(self.x)
-            dx = width / maxX
+                x0 = np.nanmin([np.nanmax(self.x[mask1]), np.nanmin(self.x[mask1])])
+                width = np.nanmax(self.x[mask1]) - np.nanmin(self.x[mask1])
+                if width == 0:
+                    width = 1
+                dx = width / (mask1.stop - mask1.start)
 
-            y0 = np.nanmax([np.nanmax(self.y), np.nanmin(self.y)])
-            height = np.nanmax(self.y) - np.nanmin(self.y)
-            dy = height / maxY
+                y0 = np.nanmin([np.nanmax(self.y[mask0]), np.nanmin(self.y[mask0])])
+                height = np.nanmax(self.y[mask0]) - np.nanmin(self.y[mask0])
+                if height == 0:
+                    height = 1
+                dy = height / (mask0.stop - mask0.start)
 
-            px, py, sx, sy = x0-dx/2, y0+dy/2, width+dx, -(height+dy)
-            # print(px, py, sx, sy)
+
+
+                px, py, sx, sy = x0-dx/2, y0-dy/2, width, height#+dy/2
+
+                if width == 1:
+                    sx = 1
+                if height == 1:
+                    sy = 1
             # print(np.nanmax(self.x), np.nanmin(self.x))
             # print(x0-dx/2, y0+dy/2, width+dx, -(height+dy))
-
+        else:
+            return
 
         # if np.isnan([]).any():
             # return
@@ -322,27 +321,43 @@ class PlotImage(pg.ImageItem):
         # if sx == 0 or sy == 0:
             # return
 
-        if px == np.nan:
-            px = minX
+        print('XXXXXXX')
+        print(mask1.stop - mask1.start)
+        print(mask0.stop - mask0.start)
+        print(x0, y0, width, height, dx, dy)
+        print(px, py, sx, sy)
 
-        if py == np.nan:
-            py = maxY
+        # if px == np.nan:
+        #     px = mask0.start
 
-        if (sx == np.nan) or (sx == 0):
-            if self.transpose:
-                sx = maxY
-            else:
-                sx = maxX
+        # if py == np.nan:
+        #     py = mask1.start
 
-        if (sy == np.nan) or (sy == 0):
-            if self.transpose:
-                sy = maxX
-            else:
-                sy = maxY
+        # if (sx == np.nan) or (sx == 0):
+        #     if self.transpose:
+        #         sx = mask1.stop
+        #     else:
+        #         sx = mask0.stop
+
+        # if (sy == np.nan) or (sy == 0):
+        #     if self.transpose:
+        #         sy = mask0.stop
+        #     else:
+        #         sy = mask1.stop
+
+
+        # print('YYYYYY')
+        # print(x0, y0, width, height, dx, dy)
+        # print(px, py, sx, sy)
+        # sy = mask1.stop
 
         # print((px, py, sx, sy))
         # rect = QtCore.QRectF(minX, maxY, max(maxX, 1), max(maxY, 1))
 
+        # print(minX, maxX)
+        # print(minY, maxY)
+
+        # return
         rect = QtCore.QRectF(px, py, sx, sy)  # topleft point and widths
         self.setRect(rect)
 
@@ -565,8 +580,6 @@ class QtPlot(QWidget):
 
         QWidget.__init__(self, parent=parent)
 
-        self.subplots = []
-
         # TODO update data with timing, not at every new datapoint
         self.auto_updating = False
         self.theme = theme
@@ -600,9 +613,7 @@ class QtPlot(QWidget):
 
 
     def clear(self):
-
         self.area.clear()
-        self.subplots = []
 
         self.add_dock()
 
@@ -636,18 +647,17 @@ class QtPlot(QWidget):
                 configuration for 'above' and 'below').
         """
 
-        title = self._subplot_title(len(self.subplots)+1, title)
+        title = self._subplot_title(len(self._get_docks())+1, title)
+        print('add dock ', title)
         subplot_dock = PlotDock(name=title, autoOrientation=False, closable=True)
         # self.set_subplot_title(subplot_dock, title)
 
         if type(relativeto) is int:
-            relativeto = [i for i in self.subplots.keys()][relativeto - 1]
-
-        self.subplots = self.area.docks
+            print(self._get_docks())
+            relativeto = self._get_docks()[relativeto - 1]
+            print(relativeto)
 
         self.area.addDock(subplot_dock, position, relativeto)
-
-        # print(self.subplots.valuerefs())
 
         return subplot_dock
 
@@ -655,9 +665,12 @@ class QtPlot(QWidget):
         title = '#{} - {}'.format(num, title or 'Plot')
         return title
 
+    def _get_docks(self):
+        return sorted(list(self.area.findAll()[1].keys()))
+
     def _get_dock(self, num, **kwargs):
 
-        docks = [i for i in self.area.docks.keys()]
+        docks = self._get_docks()
         title = kwargs.get('title', None)
         position = kwargs.pop('position', 'right')
         relativeto = kwargs.pop('relativeto', None)
@@ -679,7 +692,7 @@ class QtPlot(QWidget):
             if relativeto is not None:
                 print('TODO we should move the dock here now...')
 
-        docks = [i for i in self.area.docks.keys()]
+        docks = self._get_docks()
         dock_indices = [int(i.split(' - ')[0][1:]) for i in docks]
         print(docks, num)
 

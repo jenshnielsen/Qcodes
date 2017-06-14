@@ -164,13 +164,12 @@ class QtPlotWindow(QtWidgets.QWidget):
     def auto_update(self):
 
         # if dt < self.update_interval:
-        #     QtCore.QTimer.singleShot(0.1, self._auto_update)
+        #     QtCore.QTimer.singleShot(0.   1, self._auto_update)
 
         if self._do_update:
             for plot in self.plots:
                 # TODO only update when there is new data
                 plot['plot_item'].update_data()
-
                 self._last_update = time.perf_counter()
                 self._do_update = False
 
@@ -210,6 +209,8 @@ class QtPlotWindow(QtWidgets.QWidget):
                 for p in self.plots:
                     del p
                 self.plots = []
+                self.title_parts = []
+
 
                 self.plot.clear()
 
@@ -255,7 +256,7 @@ class QtPlotWindow(QtWidgets.QWidget):
             elif key == 'finalize':
                 self.save()
             elif key == 'save_screenshot':
-                self.save()
+                self.save(msg)
             elif key == 'set_title':
                 self.setWindowTitle(msg)
             elif key == 'set_cmap':
@@ -282,18 +283,23 @@ class QtPlotWindow(QtWidgets.QWidget):
             filename (Optional[str]): Location of the file
         """
 
-
-        default = "{}.png".format(self.title_parts[-1])
+        if len(self.title_parts)>0:
+            default = "{}".format(self.title_parts[-1])
+        else:
+            default = 'Plot'
         filename = filename or default
+        filename = filename.rstrip('.png')
+
         image = self.grab()
 
         i = 0
+        oldfilename = filename
         while os.path.isfile(filename+'.png'):
-            filename = filename + '_%d'%i
+            filename = oldfilename + '_%d'%i
             i+=1
-
-        self.control_send({'plot_saved': filename})
-        image.save(filename, "PNG", 0)
+        print(filename)
+        self.control_send({'plot_saved': filename+'.png'})
+        image.save(filename+'.png', "PNG", 0)
 
     def closeEvent(self, event):
         self.zeromq_listener.running = False
@@ -301,7 +307,6 @@ class QtPlotWindow(QtWidgets.QWidget):
         self.thread.wait()
         self.control_send({'client_losed': True})
         event.accept()
-
 
 if __name__ == '__main__':
     import sys
@@ -312,14 +317,14 @@ if __name__ == '__main__':
         port = str(sys.argv[2])
         control_port = str(sys.argv[3])
     else:
-        port, topic = (8895, 'qcodes.plot.be6cc66678324187b344f1f5392dd927')
+        port, topic = (8883, 'qcodes.plot.5da376f7976b40dab15cb8e744c6acd6')
 
     mw = QtPlotWindow(topic=topic, port=port, control_port=control_port)
 
 
-    mw.signal_received(topic='qcodes.plot.b819197931cd4b25b27c26d3eb347a27', uuid=None, message ={'set_cmap': 'hot'})
+    # mw.signal_received(topic='qcodes.plot.b819197931cd4b25b27c26d3eb347a27', uuid=None, message ={'set_cmap': 'hot'})
 
-    mw.save()
+    # mw.save()
 
     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
         QtGui.QApplication.instance().exec_()
