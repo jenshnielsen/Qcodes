@@ -10,6 +10,8 @@ import json
 from uuid import uuid4
 
 from qcodes.data.data_array import DataArray
+from qcodes.utils.helpers import NumpyJSONEncoder
+
 
 
 class ControlListener(threading.Thread):
@@ -86,7 +88,7 @@ class Plot():
         self.set_title(title)
 
     def publish(self, data, uuid=None):
-        jdata = json.dumps(data)
+        jdata = json.dumps(data, cls=NumpyJSONEncoder)
         uuid = uuid or ''
         self.socket.send_multipart([self.topic.encode(self.encoding),
                                     uuid.encode(self.encoding),
