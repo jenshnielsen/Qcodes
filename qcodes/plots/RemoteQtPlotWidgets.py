@@ -666,7 +666,9 @@ class QtPlot(QWidget):
         return title
 
     def _get_docks(self):
-        return sorted(list(self.area.findAll()[1].keys()))
+        ddd = list(self.area.findAll()[1].keys())
+        ddd.sort(key=lambda x:int(x.lstrip('#').split(' ')[0]))
+        return ddd
 
     def _get_dock(self, num, **kwargs):
 
