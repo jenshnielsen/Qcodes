@@ -58,6 +58,7 @@ import logging
 import os
 import collections
 import warnings
+from typing import Optional, List, Tuple, Union, Sequence
 
 import numpy
 
@@ -622,11 +623,20 @@ class MultiParameter(_BaseParameter):
         metadata (Optional[dict]): extra information to include with the
             JSON snapshot of the parameter
     """
-    def __init__(self, name, names, shapes, instrument=None,
-                 labels=None, units=None,
-                 setpoints=None, setpoint_names=None, setpoint_labels=None,
-                 setpoint_units=None, docstring=None,
-                 snapshot_get=True, snapshot_value=True, metadata=None):
+    def __init__(self, name,
+                 names: Sequence[str],
+                 shapes: Sequence[Sequence[int]],
+                 instrument =None,
+                 labels: Optional[Sequence[str]]=None,
+                 units: Optional[Sequence[str]]=None,
+                 setpoints: Optional[Sequence[Sequence[Union[Sequence,DataArray]]]]=None,
+                 setpoint_names: Optional[Sequence[Sequence[str]]]=None,
+                 setpoint_labels: Optional[Sequence[Sequence[str]]]=None,
+                 setpoint_units: Optional[Sequence[Sequence[str]]]=None,
+                 docstring: Optional[str]=None,
+                 snapshot_get: bool=True,
+                 snapshot_value: bool=True,
+                 metadata: Optional[dict]=None):
         super().__init__(name, instrument, snapshot_get, metadata,
                          snapshot_value=snapshot_value)
 
