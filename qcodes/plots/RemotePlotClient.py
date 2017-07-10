@@ -325,7 +325,7 @@ if __name__ == '__main__':
         port = str(sys.argv[2])
         control_port = str(sys.argv[3])
     else:
-        port, topic =(8894, 'qcodes.plot.37dc484837764ab8aeae0889a4efab72')
+        port, topic = (8886, 'qcodes.plot.d7f583134b0c4d9ba97e0628d0299aab')
 
     mw = QtPlotWindow(topic=topic, port=port, control_port=control_port)
 

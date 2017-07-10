@@ -140,7 +140,7 @@ class Plot():
     def add(self, *args, x=None, y=None, z=None,
             subplot=0, name=None, title=None, position=None,
             relativeto=None, xlabel=None, ylabel=None, zlabel=None,
-            xunit=None, yunit=None, zunit=None, silent=True,
+            xunit=None, yunit=None, zunit=None, silent=False,
             # color=None, width=None, symbol=None, pen=False, brush=None,
             # size=None, antialias=None,
             **kwargs):
@@ -153,8 +153,6 @@ class Plot():
             kwargs['z'] = z
 
         self.expand_trace(args, kwargs)
-
-        print(kwargs)
 
         x = kwargs.get('x', None)
         y = kwargs.get('y', None)

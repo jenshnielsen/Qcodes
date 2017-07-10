@@ -172,17 +172,10 @@ class PlotImage(pg.ImageItem):
         self.transpose = False
 
         # self.auto_range = True
-
-        # print('kkkkk', self.image)
         super().setImage(*args, **kwargs)
-        if any([x is not None, y is not None, z is not None]):
+
+        if any([x is not None,y is not None,z is not None]):
             self.update_data()
-
-        # print(args)
-        # print(kwargs)
-
-        # print('YYYYYYYYYYYYYYYYYYYYYYY')
-        # print('llllll', self.image)
 
         # self.update_data()
         # if self.image is not None:
@@ -293,21 +286,28 @@ class PlotImage(pg.ImageItem):
             if argmin0 > argmax0:
                 self.direction0 = -self.direction0
 
-            x0 = np.nanmin([self.x.item(argmin1), self.x.item(argmax1)])
-            x1 = np.nanmax([self.x.item(argmin1), self.x.item(argmax1)])
+            if self.x.ndim > 1:
+                x0 = np.nanmin([self.x[:, argmin1], self.x[:, argmax1]])
+                x1 = np.nanmax([self.x[:, argmin1], self.x[:, argmax1]])
+            else:
+                x0 = np.nanmin([self.x[argmin1], self.x[argmax1]])
+                x1 = np.nanmax([self.x[argmin1], self.x[argmax1]])
 
-            y0 = np.nanmin([self.y.item(argmin0), self.y.item(argmax0)])
-            y1 = np.nanmax([self.y.item(argmin0), self.y.item(argmax0)])
+            if self.y.ndim > 1:
+                y0 = np.nanmin([self.y[:, argmin0], self.y[:, argmax0]])
+                y1 = np.nanmax([self.y[:, argmin0], self.y[:, argmax0]])
+            else:
+                y0 = np.nanmin([self.y[argmin0], self.y[argmax0]])
+                y1 = np.nanmax([self.y[argmin0], self.y[argmax0]])
 
-
-            width = np.nanmax(x1 - x0)
+            width = np.nanmax(self.x[mask1]) - np.nanmin(self.x[mask1])
             nowidth = False
             if width == 0:
                 nowidth = True
                 width = 1
             dx = width / (mask1.stop - mask1.start)
 
-            height = np.nanmax(y1 - y0)
+            height = np.nanmax(self.y[mask0]) - np.nanmin(self.y[mask0])
             noheight = False
             if height == 0:
                 noheight = True
@@ -338,10 +338,7 @@ class PlotImage(pg.ImageItem):
         else:
             return
 
-        # print('XXXXXXXXXXXXXXXXXXX')
-        print(px, py, sx, sy)
-        # print('XXXXXXXXXXXXXXXXXXX')
-        super().setImage(self.z[mask1, mask0])
+        # print(px, py, sx, sy)
         rect = QtCore.QRectF(px, py, sx, sy)  # topleft point and widths
         self.setRect(rect)
 
@@ -721,7 +718,6 @@ class QtPlot(QWidget):
         dock = self._get_dock(subplot, **kwargs)
 
         # TODO add stuff from _draw_plot here
-        print(args, kwargs)
         item = dock.add_item(*args, **kwargs)
 
         return item
