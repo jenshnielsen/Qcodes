@@ -74,16 +74,18 @@ class Plot():
         self.topic = topic
         self.metadata = {}
 
-        client_ready_event = threading.Event()
+        self.client_ready_event = threading.Event()
 
-        self.control_task = ControlListener(client_ready_event)
+        self.control_task = ControlListener(self.client_ready_event)
         self.control_task.start()
         self.control_port = self.control_task.port
 
         self.new_client()
 
-        client_ready_event.wait()
-        client_ready_event.clear()
+        ret = self.client_ready_event.wait(30)
+        if ret == False:
+            print('timeout for plot window.')
+        self.client_ready_event.clear()
 
         self.set_title(title)
 
@@ -136,9 +138,12 @@ class Plot():
         self.publish({'clear_plot': True})
 
     def add(self, *args, x=None, y=None, z=None,
-            subplot=1, name=None, title=None, position=None,
+            subplot=0, name=None, title=None, position=None,
             relativeto=None, xlabel=None, ylabel=None, zlabel=None,
-            xunit=None, yunit=None, zunit=None, **kwargs):
+            xunit=None, yunit=None, zunit=None, silent=True,
+            # color=None, width=None, symbol=None, pen=False, brush=None,
+            # size=None, antialias=None,
+            **kwargs):
 
         if x is not None:
             kwargs['x'] = x
@@ -149,6 +154,8 @@ class Plot():
 
         self.expand_trace(args, kwargs)
 
+        print(kwargs)
+
         x = kwargs.get('x', None)
         y = kwargs.get('y', None)
         z = kwargs.get('z', None)
@@ -158,9 +165,16 @@ class Plot():
         arguments = {'subplot': subplot,
                      'title': title,
                      'position': position,
-                     'relativeto': relativeto}
+                     'relativeto': relativeto}#,
+                     # 'color': color,
+                     # 'width': width,
+                     # 'symbol': symbol,}
+                     # 'pen': pen,
+                     # 'brush': brush,
+                     # 'size': size,
+                     # 'antialias': antialias}
 
-        if x:
+        if x is not None:
             if isinstance(x, DataArray):
                 snap = x.snapshot()
                 uuid = x.data_set.uuid
@@ -168,26 +182,26 @@ class Plot():
                 #     arguments['x_array'] = pickle.dumps(x.ndarray, protocol=4)
                 arguments['x_info'] = snap
                 arguments['x_info']['label'] = snap.get('label', xlabel)
-                arguments['x_info']['unit'] = snap.get('unit', xunit)
-                arguments['x_info']['location'] = x.data_set.location
-                arguments['name'] = name or snap.get('array_id', None)
+                arguments['x_info']['unit'] = snap.get('unit', xunit) or snap.get('units', xunit)
+                arguments['x_info']['location'] = getattr(x.data_set, 'location', None)
+                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
             else:
                 print('Fail on x')
-        if y:
+        if y is not None:
             if isinstance(y, DataArray):
                 snap = y.snapshot()
-                uuid = y.data_set.uuid
+                uuid = getattr(y.data_set, 'uuid', None)
                 # if (~np.isnan(y.ndarray)).any():
                 #     arguments['y_array'] = pickle.dumps(y.ndarray, protocol=4)
                 arguments['y_info'] = snap
                 # arguments['y_info']['uuid'] = y.data_set.uuid
                 arguments['y_info']['label'] = snap.get('label', ylabel)
-                arguments['y_info']['unit'] = snap.get('unit', yunit)
-                arguments['y_info']['location'] = x.data_set.location
-                arguments['name'] = name or snap.get('array_id', None)
+                arguments['y_info']['unit'] = snap.get('unit', yunit) or snap.get('units', yunit)
+                arguments['y_info']['location'] = getattr(y.data_set, 'location', None)
+                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
             else:
                 print('Fail on y')
-        if z:
+        if z is not None:
             if isinstance(z, DataArray):
                 snap = z.snapshot()
                 uuid = z.data_set.uuid
@@ -196,9 +210,9 @@ class Plot():
                 arguments['z_info'] = snap
                 # arguments['z_info']['uuid'] = z.data_set.uuid
                 arguments['z_info']['label'] = snap.get('label', zlabel)
-                arguments['z_info']['unit'] = snap.get('unit', zunit)
-                arguments['z_info']['location'] = x.data_set.location
-                arguments['name'] = name or snap.get('array_id', None)
+                arguments['z_info']['unit'] = snap.get('unit', zunit) or snap.get('units', zunit)
+                arguments['z_info']['location'] = getattr(z.data_set, 'location', None)
+                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
             else:
                 print('Fail on z')
         # print('uuid:', uuid)
@@ -219,6 +233,14 @@ class Plot():
                               uuid, meta, arrays)
         else:
             self.publish({'add_plot': arguments}, uuid)
+
+        if not silent:
+            # self.client_ready_event.clear()
+            # return
+            ret = self.client_ready_event.wait(30)
+            if ret == False:
+                print('plot timed out!')
+            self.client_ready_event.clear()
 
     def expand_trace(self, args, kwargs):
         """
@@ -278,7 +300,8 @@ class Plot():
 
         # reset axletters, we may or may not have found them above
         axletters = 'xyz' if 'z' in kwargs else 'xy'
-        main_data = kwargs[axletters[-1]]
+        main_data = kwargs.get(axletters[-1], None)
+
         if hasattr(main_data, 'set_arrays'):
             num_axes = len(axletters) - 1
             # things will probably fail if we try to plot arrays of the
@@ -303,10 +326,10 @@ class Plot():
         self.publish({'save_screenshot': str(filename)})
         # print('Should save a screenshot of the plot now')
 
-    def set_xlabel(self, label, subplot=1):
+    def set_xlabel(self, label, subplot=0):
         print('Should set the x-label of a subplot now')
 
-    def set_ylabel(self, label, subplot=1):
+    def set_ylabel(self, label, subplot=0):
         print('Should set the y-label of a subplot now')
 
     def set_geometry(self, height, width, x0, y0):

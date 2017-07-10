@@ -227,7 +227,8 @@ class QtPlotWindow(QtWidgets.QWidget):
                 for ax in 'xyz':
                     array_info = msg.get(ax+'_info', None)
                     if array_info is not None:
-                        self.title_parts.append(array_info['location'])
+                        if array_info['location'] is not None:
+                            self.title_parts.append(array_info['location'])
 
                         msg[ax] = store.get_array(
                             array_info['array_id'], array_info['shape'])
@@ -237,6 +238,7 @@ class QtPlotWindow(QtWidgets.QWidget):
                             if data is not None:
                                 msg[ax] = data
 
+                # print(msg)
                 pi = self.plot.add(**msg)
 
                 msg['plot_item'] = pi
@@ -269,6 +271,8 @@ class QtPlotWindow(QtWidgets.QWidget):
                 # self.text_edit.append('Unknown message key %s' % key)
                 # self.text_edit.append(str(msg))
 
+            self.control_send({'client_ready': True})
+
     def update_labels(self):
         # for array_id, plot in self.plots.items():
         pass
@@ -287,8 +291,12 @@ class QtPlotWindow(QtWidgets.QWidget):
             default = "{}".format(self.title_parts[-1])
         else:
             default = 'Plot'
-        filename = filename or default
+
+        if (filename is None) or (filename == 'None'):
+            filename = default
         filename = filename.rstrip('.png')
+        filename = filename.rstrip('\\')
+        filename = filename.rstrip('/')
 
         image = self.grab()
 
@@ -317,7 +325,7 @@ if __name__ == '__main__':
         port = str(sys.argv[2])
         control_port = str(sys.argv[3])
     else:
-        port, topic = (8883, 'qcodes.plot.5da376f7976b40dab15cb8e744c6acd6')
+        port, topic =(8894, 'qcodes.plot.37dc484837764ab8aeae0889a4efab72')
 
     mw = QtPlotWindow(topic=topic, port=port, control_port=control_port)
 

@@ -106,7 +106,7 @@ class DiskIO:
         # note that this is NOT os.path.join - the difference is os.path.join
         # discards empty strings, so if you use it on a re.split absolute
         # path you will get a relative path!
-        return os.sep.join(re.split('[\\\\/]', location))
+        return os.sep.join(re.split('[\\\\/]', location)).rstrip(r'\\')
 
     def to_path(self, location):
         """

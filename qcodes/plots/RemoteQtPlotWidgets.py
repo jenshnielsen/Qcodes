@@ -137,6 +137,8 @@ class PlotImage(pg.ImageItem):
     # def __init__(self, *args, **kwargs)
     def __init__(self, *args, **kwargs):
         self._hist_range = (np.nan, np.nan)
+        self.direction0 = 1
+        self.direction1 = 1
         super().__init__(*args, **kwargs)
 
     # def regionChanging(self, *args, **kwargs):
@@ -170,10 +172,17 @@ class PlotImage(pg.ImageItem):
         self.transpose = False
 
         # self.auto_range = True
-        super().setImage(*args, **kwargs)
 
-        if any([x is not None,y is not None,z is not None]):
+        # print('kkkkk', self.image)
+        super().setImage(*args, **kwargs)
+        if any([x is not None, y is not None, z is not None]):
             self.update_data()
+
+        # print(args)
+        # print(kwargs)
+
+        # print('YYYYYYYYYYYYYYYYYYYYYYY')
+        # print('llllll', self.image)
 
         # self.update_data()
         # if self.image is not None:
@@ -267,97 +276,72 @@ class PlotImage(pg.ImageItem):
 
         f0, f1 = np.any(finite, axis=0), np.any(finite, axis=1)
 
-        min0, min1 = np.argmax(f0),np.argmax(f1)
+        min0, min1 = np.argmax(f0), np.argmax(f1)
 
         max0, max1 = len(f0) - np.argmax(f0[::-1]), len(f1) - np.argmax(f1[::-1])
 
-        mask1 = slice(min1, max1)
         mask0 = slice(min0, max0)
-
-        # if self.transpose:
-        #     # self.x, self.y = self.y, self.x
-        #     super().setImage(self.image[minX:maxX+1,minY:maxY+1][::-1,::].T, levels=z_range)
-        #     # print('XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXxx')
-        #     finite = finite.T
-        # else:
-        # super().setImage()
-
-        self.image = self.z[mask1, mask0]
-        self.updateImage()
-        self.sigImageChanged.emit()  # updateimage does not know about the new data
-
-        # return
+        mask1 = slice(min1, max1)
 
         if (self.x is not None) and (self.y is not None):
 
-                x0 = np.nanmin([np.nanmax(self.x[mask1]), np.nanmin(self.x[mask1])])
-                width = np.nanmax(self.x[mask1]) - np.nanmin(self.x[mask1])
-                if width == 0:
-                    width = 1
-                dx = width / (mask1.stop - mask1.start)
+            argmin0, argmax0 = np.nanargmin(self.y[mask0]), np.nanargmax(self.y[mask0])
+            argmin1, argmax1 = np.nanargmin(self.x[mask1]), np.nanargmax(self.x[mask1])
 
-                y0 = np.nanmin([np.nanmax(self.y[mask0]), np.nanmin(self.y[mask0])])
-                height = np.nanmax(self.y[mask0]) - np.nanmin(self.y[mask0])
-                if height == 0:
-                    height = 1
-                dy = height / (mask0.stop - mask0.start)
+            if argmin1 > argmax1:
+                self.direction1 = -self.direction1
+            if argmin0 > argmax0:
+                self.direction0 = -self.direction0
+
+            x0 = np.nanmin([self.x.item(argmin1), self.x.item(argmax1)])
+            x1 = np.nanmax([self.x.item(argmin1), self.x.item(argmax1)])
+
+            y0 = np.nanmin([self.y.item(argmin0), self.y.item(argmax0)])
+            y1 = np.nanmax([self.y.item(argmin0), self.y.item(argmax0)])
 
 
+            width = np.nanmax(x1 - x0)
+            nowidth = False
+            if width == 0:
+                nowidth = True
+                width = 1
+            dx = width / (mask1.stop - mask1.start)
 
-                px, py, sx, sy = x0-dx/2, y0-dy/2, width, height#+dy/2
+            height = np.nanmax(y1 - y0)
+            noheight = False
+            if height == 0:
+                noheight = True
+                height = 1
+            dy = height / (mask0.stop - mask0.start)
 
-                if width == 1:
-                    sx = 1
-                if height == 1:
-                    sy = 1
-            # print(np.nanmax(self.x), np.nanmin(self.x))
-            # print(x0-dx/2, y0+dy/2, width+dx, -(height+dy))
+
+            if self.direction1 == 1:
+                px = x0-dx/2
+            else:
+                px = x1+dx/2
+
+            if self.direction0 == 1:
+                py = y0-dy/2
+            else:
+                py = y1+dy/2
+
+            # # py = y0-dy/2
+            # print(dx, width, self.direction1,  dy, height, self.direction0)
+            # print(x0, x1, y0, y1)
+
+            sx, sy = (dx+width)*self.direction1, (dy+height)*self.direction0
+            if nowidth:
+                sx = 1
+            if noheight:
+                sy = 1
+
         else:
             return
 
-        # if np.isnan([]).any():
-            # return
-
-        # if sx == 0 or sy == 0:
-            # return
-
-        print('XXXXXXX')
-        print(mask1.stop - mask1.start)
-        print(mask0.stop - mask0.start)
-        print(x0, y0, width, height, dx, dy)
+        # print('XXXXXXXXXXXXXXXXXXX')
         print(px, py, sx, sy)
-
-        # if px == np.nan:
-        #     px = mask0.start
-
-        # if py == np.nan:
-        #     py = mask1.start
-
-        # if (sx == np.nan) or (sx == 0):
-        #     if self.transpose:
-        #         sx = mask1.stop
-        #     else:
-        #         sx = mask0.stop
-
-        # if (sy == np.nan) or (sy == 0):
-        #     if self.transpose:
-        #         sy = mask0.stop
-        #     else:
-        #         sy = mask1.stop
-
-
-        # print('YYYYYY')
-        # print(x0, y0, width, height, dx, dy)
-        # print(px, py, sx, sy)
-        # sy = mask1.stop
-
-        # print((px, py, sx, sy))
-        # rect = QtCore.QRectF(minX, maxY, max(maxX, 1), max(maxY, 1))
-
-        # print(minX, maxX)
-        # print(minY, maxY)
-
-        # return
+        # print('XXXXXXXXXXXXXXXXXXX')
+        super().setImage(self.z[mask1, mask0])
         rect = QtCore.QRectF(px, py, sx, sy)  # topleft point and widths
         self.setRect(rect)
 
@@ -490,7 +474,7 @@ class PlotDock(dockarea.Dock):
 
         return pg.ColorMap(values, colors)
 
-    def add_item(self, *args, color=None, width=None, **kwargs):
+    def add_item(self, *args, pen=False, **kwargs): #color=None, width=None, pen=None,
         """
         Shortcut to .plot_item.addItem() which also figures out 1D or 2D etc.
         """
@@ -506,21 +490,37 @@ class PlotDock(dockarea.Dock):
             self.hist_item.show()
 
         else:
-            if 'pen' not in kwargs:
-                if color is None:
-                    cycle = color_cycle
-                    color = cycle[len(self.plot_item.listDataItems()) % len(cycle)]
-                if width is None:
-                    width = 1.5
-                kwargs['pen'] = pg.mkPen(color, width=width)
+
+            color = kwargs.get('color', None)
+            width = kwargs.get('width', 1)
+            style = kwargs.get('style', None)
+            dash = kwargs.get('dash', None)
+            cosmetic = kwargs.get('cosmetic', True)
+            hsv = kwargs.get('hsv', None)
+
+            if (color is None) or (color not in 'rgbcmykw'):
+                cycle = color_cycle
+                color = cycle[len(self.plot_item.listDataItems()) % len(cycle)]
+
+            if pen is not None:
+                kwargs['pen'] = pg.mkPen(color=color, width=width, style=style, dash=dash, cosmetic=cosmetic, hsv=hsv)
+                color = kwargs['pen'].color()
+            else:
+                kwargs['pen'] = None
 
             # If a marker symbol is desired use the same color as the line
-            if any([('symbol' in key) for key in kwargs]):
-                if 'symbolPen' not in kwargs:
-                    symbol_pen_width = 1.0
-                    kwargs['symbolPen'] = pg.mkPen('444', width=symbol_pen_width)
+            symbol = kwargs.get('symbol', None)
+            if symbol == '.':
+                kwargs['symbol'] = 's'
+                if ('size' not in kwargs) and ('symbolSize' not in kwargs):
+                    kwargs['symbolSize'] = 5
+
+            if 'symbol' in kwargs or 'symbolPen' in kwargs or 'symbolSize' in kwargs:
                 if 'symbolBrush' not in kwargs:
                     kwargs['symbolBrush'] = color
+
+            if ('size' in kwargs) and ('symbolSize' not in kwargs):
+                kwargs['symbolSize'] = kwargs['size']
 
             item = PlotTrace(*args, **kwargs)
 
@@ -647,15 +647,15 @@ class QtPlot(QWidget):
                 configuration for 'above' and 'below').
         """
 
-        title = self._subplot_title(len(self._get_docks())+1, title)
-        print('add dock ', title)
+        title = self._subplot_title(len(self._get_docks()), title)
+        # print('add dock ', title, relativeto)
         subplot_dock = PlotDock(name=title, autoOrientation=False, closable=True)
         # self.set_subplot_title(subplot_dock, title)
 
         if type(relativeto) is int:
-            print(self._get_docks())
-            relativeto = self._get_docks()[relativeto - 1]
-            print(relativeto)
+            # print('y',self._get_docks())
+            relativeto = self._get_docks()[relativeto]
+            # print('y', relativeto)
 
         self.area.addDock(subplot_dock, position, relativeto)
 
@@ -677,28 +677,26 @@ class QtPlot(QWidget):
         position = kwargs.pop('position', 'right')
         relativeto = kwargs.pop('relativeto', None)
 
-        print(num, len(docks))
+        # print(position, relativeto)
+
+        if num == 'new':
+            num = len(docks)
+
         if num >= len(docks):
             # TODO this is not fully bug free, somehow sometimes it doeos not udate :(
             # Maybe some processEvents?
-            for i in range(num - len(docks)):
+            for i in range(num+1 - len(docks)):
                 dock_args = {}
-                if i == num - len(docks) - 1:
+                if i == num - len(docks):
                     if position is not None:
                         dock_args['position'] = position
                     if relativeto is not None:
                         dock_args['relativeto'] = relativeto
-
                 dock = self.add_dock(**dock_args)
-        else:
-            if relativeto is not None:
-                print('TODO we should move the dock here now...')
+        # else:
 
         docks = self._get_docks()
         dock_indices = [int(i.split(' - ')[0][1:]) for i in docks]
-        print(docks, num)
-
-
 
         if num <= 0:
             num = sorted(dock_indices)[num]
@@ -712,12 +710,18 @@ class QtPlot(QWidget):
 
         self.area.docks[docks[dockindex]].set_cmap(self._cmap)
 
+        if relativeto is not None:
+            dock = self.area.docks[docks[dockindex]]
+            neighbor = self.area.docks[docks[relativeto]]
+            self.area.moveDock(dock, position, neighbor)
+
         return self.area.docks[docks[dockindex]]
 
-    def add(self, *args, subplot=1, **kwargs):
+    def add(self, *args, subplot=0, **kwargs):
         dock = self._get_dock(subplot, **kwargs)
 
         # TODO add stuff from _draw_plot here
+        print(args, kwargs)
         item = dock.add_item(*args, **kwargs)
 
         return item
@@ -730,9 +734,9 @@ if __name__ == '__main__':
     plot = QtPlot()
     plot.show()
 
-    dd = np.empty(100)
-    dd[:] = np.nan
-    pi = plot.add(dd, name='test', subplot=-1, title='JUNK', position='bottom',
+    dd = np.random.random(100)
+    # dd[:] = np.nan
+    pi = plot.add(dd, name='test', title='JUNK', position='bottom',
                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
     # for nm, sp in plot.subplots.items():
 
@@ -743,26 +747,29 @@ if __name__ == '__main__':
     #     print()
     #     sp.clear()
     # plot.clear()
-    pi3 = plot.add(dd, name='testA', subplot=-2, title='JUNK', position='bottom',
+    # o, s, t, d, +
+    pi3 = plot.add(dd, symbol='.', width=1, name='testA', subplot='new', title='JUNK2', position='bottom',
                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi2 = plot.add(name='testB', subplot=2, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi3 = plot.add(name='testC', subplot=3, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi4 = plot.add(name='testD', subplot=4, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi5 = plot.add(name='testE', subplot=5, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi2 = plot.add(name='testB', subplot=-2, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
-    pi3 = plot.add(name='testC', subplot=3, title='JUNK2',
-                   config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi2 = plot.add(name='testB', subplot='new', title='JUNK2',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi3 = plot.add(name='testC', subplot=3, relativeto=0, position='bottom', title='JUNK XXX',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi4 = plot.add(name='testC', subplot='new', relativeto=2, position='bottom', title='JUNK XXXxx',
+                   # config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi4 = plot.add(name='testD', subplot=4, title='JUNK2',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi5 = plot.add(name='testE', subplot=5, title='JUNK2',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi2 = plot.add(name='testB', subplot=-2, title='JUNK2',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
+    # pi3 = plot.add(name='testC', subplot=3, title='JUNK2',
+    #                config={'xlabel': 'xlab', 'ylabel': 'ylab', 'xunit': 'Vx', 'yunit': 'Vy'})
 
 
 
-    dd[:5] = np.random.random(5)
-    pi.update_data()
-    pi2.update_data()
+    # dd[:5] = np.random.random(5)
+    # pi.update_data()
+    # pi2.update_data()
 
 
     # plot.clear()

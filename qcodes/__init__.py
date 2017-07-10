@@ -23,7 +23,7 @@ if in_notebook():  # pragma: no cover
               'to see the full error')
 
     try:
-        from qcodes.plots.pyqtgraph import QtPlot
+        from qcodes.plots.RemotePlot import Plot
     except Exception:
         print('pyqtgraph plotting not supported, '
               'try "from qcodes.plots.pyqtgraph import QtPlot" '
