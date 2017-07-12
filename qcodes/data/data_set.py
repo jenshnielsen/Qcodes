@@ -176,6 +176,8 @@ class DataSet(DelegateAttributes):
         else:
             raise ValueError('unrecognized location ' + repr(location))
 
+        self.publisher = None
+
         # TODO: when you change formatter or io (and there's data present)
         # make it all look unsaved
         self.formatter = formatter or self.default_formatter
@@ -392,6 +394,10 @@ class DataSet(DelegateAttributes):
             self.write()
             self.last_write = time.time()
 
+        if self.publisher is not None:
+            self.publisher.store(loop_indices, ids_values, uuid=self.uuid)
+
+
     def default_parameter_name(self, paramname='amplitude'):
         """ Return name of default parameter for plotting
 
@@ -546,8 +552,14 @@ class DataSet(DelegateAttributes):
         """
         deep_update(self.metadata, new_metadata)
 
+        if self.publisher is not None:
+            self.publisher.add_metadata(new_metadata, uuid=self.uuid)
+
     def save_metadata(self):
         """Evaluate and save the DataSet's metadata."""
+        if self.publisher is not None:
+            self.publisher.add_metadata(self.metadata, uuid=self.uuid)
+
         if self.location is not False:
             self.snapshot()
             self.formatter.write_metadata(self, self.io, self.location)
@@ -565,6 +577,9 @@ class DataSet(DelegateAttributes):
             self.formatter.close_file(self)
 
         self.save_metadata()
+
+        if self.publisher is not None:
+            self.publisher.finalize(uuid=self.uuid)
 
     def snapshot(self, update=False):
         """JSON state of the DataSet."""

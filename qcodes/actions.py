@@ -103,18 +103,10 @@ class _Measure:
 
     This should not be constructed manually, only by an ActiveLoop.
     """
-    def __init__(self, params_indices, data_set, use_threads,
-                 publisher=None):
+    def __init__(self, params_indices, data_set, use_threads):
         self.use_threads = use_threads and len(params_indices) > 1
         # the applicable DataSet.store function
         self.store = data_set.store
-
-        if hasattr(publisher, 'store'):
-            self.pub_store = publisher.store
-            self.uuid = data_set.uuid
-            self._has_pub = True
-        else:
-            self._has_pub = False
 
         # for performance, pre-calculate which params return data for
         # multiple arrays, and the name mappings
@@ -153,8 +145,6 @@ class _Measure:
 
         self.store(loop_indices, out_dict)
 
-        if self._has_pub:
-            self.pub_store(loop_indices, out_dict, self.uuid)
 
 
 class _Nest:
