@@ -69,7 +69,6 @@ class ZeroMQ_Listener(QtCore.QObject):
             if socks.get(self.socket) == zmq.POLLIN:
                 # try:
                 parts = self.socket.recv_multipart()
-                # print(parts)
                 topic, uuid, msg = parts[:3]
 
                 topic = topic.decode()
@@ -194,7 +193,6 @@ class QtPlotWindow(QtWidgets.QWidget):
 
 
     def signal_received(self, topic, uuid, message):
-
         if uuid not in self.stores:
             self.stores[uuid] = DataSet(uuid)
         store = self.stores[uuid]
@@ -227,17 +225,16 @@ class QtPlotWindow(QtWidgets.QWidget):
                 for ax in 'xyz':
                     array_info = msg.get(ax+'_info', None)
                     if array_info is not None:
-                        if array_info['location'] is not None:
+                        array_id = array_info.get('array_id', None)
+                        if array_info.get('location', None) is not None:
                             self.title_parts.append(array_info['location'])
 
-                        msg[ax] = store.get_array(
-                            array_info['array_id'], array_info['shape'])
+                        if array_id is not None:
+                            msg[ax] = store.get_array(array_id, array_info['shape'])
                         if data_arrays is not None:
-                            data = data_arrays.get(
-                                array_info['array_id'], None)
+                            data = data_arrays.get(array_id, None)
                             if data is not None:
                                 msg[ax] = data
-
                 # print(msg)
                 pi = self.plot.add(**msg)
 
@@ -246,6 +243,7 @@ class QtPlotWindow(QtWidgets.QWidget):
                 self.set_title()
 
             elif key == 'data':
+
                 if store.arrays == {}:
                     return
                 ids_values = msg['values']
@@ -268,8 +266,6 @@ class QtPlotWindow(QtWidgets.QWidget):
 
             else:
                 pass
-                # self.text_edit.append('Unknown message key %s' % key)
-                # self.text_edit.append(str(msg))
 
             self.control_send({'client_ready': True})
 
@@ -305,7 +301,6 @@ class QtPlotWindow(QtWidgets.QWidget):
         while os.path.isfile(filename+'.png'):
             filename = oldfilename + '_%d'%i
             i+=1
-        print(filename)
         self.control_send({'plot_saved': filename+'.png'})
         image.save(filename+'.png', "PNG", 0)
 
@@ -325,7 +320,7 @@ if __name__ == '__main__':
         port = str(sys.argv[2])
         control_port = str(sys.argv[3])
     else:
-        port, topic = (8886, 'qcodes.plot.d7f583134b0c4d9ba97e0628d0299aab')
+        port, topic = (8893, 'qcodes.plot.50c72c3f2dba4e5c84f2f4cd1d92afd8')
 
     mw = QtPlotWindow(topic=topic, port=port, control_port=control_port)
 

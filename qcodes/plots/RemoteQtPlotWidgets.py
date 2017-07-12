@@ -119,9 +119,6 @@ class PlotTrace(pg.PlotDataItem):
             else:
                 masky = np.isfinite(self.y)
                 super().setData(self.y[masky])
-        # else:
-        #     print('fail')
-
 
 class PlotImage(pg.ImageItem):
 
@@ -139,6 +136,9 @@ class PlotImage(pg.ImageItem):
         self._hist_range = (np.nan, np.nan)
         self.direction0 = 1
         self.direction1 = 1
+        self.x_data = None
+        self.y_data = None
+        self.z_data = None
         super().__init__(*args, **kwargs)
 
     # def regionChanging(self, *args, **kwargs):
@@ -154,17 +154,26 @@ class PlotImage(pg.ImageItem):
     def setImage(self, *args, **kwargs):
         # self._hist.region.sigRegionChanged.connect(self.regionChanging)
         # self._hist.region.sigRegionChangeFinished.connect(self.regionChanged)
+
+        # if 'x' in kwargs:
+        #     self.x = kwargs['x']
+        # if 'y' in kwargs:
+        #     self.y = kwargs['y']
+        # if 'z' in kwargs:
+        #     self.z = kwargs['z']
         x = kwargs.get('x', None)
         y = kwargs.get('y', None)
         z = kwargs.get('z', None)
 
+        # self.x = x
+        # self.y = y
+        # self.z = z
         if x is not None:
-            self.x = x
+            self.x_data = x
         if y is not None:
-            self.y = y
+            self.y_data = y
         if z is not None:
-            self.z = z
-
+            self.z_data = z
 
         # self.setOpts(axisOrder='row-major')
         # self.transpose = kwargs.get('transpose', False)
@@ -172,52 +181,37 @@ class PlotImage(pg.ImageItem):
         self.transpose = False
 
         # self.auto_range = True
-        super().setImage(*args, **kwargs)
 
-        if any([x is not None,y is not None,z is not None]):
+        self.prepareGeometryChange()
+        self.informViewBoundsChanged()
+
+        # print('kkkkk', self.image)
+        super().setImage(*args, **kwargs)
+        if any([x is not None, y is not None, z is not None]):
             self.update_data()
 
-        # self.update_data()
-        # if self.image is not None:
-        #     self.z_range = (np.nanmin(self.image), np.nanmax(self.image))
-        # else:
-        #     self.z_range = (0, 1)
-
-
-    #     print(args)
-    #     print('argsargsargsargsargsargsargsargsargsargsargs')
-    #     print(kwargs)
-    #     self.y = None
-    #     self.x = None
-    #     self.z = None
-
-    #     if len(args) == 3:
-    #         self.x = args[0]
-    #         self.y = args[1]
-    #         self.z = args[2]
-
-    #     # else:
-    #     #     raise('error zzz')
-    #     self.z = kwargs.get('z', None)
-
-    #     if len(args) == 1:
-    #         self.z = args[0]
-
-
-    #     print('ooooo')
-    #     print(self.z)
-
-    # def setLevels(self, *args, **kwargs):
-        # print('setLevels')
-        # print(args)
-        # print(kwargs)
-        # self.auto_range = False
-        # super().setLevels(*args, **kwargs)
+    # def _masked_data(self, data, mask):
+    #     if data is not None:
+    #         if data.ndim == 1:
+    #             return data[mask]
+    #         if data.ndim == 2:
+    #             return data[mask]
+    #         else:
+    #              raise ValueError('Image with too many dimensions')
+    #     else:
+    #         return None
 
     def update_data(self):
-        # print('x update')
 
         if self.image is None:
+            return
+        if self.z_data is None:
+            return
+
+
+        finite = np.isfinite(self.z_data)
+
+        if not np.any(finite):
             return
 
         hist_range = (np.nanmin(self.image), np.nanmax(self.image))
@@ -225,47 +219,6 @@ class PlotImage(pg.ImageItem):
         if (self._hist.getLevels() == self._hist_range) or np.isnan(self._hist_range).any():
             self._hist_range = hist_range
             self._hist.setLevels(*self._hist_range)
-
-        # old_range = self._hist.getLevels()
-
-        # return
-        # if h[0] is not None:
-        #     # return
-        # # if autoLevel:
-        #     mn = h[0][0]
-        #     mx = h[0][-1]
-
-            # self._hist.region.setRegion([mn, mx])
-
-        # if self.z_range == hist_range:
-        #     self.z_range = z_range
-        #     # self._hist..region.setRegion()
-        #     self.setLevels(z_range, update=True)
-            # self._hist.setLevels(*z_range)
-            # self.levels = self._hist.getLevels()
-            # print(self._hist.getLevels())
-
-
-
-        # h = self.getHistogram()
-        # hi = tuple([h[0][0], h[0][-1]])
-        # print(self.z_range == hi)
-        # print(self.z_range, hi)
-
-        # self.z_range = hi
-        # print('xxx')
-
-        # return
-
-        # if self.image is None:
-        #     print('NONE')
-        #     # super().setImage(self.image)
-        #     return
-
-        finite = np.isfinite(self.z)
-
-        if not np.any(finite):
-            return
 
         f0, f1 = np.any(finite, axis=0), np.any(finite, axis=1)
 
@@ -276,78 +229,115 @@ class PlotImage(pg.ImageItem):
         mask0 = slice(min0, max0)
         mask1 = slice(min1, max1)
 
-        if (self.x is not None) and (self.y is not None):
+        xx = None
+        yy = None
+        zz = None
 
-            argmin0, argmax0 = np.nanargmin(self.y[mask0]), np.nanargmax(self.y[mask0])
-            argmin1, argmax1 = np.nanargmin(self.x[mask1]), np.nanargmax(self.x[mask1])
+        if self.x_data is not None:
+            if self.x_data.ndim == 1:
+                xx = self.x_data[mask1]
+            if self.x_data.ndim == 2:
+                xx = self.x_data[mask1, mask0]
 
+        if self.y_data is not None:
+            if self.y_data.ndim == 1:
+                yy = self.y_data[mask0]
+            if self.y_data.ndim == 2:
+                yy = self.y_data[mask1, mask0]
+
+        if self.z_data is not None:
+            if self.z_data.ndim == 1:
+                zz = self.z_data[mask0]
+            if self.z_data.ndim == 2:
+                zz = self.z_data[mask1, mask0]
+
+
+        if xx is not None:
+            argmin1, argmax1 = np.nanargmin(xx[mask1]), np.nanargmax(xx[mask1])
+            print(argmin1, argmax1)
             if argmin1 > argmax1:
-                self.direction1 = -self.direction1
-            if argmin0 > argmax0:
-                self.direction0 = -self.direction0
-
-            if self.x.ndim > 1:
-                x0 = np.nanmin([self.x[:, argmin1], self.x[:, argmax1]])
-                x1 = np.nanmax([self.x[:, argmin1], self.x[:, argmax1]])
+                self.direction1 = -1
             else:
-                x0 = np.nanmin([self.x[argmin1], self.x[argmax1]])
-                x1 = np.nanmax([self.x[argmin1], self.x[argmax1]])
+                self.direction1 = 1
 
-            if self.y.ndim > 1:
-                y0 = np.nanmin([self.y[:, argmin0], self.y[:, argmax0]])
-                y1 = np.nanmax([self.y[:, argmin0], self.y[:, argmax0]])
-            else:
-                y0 = np.nanmin([self.y[argmin0], self.y[argmax0]])
-                y1 = np.nanmax([self.y[argmin0], self.y[argmax0]])
+            x_extrema = [xx.item(argmin1), xx.item(argmax1)]
+            x0 = np.nanmin(x_extrema)
+            x1 = np.nanmax(x_extrema)
 
-            width = np.nanmax(self.x[mask1]) - np.nanmin(self.x[mask1])
+            width = np.nanmax(x1 - x0)
             nowidth = False
             if width == 0:
                 nowidth = True
                 width = 1
-            dx = width / (mask1.stop - mask1.start)
-
-            height = np.nanmax(self.y[mask0]) - np.nanmin(self.y[mask0])
-            noheight = False
-            if height == 0:
-                noheight = True
-                height = 1
-            dy = height / (mask0.stop - mask0.start)
-
+                dx = 0.5
+            else:
+                dx = width / (zz.shape[0]-1)
 
             if self.direction1 == 1:
                 px = x0-dx/2
             else:
                 px = x1+dx/2
+        else:
+            width = (max1 - min1)
+            if width < 1:
+                width = 0.5
+            px = -0.5
+            sx = width + 1
+
+
+        if yy is not None:
+            argmin0, argmax0 = np.nanargmin(yy[mask0]), np.nanargmax(yy[mask0])
+            print(argmin0, argmax0)
+            if argmin0 > argmax0:
+                self.direction0 = -1
+            else:
+                self.direction0 = 1
+
+            y_extrema = [yy.item(argmin0), yy.item(argmax0)]
+            y0 = np.nanmin(y_extrema)
+            y1 = np.nanmax(y_extrema)
+
+
+            height = np.nanmax(y1 - y0)
+            noheight = False
+            if height == 0:
+                noheight = True
+                height = 1
+                dy = 0.5
+            else:
+                dy = height / (zz.shape[1]-1)
+
+
 
             if self.direction0 == 1:
                 py = y0-dy/2
             else:
                 py = y1+dy/2
 
-            # # py = y0-dy/2
-            # print(dx, width, self.direction1,  dy, height, self.direction0)
-            # print(x0, x1, y0, y1)
-
             sx, sy = (dx+width)*self.direction1, (dy+height)*self.direction0
             if nowidth:
                 sx = 1
             if noheight:
                 sy = 1
-
         else:
-            return
+            height = (max0 - min0)
+            if height < 1:
+                height = 0.5
+            px = -0.5
+            sx = height + 1
 
-        # print(px, py, sx, sy)
+        # print('aaa',
+        #         x0,
+        #         x1,
+        #         y0,
+        #         y1,
+        #         width,
+        #         height)
+
+        # print('bbb', px, py, sx, sy)
+        self.updateImage(zz)
         rect = QtCore.QRectF(px, py, sx, sy)  # topleft point and widths
         self.setRect(rect)
-
-    # def updateImage(self, *args, **kwargs):
-    #     print(args)
-    #     print(kwargs)
-    #     if self.image is not None:
-    #         super().updateImage(*args, **kwargs)
-
 
 
 
@@ -487,7 +477,6 @@ class PlotDock(dockarea.Dock):
             self.hist_item.show()
 
         else:
-
             color = kwargs.get('color', None)
             width = kwargs.get('width', 1)
             style = kwargs.get('style', None)
@@ -530,7 +519,6 @@ class PlotDock(dockarea.Dock):
                 config[ax+'label'] = info['label']
                 config[ax+'unit'] = info['unit']
 
-        # print(config)
         if config != {}:
             self.set_labels(config)
 
@@ -645,14 +633,11 @@ class QtPlot(QWidget):
         """
 
         title = self._subplot_title(len(self._get_docks()), title)
-        # print('add dock ', title, relativeto)
         subplot_dock = PlotDock(name=title, autoOrientation=False, closable=True)
         # self.set_subplot_title(subplot_dock, title)
 
         if type(relativeto) is int:
-            # print('y',self._get_docks())
             relativeto = self._get_docks()[relativeto]
-            # print('y', relativeto)
 
         self.area.addDock(subplot_dock, position, relativeto)
 
@@ -671,10 +656,10 @@ class QtPlot(QWidget):
 
         docks = self._get_docks()
         title = kwargs.get('title', None)
+        name = kwargs.get('name', None)
         position = kwargs.pop('position', 'right')
         relativeto = kwargs.pop('relativeto', None)
 
-        # print(position, relativeto)
 
         if num == 'new':
             num = len(docks)
@@ -700,6 +685,8 @@ class QtPlot(QWidget):
         #     dockindex = dock_indices.index(num)
         # else:
         dockindex = dock_indices.index(num)
+        if (name is not None) and ('z' in kwargs):
+            title = name
 
         if title:
             title = self._subplot_title(num, title)
@@ -717,7 +704,6 @@ class QtPlot(QWidget):
     def add(self, *args, subplot=0, **kwargs):
         dock = self._get_dock(subplot, **kwargs)
 
-        # TODO add stuff from _draw_plot here
         item = dock.add_item(*args, **kwargs)
 
         return item

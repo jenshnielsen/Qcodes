@@ -73,6 +73,7 @@ class Plot():
         topic = 'qcodes.plot.'+name
         self.topic = topic
         self.metadata = {}
+        self.data_uuid = uuid4().hex
 
         self.client_ready_event = threading.Event()
 
@@ -140,7 +141,7 @@ class Plot():
     def add(self, *args, x=None, y=None, z=None,
             subplot=0, name=None, title=None, position=None,
             relativeto=None, xlabel=None, ylabel=None, zlabel=None,
-            xunit=None, yunit=None, zunit=None, silent=False,
+            xunit=None, yunit=None, zunit=None, silent=True,
             # color=None, width=None, symbol=None, pen=False, brush=None,
             # size=None, antialias=None,
             **kwargs):
@@ -151,6 +152,14 @@ class Plot():
             kwargs['y'] = y
         if z is not None:
             kwargs['z'] = z
+
+        kwargs['xlabel'] = xlabel
+        kwargs['ylabel'] = ylabel
+        kwargs['zlabel'] = zlabel
+        kwargs['xunit'] = xunit
+        kwargs['yunit'] = yunit
+        kwargs['zunit'] = zunit
+        kwargs['name'] = name
 
         self.expand_trace(args, kwargs)
 
@@ -172,59 +181,69 @@ class Plot():
                      # 'size': size,
                      # 'antialias': antialias}
 
-        if x is not None:
-            if isinstance(x, DataArray):
-                snap = x.snapshot()
-                uuid = x.data_set.uuid
-                # if (~np.isnan(x.ndarray)).any():
-                #     arguments['x_array'] = pickle.dumps(x.ndarray, protocol=4)
-                arguments['x_info'] = snap
-                arguments['x_info']['label'] = snap.get('label', xlabel)
-                arguments['x_info']['unit'] = snap.get('unit', xunit) or snap.get('units', xunit)
-                arguments['x_info']['location'] = getattr(x.data_set, 'location', None)
-                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
-            else:
-                print('Fail on x')
-        if y is not None:
-            if isinstance(y, DataArray):
-                snap = y.snapshot()
-                uuid = getattr(y.data_set, 'uuid', None)
-                # if (~np.isnan(y.ndarray)).any():
-                #     arguments['y_array'] = pickle.dumps(y.ndarray, protocol=4)
-                arguments['y_info'] = snap
-                # arguments['y_info']['uuid'] = y.data_set.uuid
-                arguments['y_info']['label'] = snap.get('label', ylabel)
-                arguments['y_info']['unit'] = snap.get('unit', yunit) or snap.get('units', yunit)
-                arguments['y_info']['location'] = getattr(y.data_set, 'location', None)
-                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
-            else:
-                print('Fail on y')
-        if z is not None:
-            if isinstance(z, DataArray):
-                snap = z.snapshot()
-                uuid = z.data_set.uuid
-                # if (~np.isnan(z.ndarray)).any():
-                #     arguments['z_array'] = pickle.dumps(z.ndarray, protocol=4)
-                arguments['z_info'] = snap
-                # arguments['z_info']['uuid'] = z.data_set.uuid
-                arguments['z_info']['label'] = snap.get('label', zlabel)
-                arguments['z_info']['unit'] = snap.get('unit', zunit) or snap.get('units', zunit)
-                arguments['z_info']['location'] = getattr(z.data_set, 'location', None)
-                arguments['name'] = name or snap.get('array_id', None) or snap.get('name', None)
-            else:
-                print('Fail on z')
-        # print('uuid:', uuid)
-
         meta = []
         arrays = []
 
-        for arr in [x, y, z]:
+        uuid = self.data_uuid
+
+        snap_name = None
+
+        for arr_name, arr in zip(['x', 'y', 'z'], [x, y, z]):
+
+
+            shape = None
+            location = None
+            array_id = None
+            unit = None
+            label = None
+
             if arr is not None:
-                if (~np.isnan(arr.ndarray)).any():
-                    arrays.append(arr.ndarray)
-                    meta.append({'array_id': arr.array_id,
-                                 'shape': arr.ndarray.shape,
-                                 'dtype': str(arr.ndarray.dtype)})
+                if isinstance(arr, DataArray):
+                    snap = arr.snapshot()
+                    uuid = arr.data_set.uuid
+
+                    location = getattr(arr.data_set, 'location', None)
+                    unit = snap.get('unit', None) or snap.get('units', None)
+                    label = snap.get('label', None)
+                    snap_name = snap.get('name', None)
+                    shape = snap.get('shape', None)
+                    array_id = arr.array_id
+                else:
+                    array_id = uuid4().hex
+
+
+            unit = kwargs.get('%sunit'%arr_name, None) or unit
+            label = kwargs.get('%slabel'%arr_name, None) or label
+
+            arguments['%s_info'%arr_name] = {}
+            arguments['%s_info'%arr_name]['location'] = location
+            arguments['%s_info'%arr_name]['label'] = label
+            arguments['%s_info'%arr_name]['unit'] = unit
+            arguments['%s_info'%arr_name]['shape'] = shape
+            arguments['%s_info'%arr_name]['name'] = snap_name or name
+            arguments['%s_info'%arr_name]['array_id'] = array_id
+            arguments['name'] = name or snap_name
+
+        for arr_name, arr in zip(['x', 'y', 'z'], [x, y, z]):
+            if arr is not None:
+                if isinstance(arr, DataArray):
+                    ndarr = arr.ndarray
+                if isinstance(arr, np.ndarray):
+                    ndarr = arr
+                else:
+                    try:
+                        ndarr = np.array(arr)
+                    except:
+                        continue
+
+                if (~np.isnan(ndarr)).any():
+                    arrays.append(ndarr)
+                    arguments['%s_info'%arr_name]['shape'] = ndarr.shape
+                    arguments['%s_info'%arr_name]['name']
+
+                    meta.append({'array_id': arguments['%s_info'%arr_name]['array_id'],
+                                 'shape': ndarr.shape,
+                                 'dtype': str(ndarr.dtype)})
 
         if len(arrays) > 0:
             self.publish_data({'add_plot': arguments},
