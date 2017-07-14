@@ -441,9 +441,9 @@ class ActiveLoop(Metadatable):
         data_arrays = [loop_array]
         # hack set_data into actions
         new_actions = self.actions[:]
-        if hasattr(self.sweep_values, "parameters"):
-            for parameter in self.sweep_values.parameters:
-                new_actions.append(parameter)
+        # if hasattr(self.sweep_values, "parameters"):
+        #     for parameter in self.sweep_values.parameters:
+        #         new_actions.append(parameter)
 
         for i, action in enumerate(new_actions):
             if hasattr(action, 'containers'):
@@ -840,10 +840,10 @@ class ActiveLoop(Metadatable):
                 if hasattr(self.sweep_values, 'aggregate'):
                     value = self.sweep_values.aggregate(*set_val)
                 self.data_set.store(new_indices, {set_name: value})
-                for j, val in enumerate(set_val):
-                    set_index = action_indices + (j+1, )
-                    set_name = (self.data_set.action_id_map[set_index])
-                    data_to_store[set_name] = val
+                # for j, val in enumerate(set_val):
+                #     set_index = action_indices + (j+1, )
+                #     set_name = (self.data_set.action_id_map[set_index])
+                #     data_to_store[set_name] = val
             else:
                 set_name = self.data_set.action_id_map[action_indices]
                 data_to_store[set_name] = value
