@@ -8,10 +8,6 @@ from colors import color_cycle, colorscales, colorscales_raw
 import pyqtgraph as pg
 
 
-
-
-
-
 def make_rgba(colorscale):
     dd = {}
     dd['ticks'] = [(v, one_rgba(c)) for v, c in colorscale]
@@ -38,7 +34,8 @@ __colorscales = {}
 for scale_name, scale in colorscales_raw.items():
     __colorscales[scale_name] = make_rgba(scale)
 
-__colorscales['grey'] = __colorscales.pop('Greys') #pg.graphicsItems.GradientEditorItem.Gradients['grey']
+# pg.graphicsItems.GradientEditorItem.Gradients['grey']
+__colorscales['grey'] = __colorscales.pop('Greys')
 cc = pg.pgcollections.OrderedDict(__colorscales)
 
 
@@ -56,7 +53,6 @@ from PyQt5.QtCore import QObject, pyqtSlot
 qtapp = QtGui.QApplication([])
 
 
-
 class PlotTrace(pg.PlotDataItem):
 
     '''
@@ -70,7 +66,6 @@ class PlotTrace(pg.PlotDataItem):
 
 
     '''
-
 
     def setData(self, *args, **kwargs):
 
@@ -120,6 +115,7 @@ class PlotTrace(pg.PlotDataItem):
                 masky = np.isfinite(self.y)
                 super().setData(self.y[masky])
 
+
 class PlotImage(pg.ImageItem):
 
     '''
@@ -134,8 +130,6 @@ class PlotImage(pg.ImageItem):
     # def __init__(self, *args, **kwargs)
     def __init__(self, *args, **kwargs):
         self._hist_range = (np.nan, np.nan)
-        self.direction0 = 1
-        self.direction1 = 1
         self.x_data = None
         self.y_data = None
         self.z_data = None
@@ -145,7 +139,6 @@ class PlotImage(pg.ImageItem):
     #     self.auto_range = False
     #     pass
     #     # print('regionChanging', args, kwargs)
-
 
     # def regionChanged(self, *args, **kwargs):
     #     pass
@@ -208,7 +201,6 @@ class PlotImage(pg.ImageItem):
         if self.z_data is None:
             return
 
-
         finite = np.isfinite(self.z_data)
 
         if not np.any(finite):
@@ -224,7 +216,8 @@ class PlotImage(pg.ImageItem):
 
         min0, min1 = np.argmax(f0), np.argmax(f1)
 
-        max0, max1 = len(f0) - np.argmax(f0[::-1]), len(f1) - np.argmax(f1[::-1])
+        max0 = len(f0) - np.argmax(f0[::-1])
+        max1 = len(f1) - np.argmax(f1[::-1])
 
         mask0 = slice(min0, max0)
         mask1 = slice(min1, max1)
@@ -251,80 +244,106 @@ class PlotImage(pg.ImageItem):
             if self.z_data.ndim == 2:
                 zz = self.z_data[mask1, mask0]
 
+        # rect = [[None, None], [None, None]]
+        rect = []
+        for arr, mask in zip([xx, yy], [mask1, mask0]):
 
-        if xx is not None:
-            argmin1, argmax1 = np.nanargmin(xx[mask1]), np.nanargmax(xx[mask1])
-            print(argmin1, argmax1)
-            if argmin1 > argmax1:
-                self.direction1 = -1
-            else:
-                self.direction1 = 1
+            if arr is not None:
+                diff = np.unique(np.round(np.diff(arr[mask]), decimals=12))
+                diff = diff[np.isfinite(diff)]
+                npspan = False
+                if len(diff) == 1:
+                    df = diff[0]
+                else:
+                    print('diff error not linear setpoints', diff)
+                    npspan = True
+                    df = 1
+                df = abs(df)
 
-            x_extrema = [xx.item(argmin1), xx.item(argmax1)]
-            x0 = np.nanmin(x_extrema)
-            x1 = np.nanmax(x_extrema)
+                argmin, argmax = np.nanargmin(arr[mask]), np.nanargmax(arr[mask])
+                # print(argmin, argmax)
+                if argmin > argmax:
+                    direction = -1
+                else:
+                    direction = 1
 
-            width = np.nanmax(x1 - x0)
-            nowidth = False
-            if width == 0:
-                nowidth = True
-                width = 1
-                dx = 0.5
-            else:
-                dx = width / (zz.shape[0]-1)
+                extrema = [arr.item(argmin), arr.item(argmax)]
+                p0 = np.nanmin(extrema)
+                p1 = np.nanmax(extrema)
 
-            if self.direction1 == 1:
-                px = x0-dx/2
-            else:
-                px = x1+dx/2
-        else:
+                span = np.nanmax(p1 - p0)
+
+                if direction == 1:
+                    pt = p0-df/2
+                else:
+                    pt = p1+df/2
+
+                if npspan:
+                    scl = 1
+                else:
+                    scl = (df+span)*direction
+
+                rect.append([pt, scl])
+
+        try:
+            px, sx = rect[0]
+        except:
+            pass
+        try:
+            py, sy = rect[1]
+        except:
+            pass
+
+
+        if xx is None:
             width = (max1 - min1)
             if width < 1:
                 width = 0.5
             px = -0.5
             sx = width + 1
 
+        # print(x1, p0, width, px, sx)
 
-        if yy is not None:
-            argmin0, argmax0 = np.nanargmin(yy[mask0]), np.nanargmax(yy[mask0])
-            print(argmin0, argmax0)
-            if argmin0 > argmax0:
-                self.direction0 = -1
-            else:
-                self.direction0 = 1
+        # if yy is not None:
+        #     diff = np.unique(np.round(np.diff(yy), decimals=12))
+        #     noheight = False
+        #     if len(diff) == 1:
+        #         dy = diff[0]
+        #     else:
+        #         print('diff error not linear setpoints', diff)
+        #         noheight = True
+        #         dy = 1
+        #     dy = abs(dy)
 
-            y_extrema = [yy.item(argmin0), yy.item(argmax0)]
-            y0 = np.nanmin(y_extrema)
-            y1 = np.nanmax(y_extrema)
+        #     argmin0, argmax0 = np.nanargmin(yy[mask0]), np.nanargmax(yy[mask0])
+        #     # print(argmin0, argmax0)
+        #     if argmin0 > argmax0:
+        #         direction = -1
+        #     else:
+        #         direction = 1
 
+        #     y_extrema = [yy.item(argmin0), yy.item(argmax0)]
+        #     y0 = np.nanmin(y_extrema)
+        #     y1 = np.nanmax(y_extrema)
 
-            height = np.nanmax(y1 - y0)
-            noheight = False
-            if height == 0:
-                noheight = True
-                height = 1
-                dy = 0.5
-            else:
-                dy = height / (zz.shape[1]-1)
+        #     height = np.nanmax(y1 - y0)
 
+        #     if direction == 1:
+        #         py = y0-dy/2
+        #     else:
+        #         py = y1+dy/2
 
+        #     sy = (dy+height)*direction
 
-            if self.direction0 == 1:
-                py = y0-dy/2
-            else:
-                py = y1+dy/2
+        #     if noheight:
+        #         sy = 1
+        if yy is None:
 
-            sx, sy = (dx+width)*self.direction1, (dy+height)*self.direction0
-            if nowidth:
-                sx = 1
-            if noheight:
-                sy = 1
-        else:
             height = (max0 - min0)
             if height < 1:
                 height = 0.5
-            px = -0.5
-            sx = height + 1
+            py = -0.5
+            sy = height + 1
 
         # print('aaa',
         #         x0,
@@ -333,12 +352,10 @@ class PlotImage(pg.ImageItem):
         #         y1,
         #         width,
         #         height)
-
         # print('bbb', px, py, sx, sy)
         self.updateImage(zz)
         rect = QtCore.QRectF(px, py, sx, sy)  # topleft point and widths
         self.setRect(rect)
-
 
 
 class PlotDock(dockarea.Dock):
@@ -354,6 +371,7 @@ class PlotDock(dockarea.Dock):
     save()
     to_matplolib()
     '''
+
     def __init__(self, *args, **kwargs):
         self.theme = ((60, 60, 60), 'w')
         self.grid = 20
@@ -382,9 +400,8 @@ class PlotDock(dockarea.Dock):
         self.addWidget(self.hist_item, 0, 1)
 
         self.plot_item = self.dock_widget.addPlot()
-        self.legend = self.plot_item.addLegend(offset=(-30,30))
+        self.legend = self.plot_item.addLegend(offset=(-30, 30))
         self.legend.hide()
-
 
         for pos, ax in self.plot_item.axes.items():
             self.plot_item.showAxis(pos, True)
@@ -443,12 +460,10 @@ class PlotDock(dockarea.Dock):
         self.label.updateStyle = updateStyle
         self.label.closeButton.setStyleSheet('border: none')
 
-
     def set_cmap(self, cmap=None, traces=None):
         if cmap is not None:
             gradient = self.hist_item.gradient
             gradient.setColorMap(self._get_cmap(cmap))
-
 
     def _get_cmap(self, scale):
         if isinstance(scale, str):
@@ -461,7 +476,7 @@ class PlotDock(dockarea.Dock):
 
         return pg.ColorMap(values, colors)
 
-    def add_item(self, *args, pen=False, **kwargs): #color=None, width=None, pen=None,
+    def add_item(self, *args, pen=False, **kwargs):  # color=None, width=None, pen=None,
         """
         Shortcut to .plot_item.addItem() which also figures out 1D or 2D etc.
         """
@@ -555,7 +570,6 @@ class PlotDock(dockarea.Dock):
         self.legend.hide()
 
 
-
 class QtPlot(QWidget):
 
     def __init__(self, *args, title=None,
@@ -569,7 +583,6 @@ class QtPlot(QWidget):
         self.auto_updating = False
         self.theme = theme
         self._cmap = cmap
-
 
         # if title:
         self.setWindowTitle(title or 'QtPlot')
@@ -596,7 +609,6 @@ class QtPlot(QWidget):
 
         QtWidgets.QApplication.processEvents()
 
-
     def clear(self):
         self.area.clear()
 
@@ -611,10 +623,8 @@ class QtPlot(QWidget):
         self.deleteLater()
         event.accept()
 
-
-
     def add_dock(self, title=None, position='right',
-                    relativeto=None):
+                 relativeto=None):
         """
         Add a new dock to the current window.
 
@@ -649,7 +659,7 @@ class QtPlot(QWidget):
 
     def _get_docks(self):
         ddd = list(self.area.findAll()[1].keys())
-        ddd.sort(key=lambda x:int(x.lstrip('#').split(' ')[0]))
+        ddd.sort(key=lambda x: int(x.lstrip('#').split(' ')[0]))
         return ddd
 
     def _get_dock(self, num, **kwargs):
@@ -659,7 +669,6 @@ class QtPlot(QWidget):
         name = kwargs.get('name', None)
         position = kwargs.pop('position', 'right')
         relativeto = kwargs.pop('relativeto', None)
-
 
         if num == 'new':
             num = len(docks)
@@ -707,8 +716,6 @@ class QtPlot(QWidget):
         item = dock.add_item(*args, **kwargs)
 
         return item
-
-
 
 
 if __name__ == '__main__':
