@@ -666,7 +666,8 @@ class ActiveLoop(Metadatable):
         return self.run(quiet=True, location=False, **kwargs)
 
     def run(self, use_threads=False, quiet=False, station=None,
-            progress_interval=False, set_active=True, *args, **kwargs):
+            progress_interval=False, set_active=True, publisher=None,
+            *args, **kwargs):
         """
         Execute this loop.
 
@@ -708,6 +709,8 @@ class ActiveLoop(Metadatable):
             self.progress_interval = progress_interval
 
         data_set = self.get_data_set(*args, **kwargs)
+        if publisher is not None:
+            data_set.publisher = publisher
 
         self.set_common_attrs(data_set=data_set, use_threads=use_threads)
 
