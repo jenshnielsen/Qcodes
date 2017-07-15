@@ -441,9 +441,9 @@ class ActiveLoop(Metadatable):
         data_arrays = [loop_array]
         # hack set_data into actions
         new_actions = self.actions[:]
-        # if hasattr(self.sweep_values, "parameters"):
-        #     for parameter in self.sweep_values.parameters:
-        #         new_actions.append(parameter)
+        if hasattr(self.sweep_values, "parameters"): # combined parameter
+            for parameter in self.sweep_values.parameters:
+                new_actions.append(parameter)
 
         for i, action in enumerate(new_actions):
             if hasattr(action, 'containers'):
@@ -666,8 +666,7 @@ class ActiveLoop(Metadatable):
         return self.run(quiet=True, location=False, **kwargs)
 
     def run(self, use_threads=False, quiet=False, station=None,
-            progress_interval=False, set_active=True, publisher=None,
-            *args, **kwargs):
+            progress_interval=False, set_active=True, *args, **kwargs):
         """
         Execute this loop.
 
@@ -710,11 +709,7 @@ class ActiveLoop(Metadatable):
 
         data_set = self.get_data_set(*args, **kwargs)
 
-        if publisher is not None:
-            data_set.publisher = publisher
-
-        self.set_common_attrs(data_set=data_set,
-                              use_threads=use_threads)
+        self.set_common_attrs(data_set=data_set, use_threads=use_threads)
 
         station = station or self.station or Station.default
         if station:
@@ -816,7 +811,12 @@ class ActiveLoop(Metadatable):
         delay = max(self.delay, first_delay)
 
         callables = self._compile_actions(self.actions, action_indices)
-
+        n_callables = 0
+        for item in callables:
+            if hasattr(item, 'param_ids'):
+                n_callables += len(item.param_ids)
+            else:
+                n_callables += 1
         t0 = time.time()
         last_task = t0
         imax = len(self.sweep_values)
@@ -835,15 +835,15 @@ class ActiveLoop(Metadatable):
             new_values = current_values + (value,)
             data_to_store = {}
 
-            if hasattr(self.sweep_values, "parameters"):
+            if hasattr(self.sweep_values, "parameters"): # combined parameter
                 set_name = self.data_set.action_id_map[action_indices]
                 if hasattr(self.sweep_values, 'aggregate'):
                     value = self.sweep_values.aggregate(*set_val)
                 self.data_set.store(new_indices, {set_name: value})
-                # for j, val in enumerate(set_val):
-                #     set_index = action_indices + (j+1, )
-                #     set_name = (self.data_set.action_id_map[set_index])
-                #     data_to_store[set_name] = val
+                for j, val in enumerate(set_val): # set_val list of values to set [param1_setpoint, param2_setpoint ..]
+                    set_index = action_indices + (j+n_callables, )
+                    set_name = (self.data_set.action_id_map[set_index])
+                    data_to_store[set_name] = val
             else:
                 set_name = self.data_set.action_id_map[action_indices]
                 data_to_store[set_name] = value
