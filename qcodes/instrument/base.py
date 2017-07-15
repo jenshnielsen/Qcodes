@@ -5,6 +5,10 @@ import time
 import warnings
 import weakref
 
+import signal
+import logging
+from itertools import count
+
 from qcodes.utils.metadata import Metadatable
 from qcodes.utils.helpers import DelegateAttributes, strip_attrs, full_class
 from qcodes.utils.validators import Anything
