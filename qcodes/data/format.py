@@ -222,7 +222,7 @@ class Formatter:
     @staticmethod
     def _match_save_range_whole_file(arrays, only_complete):
         max_save = None
-        agg = (min if only_complete else max)
+        min_save = None
         for array in arrays:
             array_max = array.last_saved_index
             if array_max is None:
@@ -230,11 +230,17 @@ class Formatter:
             mr = array.modified_range
             if mr:
                 array_max = max(array_max, mr[1])
+            # array_max last index modified or saved for this array
+            min_save = (array_max if min_save is None else
+                        min(min_save, array_max))
             max_save = (array_max if max_save is None else
-                        agg(max_save, array_max))
-
-        if max_save >= 0:
-            return (0, max_save)
+                        max(max_save, array_max))
+        if min_save < max_save and only_complete:
+            logging.warning("Incomplete data, one or more data arrays have missing data. "
+                            "This may result in missing data")
+        range_end = (min_save if only_complete else max_save)
+        if range_end >= 0:
+            return (0, range_end)
         else:
             return None
 
@@ -245,17 +251,29 @@ class Formatter:
             mr = array.modified_range
             if not mr:
                 if only_complete:
+                    logging.warning("Incomplete data, one or more data "
+                                    "arrays have missing data. "
+                                    "This may result in missing data")
                     return None
                 else:
                     continue
             mod_ranges.append(mr)
 
-        mod_range = mod_ranges[0]
-        agg = (min if only_complete else max)
+        start_mod_range = mod_ranges[0][0]
+        max_end_mod_range = mod_ranges[0][1]
+        min_end_mod_range = max_end_mod_range
         for mr in mod_ranges[1:]:
-            mod_range = (min(mod_range[0], mr[0]),
-                         agg(mod_range[1], mr[1]))
-
+            start_mod_range = min(start_mod_range, mr[0])
+            max_end_mod_range = max(max_end_mod_range, mr[1])
+            min_end_mod_range = min(min_end_mod_range, mr[1])
+        if only_complete:
+            mod_range = (start_mod_range, min_end_mod_range)
+        else:
+            mod_range = (start_mod_range, max_end_mod_range)
+        if max_end_mod_range > min_end_mod_range:
+            logging.warning("Incomplete data, one or more data "
+                            "arrays have missing data. "
+                            "This may result in missing data")
         if last_saved_index >= mod_range[1]:
             return (0, last_saved_index)
         elif last_saved_index >= mod_range[0]:
