@@ -493,6 +493,102 @@ def do1d(inst_set, start, stop, num_points, delay, *inst_meas, do_plots=True):
     return plot, data
 
 
+def do1dcombined(combined_param, combined_setpoints, delay, *inst_meas, do_plots=True):
+    """
+
+    Args:
+        inst_set:  Instrument to sweep over
+        start:  Start of sweep
+        stop:  End of sweep
+        num_points:  Number of steps to perform
+        delay:  Delay at every step
+        *inst_meas:  any number of instrument to measure and/or tasks to
+          perform at each step of the sweep
+        do_plots: Default True: If False no plots are produced.
+            Data is still saved
+             and can be displayed with show_num.
+
+    Returns:
+        plot, data : returns the plot and the dataset
+
+    """
+
+    loop = qc.Loop(combined_param.sweep(combined_setpoints), delay).each(*inst_meas)
+    plot = None
+    set_params = []
+    for i, parameter in enumerate(combined_param.parameters):
+        set_params.append((parameter, combined_setpoints[0, i], combined_setpoints[-1, i]))
+    meas_params = _select_plottables(inst_meas)
+
+
+    parameters = [sp[0] for sp in set_params] + list(meas_params)
+    _flush_buffers(*parameters)
+
+    # startranges for _plot_setup
+    startranges = dict(zip((sp[0].label for sp in set_params),
+                           ((sp[1], sp[2]) for sp in set_params)))
+
+    interrupted = False
+    data = loop.get_data_set()
+    axis = ((data.keysight_voltage_set_0,
+             data.arrays['{}_{}'.format(combined_param.parameters[0]._instrument.name,
+                                 combined_param.parameters[0].name)]),
+            (data.keysight_voltage_set_1,
+             data.arrays['{}_{}'.format(combined_param.parameters[1]._instrument.name,
+                                 combined_param.parameters[1].name)]))
+    if do_plots:
+        plot, _ = _plot_setup(data, meas_params, startranges=startranges, axis=axis)
+    else:
+        plot = None
+    try:
+        if do_plots:
+            _ = loop.with_bg_task(plot.update).run()
+        else:
+            _ = loop.run()
+    except KeyboardInterrupt:
+        interrupted = True
+        print("Measurement Interrupted")
+    if do_plots:
+        # Ensure the correct scaling before saving
+        for subplot in plot.subplots:
+            vBox = subplot.getViewBox()
+            vBox.enableAutoRange(vBox.XYAxes)
+        cmap = None
+        # resize histogram
+        for trace in plot.traces:
+            if 'plot_object' in trace.keys():
+                if (isinstance(trace['plot_object'], dict) and
+                            'hist' in trace['plot_object'].keys()):
+                    cmap = trace['plot_object']['cmap']
+                    max = trace['config']['z'].max()
+                    min = trace['config']['z'].min()
+                    trace['plot_object']['hist'].setLevels(min, max)
+                    trace['plot_object']['hist'].vb.autoRange()
+        if cmap:
+            plot.set_cmap(cmap)
+        # set window back to original size
+        plot.win.resize(1000, 600)
+        plot.save()
+        pdfplot, num_subplots = _plot_setup(data, meas_params, useQT=False, axis=axis)
+        # pad a bit more to prevent overlap between
+        # suptitle and title
+        pdfplot.fig.tight_layout(pad=3)
+        pdfplot.save("{}.pdf".format(plot.get_default_title()))
+        pdfplot.fig.canvas.draw()
+        if num_subplots > 1:
+            _save_individual_plots(data, meas_params, axis=axis)
+    if CURRENT_EXPERIMENT.get('device_image'):
+        log.debug('Saving device image')
+        save_device_image(tuple(sp[0] for sp in set_params))
+
+    # add the measurement ID to the logfile
+    with open(CURRENT_EXPERIMENT['logfile'], 'a') as fid:
+        print("#[QCoDeS]# Saved dataset to: {}".format(data.location),
+              file=fid)
+    if interrupted:
+        raise KeyboardInterrupt
+    return plot, data
+
 def do1dDiagonal(inst_set, inst2_set, start, stop, num_points,
                  delay, start2, slope, *inst_meas, do_plots=True):
     """
