@@ -339,8 +339,8 @@ class Plot():
     def set_cmap(self, cmap):
         self.publish({'set_cmap': cmap})
 
-    def save(self, filename=None):
-        self.publish({'save_screenshot': str(filename)})
+    def save(self, filename=None, subplot=None):
+        self.publish({'save_screenshot': {'filename': str(filename), 'subplot': subplot}})
         # print('Should save a screenshot of the plot now')
 
     def set_xlabel(self, label, subplot=0):

@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import zmq
 import numpy as np
 import json
@@ -256,11 +257,17 @@ class QtPlotWindow(QtWidgets.QWidget):
             elif key == 'finalize':
                 self.save()
             elif key == 'save_screenshot':
-                self.save(msg)
+                filename, subplot = msg['filename'], msg['subplot']
+                print(filename)
+                if subplot == 'all':
+                    for i in range(len(self.plot.area.docks)):
+                        self.save(filename, i)
+                else:
+                    self.save(filename, subplot)
             elif key == 'set_title':
                 self.setWindowTitle(msg)
             elif key == 'set_cmap':
-                for dock in self.plot.subplots.keys():
+                for dock in self.plot.area.docks.keys():
                     self.plot.area.docks[dock].set_cmap(msg)
 
 
@@ -273,7 +280,7 @@ class QtPlotWindow(QtWidgets.QWidget):
         # for array_id, plot in self.plots.items():
         pass
 
-    def save(self, filename=None):
+    def save(self, filename=None, subplot=None):
         """
         Save current plot to filename, by default
         to the location corresponding to the default
@@ -290,11 +297,15 @@ class QtPlotWindow(QtWidgets.QWidget):
 
         if (filename is None) or (filename == 'None'):
             filename = default
-        filename = filename.rstrip('.png')
+
+        filename = re.sub(r"\.png$", "", filename)
         filename = filename.rstrip('\\')
         filename = filename.rstrip('/')
-
-        image = self.grab()
+        if subplot is None:
+            image = self.grab()
+        else:
+            image = self.plot._get_dock(int(subplot)).grab()
+            filename = '%s #%d'%(filename, int(subplot))
 
         i = 0
         oldfilename = filename
@@ -302,6 +313,7 @@ class QtPlotWindow(QtWidgets.QWidget):
             filename = oldfilename + '_%d'%i
             i+=1
         self.control_send({'plot_saved': filename+'.png'})
+        print(filename+'.png')
         image.save(filename+'.png', "PNG", 0)
 
     def closeEvent(self, event):
@@ -320,12 +332,12 @@ if __name__ == '__main__':
         port = str(sys.argv[2])
         control_port = str(sys.argv[3])
     else:
-        port, topic = (8893, 'qcodes.plot.50c72c3f2dba4e5c84f2f4cd1d92afd8')
+        port, topic = (8886, 'qcodes.plot.948829bd666146449399fa4eef8fca12')
 
     mw = QtPlotWindow(topic=topic, port=port, control_port=control_port)
 
 
-    # mw.signal_received(topic='qcodes.plot.b819197931cd4b25b27c26d3eb347a27', uuid=None, message ={'set_cmap': 'hot'})
+    # mw.signal_received(topic=topic, uuid=None, message ={'save_screenshot': {'filename': str('./aafsd/asdfnp'), 'subplot': 'all'}})
 
     # mw.save()
 
