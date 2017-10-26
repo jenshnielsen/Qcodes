@@ -167,7 +167,6 @@ class _Measure:
         self.store(loop_indices, out_dict)
 
 
-
 class _Nest:
 
     """
