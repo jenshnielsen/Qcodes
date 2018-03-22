@@ -17,7 +17,7 @@ from queue import Queue, Empty
 import qcodes.config
 from qcodes.dataset.param_spec import ParamSpec
 from qcodes.instrument.parameter import _BaseParameter
-from qcodes.dataset.sqlite_base import (atomic, atomicTransaction,
+from qcodes.dataset.postgresql_base import (atomic, atomicTransaction,
                                         transaction, add_parameter,
                                         connect, create_run, get_parameters,
                                         get_experiments,

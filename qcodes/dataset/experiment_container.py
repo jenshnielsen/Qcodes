@@ -6,12 +6,12 @@ import qcodes
 from qcodes.dataset.data_set import (DataSet, load_by_id, load_by_counter,
                                      new_data_set, SPECS)
 
-from qcodes.dataset.sqlite_base import (select_one_where, finish_experiment,
+from qcodes.dataset.postgresql_base import (select_one_where, finish_experiment,
                                         get_run_counter, get_runs,
                                         get_last_run,
                                         connect, transaction,
                                         get_last_experiment, get_experiments)
-from qcodes.dataset.sqlite_base import new_experiment as ne
+from qcodes.dataset.postgresql_base import new_experiment as ne
 
 DB = qcodes.config["core"]["db_location"]
 debug_db = qcodes.config["core"]["db_debug"]
