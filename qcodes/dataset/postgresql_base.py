@@ -24,7 +24,7 @@ _experiment_table_schema = """
 CREATE  TABLE IF NOT EXISTS experiments (
     -- this will autoncrement by default if
     -- no value is specified on insert
-    exp_id INTEGER PRIMARY KEY,
+    exp_id SERIAL PRIMARY KEY,
     name TEXT,
     sample_name TEXT,
     start_time INTEGER,
@@ -745,7 +745,7 @@ def new_experiment(conn: pg8000.Connection,
     INSERT INTO experiments
         (name, sample_name, start_time, format_string, run_counter)
     VALUES
-        (?,?,?,?,?)
+        (%s,%s,%s,%s,%s)
     """
     curr = atomicTransaction(conn, query, name, sample_name,
                              time.time(), format_string, 0)
