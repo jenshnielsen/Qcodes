@@ -18,7 +18,8 @@ end
 
 Driver -> AlazarCard: Call 'AlazarAbortAsyncRead'
 Driver -> Controller: Call 'post_acquire'
-Driver -> DataParameter: Returns output of 'post_acquire'
+Controller -> Driver: Returns processed data
+Driver -> DataParameter: Returns data from 'post_acquire'
 
 
 @enduml
