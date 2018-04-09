@@ -1,0 +1,24 @@
+@startuml
+participant AlazarCard
+participant Driver
+participant Controller
+participant DataParameter
+
+DataParameter --> Driver: get() calls 'acquire'
+Driver -> AlazarCard: Calls 'AlazarPostAyncBuffers'
+Driver -> Controller: Calls 'pre_start_capture'
+Driver -> AlazarCard: Calls 'AlazarStartCapture'
+Driver -> Controller: Calls 'pre_acquire'
+loop until requested number of buffers filled
+    Driver -> AlazarCard: Calls 'AlazarWaitAsyncBufferComplete'
+    AlazarCard -> Driver: Returns Buffer with data
+    Driver -> Controller: Calls 'handle_buffer'
+    Driver -> AlazarCard: Calls 'AlazarPostAsyncBuffer'
+end
+
+Driver -> AlazarCard: Call 'AlazarAbortAsyncRead'
+Driver -> Controller: Call 'post_acquire'
+Driver -> DataParameter: Returns output of 'post_acquire'
+
+
+@enduml
