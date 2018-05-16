@@ -15,6 +15,19 @@ import hashlib
 import uuid
 from queue import Queue, Empty
 import warnings
+import numpy as np
+try:
+    import pandas as pd
+    has_pandas = True
+except ImportError:
+    has_pandas = False
+
+try:
+    import xarray as xr
+    has_xarray = True
+except ImportError:
+    has_xarray = False
+
 
 import qcodes.config
 from qcodes.dataset.param_spec import ParamSpec
@@ -586,6 +599,14 @@ class DataSet(Sized):
 
     def get_metadata(self, tag):
         return get_metadata(self.conn, tag, self.table_name)
+
+    def to_pandas(self):
+        if has_pandas:
+
+            df = pd.DataFrame({f"{paramspec.label} ({paramspec.unit})":
+                               np.squeeze(np.array(self.get_data(param))) for param, paramspec
+                               in self.paramspecs.items()})
+            return df
 
     def __len__(self) -> int:
         return length(self.conn, self.table_name)
