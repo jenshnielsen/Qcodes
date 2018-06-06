@@ -10,12 +10,13 @@ from qcodes.instrument.parameter import Parameter
 def some_dummy_parameters() -> List[Parameter]:
 
     dummy_parameters = []
-    for name,value in zip(['a', 'b', 'c'],range(3)):
+    for name, value in zip(['a', 'b', 'c'], range(3)):
         dummy_parameters.append(Parameter(name=name,
                                 label=name.upper(),
                                 initial_value=value,
                                 set_cmd=None, get_cmd=None))
     return dummy_parameters
+
 
 def test_parameter_group_basic(some_dummy_parameters):
 
@@ -25,4 +26,3 @@ def test_parameter_group_basic(some_dummy_parameters):
     assert pg.get() == expected_values
     pg.set(set_values)
     assert pg.get() == set_values
-
