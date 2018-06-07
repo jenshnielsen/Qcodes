@@ -8,6 +8,7 @@ from typing import Sequence, Optional, Dict, Union, Callable, Any, List, TYPE_CH
 import numpy as np
 if TYPE_CHECKING:
     from qcodes.instrument.channel import ChannelList
+    from qcodes.instrument.parameter_group import ParameterGroup
 from qcodes.utils.helpers import DelegateAttributes, strip_attrs, full_class
 from qcodes.utils.metadata import Metadatable
 from qcodes.utils.validators import Anything
@@ -50,6 +51,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
         self.parameters: Dict[str, _BaseParameter] = {}
         self.functions: Dict[str, Function] = {}
         self.submodules: Dict[str, Union['InstrumentBase',
+                                         'ParameterGroup',
                                          'ChannelList']] = {}
         super().__init__(**kwargs)
 
@@ -112,7 +114,9 @@ class InstrumentBase(Metadatable, DelegateAttributes):
         func = Function(name=name, instrument=self, **kwargs)
         self.functions[name] = func
 
-    def add_submodule(self, name: str, submodule:  Union['InstrumentBase', 'ChannelList']) -> None:
+    def add_submodule(self, name: str, submodule:  Union['InstrumentBase',
+                                                         'ChannelList',
+                                                         'ParameterGroup']) -> None:
         """
         Bind one submodule to this instrument.
 
