@@ -17,25 +17,40 @@ class ParameterGroup(Metadatable):
     parameters. and correct snapshot handling.
 
     """
-    def __init__(self, name: str, *parameters: Union[Parameter,
-                                                     'ParameterGroup']) -> None:
+    def __init__(self, name: str,
+                 *parameters: Union[Parameter, 'ParameterGroup'],
+                 instrument=None) -> None:
         super().__init__()
         self.__parameters = parameters
         self.__parameter_dict = {}
         self.__name = name
+        if instrument:
+            self.__full_name = f"{instrument.name}_{name}"
+        else:
+            self.__full_name = name
+        print(f"New parameter group with name {self.__name} and full_name {self.__full_name}")
         for parameter in parameters:
+            print(parameter.full_name)
             self.__parameter_dict[parameter.name] = parameter
 
     def get(self) -> Dict['str', Union[dict, value_types]]:
         captured_values = {}
 
         for parameter in self.__parameters:
-            captured_values[parameter.name] = parameter.get()
+            captured_values[parameter.full_name] = parameter.get()
         return captured_values
 
     @property
     def name(self):
         return self.__name
+
+    @property
+    def full_name(self):
+        return self.__full_name
+
+    @property
+    def parameter_dict(self):
+        return self.__parameter_dict
 
     def set(self, values: Dict[str, Union[dict, value_types]]):
 
