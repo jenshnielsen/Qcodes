@@ -1,10 +1,13 @@
+from typing import Dict, Union, Sequence
+
+from qcodes.utils.metadata import Metadatable
 from qcodes.instrument.parameter import Parameter
-from typing import Dict, Union
+from qcodes.utils.helpers import full_class
 
 value_types = Union[int, float, str]
 
 
-class ParameterGroup:
+class ParameterGroup(Metadatable):
     """
 
 
@@ -16,6 +19,7 @@ class ParameterGroup:
     """
     def __init__(self, name: str, *parameters: Union[Parameter,
                                                      'ParameterGroup']) -> None:
+        super().__init__()
         self.__parameters = parameters
         self.__parameter_dict = {}
         self.__name = name
@@ -45,3 +49,13 @@ class ParameterGroup:
         raise AttributeError(f"'{self.__class__.__name__}' object has"
                              f" no attribute '{name}'")
 
+
+    def snapshot_base(self, update: bool=False,
+                      params_to_skip_update: Sequence[str]=None):
+
+        snap = {}
+        membersdict = {param_name: param.snapshot(update=update) for param_name,
+                       param in self.__parameter_dict.items()}
+        snap['members'] = membersdict
+        snap['__class__'] = full_class(self)
+        return snap
