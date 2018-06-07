@@ -6,7 +6,7 @@ from .parameter import MultiParameter, ArrayParameter, Parameter
 from ..utils.validators import Validator
 from ..utils.metadata import Metadatable
 from ..utils.helpers import full_class
-
+from .parameter_group import ParameterGroup
 
 class InstrumentChannel(InstrumentBase):
     """
@@ -122,6 +122,7 @@ class MultiChannelInstrumentParameter(MultiParameter):
 
         return self.names
 
+
 class ChannelList(Metadatable):
     """
     Container for channelized parameters that allows for sweeps over
@@ -212,14 +213,15 @@ class ChannelList(Metadatable):
             i (int/slice): Either a single channel index or a slice of channels
               to get
         """
+        my_class = self.__class__
         if isinstance(i, slice):
-            return ChannelList(self._parent, self._name, self._chan_type,
-                               self._channels[i],
-                               multichan_paramclass=self._paramclass)
+            return my_class(self._parent, self._name, self._chan_type,
+                            self._channels[i],
+                            multichan_paramclass=self._paramclass)
         elif isinstance(i, tuple):
-            return ChannelList(self._parent, self._name, self._chan_type,
-                               [self._channels[j] for j in i],
-                               multichan_paramclass=self._paramclass)
+            return my_class(self._parent, self._name, self._chan_type,
+                            [self._channels[j] for j in i],
+                            multichan_paramclass=self._paramclass)
         return self._channels[i]
 
     def __iter__(self):
@@ -269,7 +271,7 @@ class ChannelList(Metadatable):
         Args:
             obj(chan_type): New channel to add to the list.
         """
-        if (isinstance(self._channels, tuple) or self._locked):
+        if isinstance(self._channels, tuple) or self._locked:
             raise AttributeError("Cannot append to a locked channel list")
         if not isinstance(obj, self._chan_type):
             raise TypeError("All items in a channel list must be of the same "
@@ -331,7 +333,7 @@ class ChannelList(Metadatable):
 
             obj(chan_type): Object of type chan_type to insert.
         """
-        if (isinstance(self._channels, tuple) or self._locked):
+        if isinstance(self._channels, tuple) or self._locked:
             raise AttributeError("Cannot insert into a locked channel list")
         if not isinstance(obj, self._chan_type):
             raise TypeError("All items in a channel list must be of the same "
@@ -347,7 +349,8 @@ class ChannelList(Metadatable):
         in this channel list
         """
         if not self._locked:
-            raise AttributeError("Cannot create a validator for an unlocked channel list")
+            raise AttributeError("Cannot create a validator for "
+                                 "an unlocked channel list")
         return ChannelListValidator(self)
 
     def lock(self) -> None:
@@ -361,7 +364,8 @@ class ChannelList(Metadatable):
         self._channels = tuple(self._channels)
         self._locked = True
 
-    def snapshot_base(self, update: bool=False, params_to_skip_update: Optional[Sequence[str]]=None):
+    def snapshot_base(self, update: bool=False,
+                      params_to_skip_update: Optional[Sequence[str]]=None):
         """
         State of the instrument as a JSON-compatible dict.
 
@@ -473,6 +477,48 @@ class ChannelList(Metadatable):
             names += [channel.short_name for channel in self._channels]
         return sorted(set(names))
 
+
+class NewChannelList(ChannelList):
+
+    def __getattr__(self, name: str):
+        """
+        Return a multi-channel function or parameter that we can use to get or
+        set all items in a channel list simultaneously.
+
+        Params:
+            name(str): The name of the parameter or function that we want to
+            operate on.
+        """
+        # Check if this is a valid parameter
+        if name in self._channels[0].parameters:
+            parameters = []
+            for i, channel in enumerate(self._channels):
+                parameters.append(getattr(channel, name))
+            return ParameterGroup(name, *parameters)
+        if name in self._channels[0].submodules:
+            subgroups = []
+            for i, channel in enumerate(self._channels):
+                subgroups.append(getattr(channel, name))
+                print(subgroups)
+            return ParameterGroup(name, *subgroups)
+
+
+        # Check if this is a valid function
+        if name in self._channels[0].functions:
+            # We want to return a reference to a function that would call the
+            # function for each of the channels in turn.
+            def multi_func(*args, **kwargs):
+                for chan in self._channels:
+                    chan.functions[name](*args, **kwargs)
+            return multi_func
+
+        try:
+            return self._channel_mapping[name]
+        except KeyError:
+            pass
+
+        raise AttributeError('\'{}\' object has no attribute \'{}\''
+                             ''.format(self.__class__.__name__, name))
 
 class ChannelListValidator(Validator):
     """
