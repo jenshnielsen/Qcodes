@@ -25,6 +25,7 @@ class ParameterGroup(Metadatable):
         self.__parameter_dict = {}
         self.__name = name
         if instrument:
+            self.__instrument = instrument
             self.__full_name = f"{instrument.name}_{name}"
         else:
             self.__full_name = name
@@ -44,6 +45,12 @@ class ParameterGroup(Metadatable):
     def name(self):
         return self.__name
 
+    @property
+    def name_parts(self) -> List[str]:
+        name_parts = []
+        if self.__instrument is not None:
+            name_parts.append
+        return name_parts
     @property
     def full_name(self):
         return self.__full_name
