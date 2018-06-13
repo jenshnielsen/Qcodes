@@ -1,4 +1,4 @@
-from typing import Dict, Union, Sequence
+from typing import Dict, Union, Sequence, List
 
 from qcodes.utils.metadata import Metadatable
 from qcodes.instrument.parameter import Parameter
@@ -28,17 +28,16 @@ class ParameterGroup(Metadatable):
             self.__instrument = instrument
             self.__full_name = f"{instrument.name}_{name}"
         else:
+            self.__instrument = None
             self.__full_name = name
-        print(f"New parameter group with name {self.__name} and full_name {self.__full_name}")
         for parameter in parameters:
-            print(parameter.full_name)
-            self.__parameter_dict[parameter.name] = parameter
+            self.__parameter_dict[parameter.qualified_name] = parameter
 
     def get(self) -> Dict['str', Union[dict, value_types]]:
         captured_values = {}
 
         for parameter in self.__parameters:
-            captured_values[parameter.full_name] = parameter.get()
+            captured_values[parameter.qualified_name] = parameter.get()
         return captured_values
 
     @property
@@ -46,14 +45,23 @@ class ParameterGroup(Metadatable):
         return self.__name
 
     @property
-    def name_parts(self) -> List[str]:
-        name_parts = []
-        if self.__instrument is not None:
-            name_parts.append
-        return name_parts
-    @property
     def full_name(self):
         return self.__full_name
+
+    @property
+    def short_name(self):
+        return self.__name
+
+    @property
+    def name_parts(self) -> List[str]:
+        name_parts = [self.name]
+        parent_inst = self.__instrument
+        while parent_inst is not None:
+            name_parts.append(parent_inst.short_name)
+            parent_inst = parent_inst.parent
+        name_parts.reverse()
+        return name_parts
+
 
     @property
     def parameter_dict(self):
