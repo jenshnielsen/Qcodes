@@ -19,34 +19,29 @@ class ParameterGroup(Metadatable):
     """
     def __init__(self, name: str,
                  *parameters: Union[Parameter, 'ParameterGroup'],
-                 instrument=None) -> None:
+                 parent=None) -> None:
         super().__init__()
-        self.__parameters = parameters
         self.__parameter_dict = {}
         self.__name = name
-        if instrument:
-            self.__instrument = instrument
-            self.__full_name = f"{instrument.name}_{name}"
+        if parent is not None:
+            self.__parent = parent
         else:
-            self.__instrument = None
-            self.__full_name = name
+            self.__parent = None
         for parameter in parameters:
-            self.__parameter_dict[parameter.qualified_name] = parameter
+            qualified_name = "_".join(parameter.name_parts)
+            self.__parameter_dict[qualified_name] = parameter
 
     def get(self) -> Dict['str', Union[dict, value_types]]:
         captured_values = {}
 
-        for parameter in self.__parameters:
-            captured_values[parameter.qualified_name] = parameter.get()
+        for parameter in self.__parameter_dict.values():
+            qualified_name = "_".join(parameter.name_parts)
+            captured_values[qualified_name] = parameter.get()
         return captured_values
 
     @property
-    def name(self):
-        return self.__name
-
-    @property
     def full_name(self):
-        return self.__full_name
+        return "_".join(self.name_parts)
 
     @property
     def short_name(self):
@@ -54,14 +49,12 @@ class ParameterGroup(Metadatable):
 
     @property
     def name_parts(self) -> List[str]:
-        name_parts = [self.name]
-        parent_inst = self.__instrument
-        while parent_inst is not None:
-            name_parts.append(parent_inst.short_name)
-            parent_inst = parent_inst.parent
-        name_parts.reverse()
+        if self.__parent is not None:
+            name_parts = self.__parent.name_parts
+        else:
+            name_parts = []
+        name_parts.append(self.short_name)
         return name_parts
-
 
     @property
     def parameter_dict(self):
