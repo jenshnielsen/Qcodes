@@ -74,7 +74,8 @@ def test_nested_parameter_group_advanced(some_dummy_parameters,
     expected_values1 = {'a': 0, 'b': 1, 'c': 2}
     expected_values2 = {'d': 3, 'e': 4, 'f': 5}
     expected_values = {'pg1': expected_values1,
-                       'pg2': expected_values2}
+                       'pg2': expected_values2,
+                       'pg3': expected_values1}
     outerpg.add_member(pg1)
     outerpg.add_member(pg2)
     outerpg.add_member(pg3)
