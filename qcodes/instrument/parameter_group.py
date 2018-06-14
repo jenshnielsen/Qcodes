@@ -2,6 +2,7 @@ from typing import Dict, Union, Sequence, List
 
 from qcodes.utils.metadata import Metadatable
 from qcodes.instrument.parameter import Parameter
+from qcodes.instrument.base import InstrumentBase
 from qcodes.utils.helpers import full_class
 
 value_types = Union[int, float, str]
@@ -19,25 +20,52 @@ class ParameterGroup(Metadatable):
     """
     def __init__(self, name: str,
                  *parameters: Union[Parameter, 'ParameterGroup'],
-                 parent=None) -> None:
+                 parent: Union['ParameterGroup', InstrumentBase]=None,
+                 names=None) -> None:
         super().__init__()
+        # the order of __parameter_dict is importatant but since we
+        # are only supporting python 3.6+ we can assume that the dict is
+        # ordered. For 3.6 insertion order is an implementation detail but for
+        # 3.7 it's guarantied.
         self.__parameter_dict = {}
         self.__name = name
         if parent is not None:
             self.__parent = parent
         else:
             self.__parent = None
-        for parameter in parameters:
-            qualified_name = "_".join(parameter.name_parts)
-            self.__parameter_dict[qualified_name] = parameter
+        if names is not None:
+            assert len(names) == len(parameters)
+            for name, parameter in zip(names, parameters):
+                self.add_member(parameter, name)
+        else:
+            for parameter in parameters:
+                self.add_member(parameter)
 
     def get(self) -> Dict['str', Union[dict, value_types]]:
         captured_values = {}
 
-        for parameter in self.__parameter_dict.values():
-            qualified_name = "_".join(parameter.name_parts)
-            captured_values[qualified_name] = parameter.get()
+        for name, parameter in self.__parameter_dict.items():
+            captured_values[name] = parameter.get()
         return captured_values
+
+    def add_member(self, new_member: Union['ParameterGroup', Parameter],
+                   name=None) -> None:
+        if name is None:
+            name = new_member.short_name
+
+        if name in self.__parameter_dict.keys():
+            raise RuntimeError(f"{name} was already "
+                               f"added to {self.full_name}")
+        self.__parameter_dict[name] = new_member
+
+
+    @property
+    def parent(self) -> Union['ParameterGroup', InstrumentBase]:
+        return self.__parent
+
+    @parent.setter
+    def set_parent(self, parent: Union['ParameterGroup', InstrumentBase]):
+        self.__parent = parent
 
     @property
     def full_name(self):
@@ -65,7 +93,7 @@ class ParameterGroup(Metadatable):
         for param_name, param_value in values.items():
             getattr(self, param_name).set(param_value)
 
-    def __getattr__(self, name: str) -> Parameter:
+    def __getattr__(self, name: str) -> Union['ParameterGroup', Parameter]:
         if name in self.__parameter_dict.keys():
             return self.__parameter_dict[name]
 
