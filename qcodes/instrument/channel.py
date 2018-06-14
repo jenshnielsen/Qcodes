@@ -496,14 +496,14 @@ class NewChannelList(ChannelList):
             for i, channel in enumerate(self._channels):
                 parameter = getattr(channel, name)
                 parameters.append(parameter)
-                names.append("_".join(parameter.name_parts[-2:]))
+                names.append(channel.short_name)
             return ParameterGroup(name, *parameters, names=names)
         if name in self._channels[0].submodules:
             subgroups = []
             names = []
             for i, channel in enumerate(self._channels):
                 subgroups.append(getattr(channel, name))
-                names.append(str(i))
+                names.append(channel.short_name)
             return ParameterGroup(name, *subgroups, parent=self._parent,
                                   names=names)
 
