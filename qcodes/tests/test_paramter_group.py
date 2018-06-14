@@ -60,3 +60,22 @@ def test_nested_parameter_group(some_dummy_parameters,
     outerpg.add_member(pg1)
     outerpg.add_member(pg2)
     assert outerpg.get() == expected_values
+
+
+def test_nested_parameter_group_advanced(some_dummy_parameters,
+                                         more_dummy_parameters):
+
+    outerpg = ParameterGroup('outerpg')
+
+    pg1 = ParameterGroup('pg1', *some_dummy_parameters, parent=outerpg)
+    pg2 = ParameterGroup('pg2', *more_dummy_parameters, parent=outerpg)
+    pg3 = ParameterGroup('pg3', *some_dummy_parameters, parent=outerpg)
+
+    expected_values1 = {'a': 0, 'b': 1, 'c': 2}
+    expected_values2 = {'d': 3, 'e': 4, 'f': 5}
+    expected_values = {'pg1': expected_values1,
+                       'pg2': expected_values2}
+    outerpg.add_member(pg1)
+    outerpg.add_member(pg2)
+    outerpg.add_member(pg3)
+    assert outerpg.get() == expected_values
