@@ -492,15 +492,20 @@ class NewChannelList(ChannelList):
         # Check if this is a valid parameter
         if name in self._channels[0].parameters:
             parameters = []
+            names = []
             for i, channel in enumerate(self._channels):
-                parameters.append(getattr(channel, name))
-            return ParameterGroup(name, *parameters)
+                parameter = getattr(channel, name)
+                parameters.append(parameter)
+                names.append("_".join(parameter.name_parts[-2:]))
+            return ParameterGroup(name, *parameters, names=names)
         if name in self._channels[0].submodules:
             subgroups = []
+            names = []
             for i, channel in enumerate(self._channels):
                 subgroups.append(getattr(channel, name))
-                print(subgroups)
-            return ParameterGroup(name, *subgroups)
+                names.append(str(i))
+            return ParameterGroup(name, *subgroups, parent=self._parent,
+                                  names=names)
 
 
         # Check if this is a valid function
