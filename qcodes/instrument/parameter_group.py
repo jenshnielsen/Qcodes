@@ -96,6 +96,19 @@ class ParameterGroup(Metadatable):
     def __getattr__(self, name: str) -> Union['ParameterGroup', Parameter]:
         if name in self.__parameter_dict.keys():
             return self.__parameter_dict[name]
+        elif name is not None:
+            found_members = []
+            names = []
+            for groupname, member in self.__parameter_dict.items():
+                if isinstance(member, ParameterGroup):
+                    found_member = getattr(member, name, None)
+                    if found_member is not None:
+                        names.append(groupname)
+                        found_members.append(found_member)
+            if len(found_members) == 1:
+                return found_members[0]
+            if len(found_members) > 1:
+                return ParameterGroup('found', *found_members, names=names)
 
         raise AttributeError(f"'{self.__class__.__name__}' object has"
                              f" no attribute '{name}'")
