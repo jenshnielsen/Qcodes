@@ -172,9 +172,11 @@ class ChannelList(Metadatable):
                 not issubclass(chan_type, InstrumentChannel)):
             raise ValueError("Channel Lists can only hold instances of type"
                              " InstrumentChannel")
-        if (not isinstance(multichan_paramclass, type) or
-                not issubclass(multichan_paramclass,
-                               MultiChannelInstrumentParameter)):
+        is_type = isinstance(multichan_paramclass, type)
+        is_mcip = issubclass(multichan_paramclass,
+                   MultiChannelInstrumentParameter)
+        is_pg = issubclass(multichan_paramclass, ParameterGroup)
+        if (not is_type or (not is_mcip and not is_pg)):
             raise ValueError("multichan_paramclass must be a (subclass of) "
                              "MultiChannelInstrumentParameter")
 
@@ -480,6 +482,13 @@ class ChannelList(Metadatable):
 
 class NewChannelList(ChannelList):
 
+    def __init__(self, *args, multichan_paramclass: ParameterGroup=None,
+                 **kwargs):
+        if multichan_paramclass is None:
+            multichan_paramclass = ParameterGroup
+        super().__init__(*args, multichan_paramclass=multichan_paramclass,
+                         **kwargs, )
+
     def __getattr__(self, name: str):
         """
         Return a multi-channel function or parameter that we can use to get or
@@ -497,16 +506,16 @@ class NewChannelList(ChannelList):
                 parameter = getattr(channel, name)
                 parameters.append(parameter)
                 names.append(channel.short_name)
-            return ParameterGroup(name, *parameters, names=names)
+            return self._paramclass(name, *parameters, names=names,
+                                    parent=self._parent)
         if name in self._channels[0].submodules:
             subgroups = []
             names = []
             for i, channel in enumerate(self._channels):
                 subgroups.append(getattr(channel, name))
                 names.append(channel.short_name)
-            return ParameterGroup(name, *subgroups, parent=self._parent,
-                                  names=names)
-
+            return self._paramclass(name, *subgroups, parent=self._parent,
+                                    names=names)
 
         # Check if this is a valid function
         if name in self._channels[0].functions:
