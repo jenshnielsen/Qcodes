@@ -1,3 +1,4 @@
+from typing import Union, Callable, Optional, Any
 from qcodes.utils.helpers import is_function
 
 
@@ -44,8 +45,12 @@ class Command:
         NoCommandError: if no cmd is found no_cmd_function is missing
     """
 
-    def __init__(self, arg_count, cmd=None, exec_str=None, input_parser=None,
-                 output_parser=None, no_cmd_function=None):
+    def __init__(self, arg_count: int,
+                 cmd: Optional[Union[str, Callable[..., Any]]]=None,
+                 exec_str: Optional[Callable[[Any], Any]]=None,
+                 input_parser: Optional[Callable[..., Any]]=None,
+                 output_parser: Optional[Callable[..., Any]]=None,
+                 no_cmd_function: Optional[Callable[..., Any]]=None):
 
         self.arg_count = arg_count
 
