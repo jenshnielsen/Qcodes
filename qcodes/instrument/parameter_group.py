@@ -41,13 +41,6 @@ class ParameterGroup(Metadatable):
             for parameter in parameters:
                 self.add_member(parameter)
 
-    def get(self) -> Dict['str', Union[dict, value_types]]:
-        captured_values = {}
-
-        for name, parameter in self.__parameter_dict.items():
-            captured_values[name] = parameter.get()
-        return captured_values
-
     def add_member(self, new_member: Union['ParameterGroup', Parameter],
                    name=None) -> None:
         if name is None:
@@ -58,6 +51,9 @@ class ParameterGroup(Metadatable):
                                f"added to {self.full_name}")
         self.__parameter_dict[name] = new_member
 
+    @property
+    def root_instrument(self) -> InstrumentBase:
+        return self.__parent.root_instrument
 
     @property
     def parent(self) -> Union['ParameterGroup', InstrumentBase]:
@@ -88,6 +84,15 @@ class ParameterGroup(Metadatable):
     def parameter_dict(self):
         return self.__parameter_dict
 
+    def get(self) -> Dict['str', Union[dict, value_types]]:
+        captured_values = {}
+        for name, parameter in self.__parameter_dict.items():
+            captured_values[name] = parameter.get()
+        return captured_values
+
+    def get_latest(self) -> Dict['str', Union[dict, value_types]]:
+        return self.get()
+
     def set(self, values: Dict[str, Union[dict, value_types]]):
 
         for param_name, param_value in values.items():
@@ -108,7 +113,8 @@ class ParameterGroup(Metadatable):
             if len(found_members) == 1:
                 return found_members[0]
             if len(found_members) > 1:
-                return ParameterGroup('found', *found_members, names=names)
+                myclass = self.__class__
+                return myclass('found', *found_members, names=names)
 
         raise AttributeError(f"'{self.__class__.__name__}' object has"
                              f" no attribute '{name}'")
