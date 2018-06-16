@@ -50,7 +50,7 @@ class Command:
                  exec_str: Optional[Callable[[Any], Any]]=None,
                  input_parser: Optional[Callable[..., Any]]=None,
                  output_parser: Optional[Callable[..., Any]]=None,
-                 no_cmd_function: Optional[Callable[..., Any]]=None):
+                 no_cmd_function: Optional[Callable[..., Any]]=None) -> None:
 
         self.arg_count = arg_count
 
@@ -60,6 +60,7 @@ class Command:
                             'taking the same args as the command, not '
                             '{}'.format(no_cmd_function))
 
+        parse_input: Union[bool, str]
         if input_parser is None:
             parse_input = False
         elif is_function(input_parser, arg_count):
