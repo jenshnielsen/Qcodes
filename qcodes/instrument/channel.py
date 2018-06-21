@@ -390,6 +390,10 @@ class ChannelList(Metadatable):
                     }
         return snap
 
+    @property
+    def parent(self) -> InstrumentBase:
+        return self._parent
+
     def __getattr__(self, name: str):
         """
         Return a multi-channel function or parameter that we can use to get or
