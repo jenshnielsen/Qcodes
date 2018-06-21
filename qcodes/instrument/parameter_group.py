@@ -114,7 +114,8 @@ class ParameterGroup(Metadatable):
                 return found_members[0]
             if len(found_members) > 1:
                 myclass = self.__class__
-                return myclass('found', *found_members, names=names)
+                return myclass('found', *found_members, names=names,
+                               parent=self)
 
         raise AttributeError(f"'{self.__class__.__name__}' object has"
                              f" no attribute '{name}'")
