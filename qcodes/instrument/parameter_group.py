@@ -120,7 +120,6 @@ class ParameterGroup(Metadatable):
         raise AttributeError(f"'{self.__class__.__name__}' object has"
                              f" no attribute '{name}'")
 
-
     def snapshot_base(self, update: bool=False,
                       params_to_skip_update: Sequence[str]=None):
 
