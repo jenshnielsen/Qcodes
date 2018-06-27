@@ -1,5 +1,5 @@
 """ Base class for the channel of an instrument """
-from typing import List, Tuple, Union, Optional, Dict, Sequence, cast
+from typing import List, Tuple, Union, Optional, Dict, Sequence, cast, Any
 
 from .base import InstrumentBase, Instrument
 from .parameter import MultiParameter, ArrayParameter, Parameter
@@ -72,6 +72,23 @@ class InstrumentChannel(InstrumentBase):
         name_parts = self._parent.name_parts
         name_parts.append(self.short_name)
         return name_parts
+
+
+class NewInstrumentChannel(InstrumentChannel):
+
+    # todo The inheritance needs to be reorganised for this to be
+    # clean
+    def get(self) -> Dict['str', Any]:
+        captured_values = {}
+        for name, parameter in self.parameters.items():
+            captured_values[name] = parameter.get()
+        for name, submodule in self.submodules.items():
+            captured_values[name] = submodule.get()
+        return captured_values
+
+    def set(self, values: Dict[str, Any]):
+        for param_name, param_value in values.items():
+            self.parameters[param_name].set(param_value)
 
 class MultiChannelInstrumentParameter(MultiParameter):
     """

@@ -90,9 +90,6 @@ class ParameterGroup(Metadatable):
             captured_values[name] = parameter.get()
         return captured_values
 
-    def get_latest(self) -> Dict['str', Union[dict, value_types]]:
-        return self.get()
-
     def set(self, values: Dict[str, Union[dict, value_types]]):
 
         for param_name, param_value in values.items():
@@ -105,11 +102,11 @@ class ParameterGroup(Metadatable):
             found_members = []
             names = []
             for groupname, member in self.__parameter_dict.items():
-                if isinstance(member, ParameterGroup):
-                    found_member = getattr(member, name, None)
-                    if found_member is not None:
-                        names.append(groupname)
-                        found_members.append(found_member)
+                # what if this is a parameter
+                found_member = getattr(member, name, None)
+                if found_member is not None:
+                    names.append(groupname)
+                    found_members.append(found_member)
             if len(found_members) == 1:
                 return found_members[0]
             if len(found_members) > 1:
