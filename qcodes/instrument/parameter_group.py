@@ -59,10 +59,6 @@ class ParameterGroup(Metadatable):
     def parent(self) -> Union['ParameterGroup', InstrumentBase]:
         return self.__parent
 
-    @parent.setter
-    def set_parent(self, parent: Union['ParameterGroup', InstrumentBase]):
-        self.__parent = parent
-
     @property
     def full_name(self):
         return "_".join(self.name_parts)
