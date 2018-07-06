@@ -328,25 +328,25 @@ class Infiniium(VisaInstrument):
                            get_parser=float
                            )
 
-        # this parameter gets used internally for data aquisition. For now it
+        # this parameter gets used internally for data acquisition. For now it
         # should not be used manually
         self.add_parameter('data_source',
                            label='Waveform Data source',
                            get_cmd=':WAVeform:SOURce?',
                            set_cmd=':WAVeform:SOURce {}',
-                           vals = Enum( *(\
-                                ['CHANnel{}'.format(i) for i in range(1, 4+1)]+\
-                                ['CHAN{}'.format(i) for i in range(1, 4+1)]+\
-                                ['DIFF{}'.format(i) for i in range(1, 2+1)]+\
-                                ['COMMonmode{}'.format(i) for i in range(3, 4+1)]+\
-                                ['COMM{}'.format(i) for i in range(3, 4+1)]+\
-                                ['FUNCtion{}'.format(i) for i in range(1, 16+1)]+\
-                                ['FUNC{}'.format(i) for i in range(1, 16+1)]+\
-                                ['WMEMory{}'.format(i) for i in range(1, 4+1)]+\
-                                ['WMEM{}'.format(i) for i in range(1, 4+1)]+\
-                                ['BUS{}'.format(i) for i in range(1, 4+1)]+\
-                                ['HISTogram', 'HIST', 'CLOCK']+\
-                                ['MTRend', 'MTR']))
+                           vals=Enum(*(
+                             ['CHANnel{}'.format(i) for i in range(1, 4+1)] +
+                             ['CHAN{}'.format(i) for i in range(1, 4+1)] +
+                             ['DIFF{}'.format(i) for i in range(1, 2+1)] +
+                             ['COMMonmode{}'.format(i) for i in range(3, 4+1)] +
+                             ['COMM{}'.format(i) for i in range(3, 4+1)] +
+                             ['FUNCtion{}'.format(i) for i in range(1, 16+1)] +
+                             ['FUNC{}'.format(i) for i in range(1, 16+1)] +
+                             ['WMEMory{}'.format(i) for i in range(1, 4+1)] +
+                             ['WMEM{}'.format(i) for i in range(1, 4+1)] +
+                             ['BUS{}'.format(i) for i in range(1, 4+1)] +
+                             ['HISTogram', 'HIST', 'CLOCK'] +
+                             ['MTRend', 'MTR']))
                            )
 
         # TODO: implement as array parameter to allow for setting the other filter
@@ -367,8 +367,8 @@ class Infiniium(VisaInstrument):
                             )
         
         self.add_parameter('acquire_timespan',
-                            get_cmd=(lambda: self.acquire_points.get_latest() \
-                                            /self.acquire_sample_rate.get_latest()),
+                            get_cmd=(lambda: self.acquire_points.get_latest() /
+                                             self.acquire_sample_rate.get_latest()),
                             unit='s',
                             get_parser=float
                             )
