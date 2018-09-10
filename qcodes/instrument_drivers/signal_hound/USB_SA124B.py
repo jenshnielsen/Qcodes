@@ -353,14 +353,14 @@ class SignalHound_USB_SA124B(Instrument):
             detector = detectorVals[self.acquisition_mode()]
         else:
             raise ValueError('Invalid Detector mode! Detector  must be one of '
-                             '%s. Specified detector = %s' %
-                             (list(detectorVals.keys()), detector))
+                             f'{list(detectorVals.keys())}. Specified '
+                             f'detector = {self.acquisition_mode()}')
         if self.scale() in scaleVals:
             scale = scaleVals[self.scale()]
         else:
             raise ValueError('Invalid Scaling mode! Scaling mode must be one '
-                             'of %s. Specified scale = %s' %
-                             (list(scaleVals.keys()), scale))
+                             f'of {list(scaleVals.keys())}. '
+                             f'Specified scale = {self.scale()}')
         err = self.dll.saConfigAcquisition(self.deviceHandle, detector, scale)
         self.check_for_error(err)
 
@@ -442,7 +442,7 @@ class SignalHound_USB_SA124B(Instrument):
 
         # note if used in averaged mode (set in config) datamin=datamax
         datamin = np.array([minarr[elem] for elem in range(sweep_len)])
-        datamax = np.array([minarr[elem] for elem in range(sweep_len)])
+        datamax = np.array([maxarr[elem] for elem in range(sweep_len)])
 
         return np.array([freq_points, datamin, datamax])
 
