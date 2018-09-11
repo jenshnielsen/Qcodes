@@ -1,3 +1,4 @@
+from typing import Dict, Union, Optional
 from time import sleep, time
 import numpy as np
 import ctypes as ct
@@ -453,11 +454,44 @@ class SignalHound_USB_SA124B(Instrument):
 
     def check_for_error(self, err):
         if err != saStatus.saNoError:
-            err_msg = saStatus(err)
+            err_msg = saStatus(err).name
             if err > 0:
                 print('Warning:', err_msg)
             else:
                 raise IOError(err_msg)
+
+    def get_idn(self) -> Dict[str, Optional[Union[str, int]]]:
+
+        output = {}
+
+        output['vendor'] = 'Signal Hound'
+
+        devicetypeenum = ct.c_int()
+        ret = self.dll.saGetDeviceType(self.deviceHandle,
+                                       ct.pointer(devicetypeenum))
+        if ret != saStatus.saNoError:
+            raise RuntimeError(f"Could not get device type. "
+                               f"Error was: {saStatus(ret).name}")
+        output['model'] = saDeviceType(devicetypeenum.value).name
+
+        serialnumber = ct.c_int32()
+        ret = self.dll.saGetSerialNumber(self.deviceHandle,
+                                         ct.pointer(serialnumber))
+        if ret != saStatus.saNoError:
+            raise RuntimeError(f"Could not get serial number. "
+                               f"Error was: {saStatus(ret).name}")
+        output['serial'] = serialnumber.value
+
+        fw_version = (ct.c_char*17)()
+        # the manual says that this must be at least 16 char
+        # but not clear if that includes a termination zero so
+        # make it 17 just in case
+        ret = self.dll.saGetFirmwareString(self.deviceHandle, fw_version)
+        if ret != saStatus.saNoError:
+            raise RuntimeError(f"Could not get fw version. "
+                               f"Error was: {saStatus(ret).name}")
+        output['firmware'] = fw_version.value.decode('ascii')
+        return output
 
 
 class constants:
@@ -551,3 +585,11 @@ class saStatus(IntEnum):
     saCompressionWarning = 2
     saParameterClamped = 3
     saBandwidthClamped = 4
+
+
+class saDeviceType(IntEnum):
+    saDeviceTypeNone = 0
+    saDeviceTypeSA44 = 1
+    saDeviceTypeSA44B = 2
+    saDeviceTypeSA124A = 3
+    saDeviceTypeSA124B = 4
