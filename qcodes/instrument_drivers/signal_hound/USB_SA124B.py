@@ -126,7 +126,7 @@ class SignalHound_USB_SA124B(Instrument):
         self.devOpen = True
         self.get('device_type')
 
-    def closeDevice(self):
+    def close(self):
         log.info('Closing Device with handle num: '
                  f'{self.deviceHandle.value}')
 
@@ -142,6 +142,7 @@ class SignalHound_USB_SA124B(Instrument):
         log.info(f'Closed Device with handle num: {self.deviceHandle.value}')
         self.devOpen = False
         self.running(False)
+        super().close()
 
     def abort(self):
         log.info('Stopping acquisition')
