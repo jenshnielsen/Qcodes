@@ -115,14 +115,8 @@ class SignalHound_USB_SA124B(Instrument):
         deviceHandlePnt = ct.pointer(self.deviceHandle)
         ret = self.dll.saOpenDevice(deviceHandlePnt)
         if ret != saStatus.saNoError:
-            if ret == saStatus.saNullPtrErr:
-                raise ValueError('Could not open device due to '
-                                 'null-pointer error!')
-            elif ret == saStatus.saDeviceNotOpenErr:
-                raise ValueError('Could not open device!')
-            else:
-                raise ValueError('Could not open device due to unknown '
-                                 'reason! Error = %d' % ret)
+            raise ValueError('Could not open device. Got error: '
+                             f'{saStatus(ret).name}')
 
         self.devOpen = True
         self.get('device_type')
@@ -285,7 +279,7 @@ class SignalHound_USB_SA124B(Instrument):
             2. Acquisition configuration
                 lin-scale/log-scale
                 avg/max power
-            3. Configuring the external 10MHz refernce
+            3. Configuring the external 10MHz reference
             4. Configuration of the mode that is being used
             5. Configuration of the tracking generator (not implemented)
                 used in VNA mode
