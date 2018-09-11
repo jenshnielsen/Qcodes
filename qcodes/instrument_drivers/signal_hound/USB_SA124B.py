@@ -465,14 +465,7 @@ class SignalHound_USB_SA124B(Instrument):
         output = {}
 
         output['vendor'] = 'Signal Hound'
-
-        devicetypeenum = ct.c_int()
-        ret = self.dll.saGetDeviceType(self.deviceHandle,
-                                       ct.pointer(devicetypeenum))
-        if ret != saStatus.saNoError:
-            raise RuntimeError(f"Could not get device type. "
-                               f"Error was: {saStatus(ret).name}")
-        output['model'] = saDeviceType(devicetypeenum.value).name
+        output['model'] = self._do_get_device_type()
 
         serialnumber = ct.c_int32()
         ret = self.dll.saGetSerialNumber(self.deviceHandle,
@@ -585,11 +578,3 @@ class saStatus(IntEnum):
     saCompressionWarning = 2
     saParameterClamped = 3
     saBandwidthClamped = 4
-
-
-class saDeviceType(IntEnum):
-    saDeviceTypeNone = 0
-    saDeviceTypeSA44 = 1
-    saDeviceTypeSA44B = 2
-    saDeviceTypeSA124A = 3
-    saDeviceTypeSA124B = 4
