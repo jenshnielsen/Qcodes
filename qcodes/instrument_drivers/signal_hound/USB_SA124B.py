@@ -455,20 +455,6 @@ class SignalHound_USB_SA124B(Instrument):
             datamin += np.array([minarr[elem] for elem in range(sweep_len)])
         return datamin / n_avg
 
-    def get_power_at_freq(self, Navg=1):
-        """
-        Returns the maximum power in a window of 250kHz
-        around the specified  frequency.
-        The integration window is specified by the VideoBandWidth (set by vbw)
-        """
-        poweratfreq = 0
-        for i in range(Navg):
-            data = self.sweep()
-            max_power = np.max(data[1][:])
-            poweratfreq += max_power
-        self.power(poweratfreq / Navg)
-        return self.power()
-
     def prepare_for_measurement(self):
         self.configure()
         self.initialisation()
