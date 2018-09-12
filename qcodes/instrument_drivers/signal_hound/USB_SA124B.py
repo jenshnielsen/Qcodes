@@ -469,20 +469,6 @@ class SignalHound_USB_SA124B(Instrument):
         self.power(poweratfreq / Navg)
         return self.power()
 
-    def get_spectrum(self, Navg=1):
-        """
-        Averages over SH.sweep Navg times
-
-        """
-        sweep_params = self.QuerySweep()
-        data_spec = np.zeros(sweep_params[0])
-        for i in range(Navg):
-            data = self.sweep()
-            data_spec[:] += data[1][:]
-        data_spec[:] = data_spec[:] / Navg
-        sweep_points = data[0][:]
-        return np.array([sweep_points, data_spec])
-
     def prepare_for_measurement(self):
         self.configure()
         self.initialisation()
