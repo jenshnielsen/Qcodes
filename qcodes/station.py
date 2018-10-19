@@ -1,4 +1,5 @@
 """Station objects - collect all the equipment you use to do an experiment."""
+from typing import Dict, List, Optional, Sequence, Any
 
 from qcodes.utils.metadata import Metadatable
 from qcodes.utils.helpers import make_unique, DelegateAttributes
@@ -16,34 +17,37 @@ class Station(Metadatable, DelegateAttributes):
     """
     A representation of the entire physical setup.
 
-    Lists all the connected `Component`\s and the current default
+    Lists all the connected Components and the current default
     measurement (a list of actions). Contains a convenience method
     `.measure()` to measure these defaults right now, but this is separate
     from the code used by `Loop`.
 
     Args:
-        *components (list[Any]): components to add immediately to the Station.
-            can be added later via self.add_component
+        *components (list[Any]): components to add immediately to the
+             Station. Can be added later via self.add_component
 
-        monitor (None): Not implememnted, the object that monitors the system continuously
+        monitor (None): Not implemented, the object that monitors the system
+            continuously
 
         default (bool): is this station the default, which gets
-            used in Loops and elsewhere that a Station can be specified, default  true
+            used in Loops and elsewhere that a Station can be specified,
+            default true
 
         update_snapshot (bool): immediately update the snapshot
             of each component as it is added to the Station, default true
 
     Attributes:
         default (Station): class attribute to store the default station
-        delegate_attr_dicts (list): a list of names (strings) of dictionaries which are
-            (or will be) attributes of self, whose keys should be treated as
-            attributes of self
+        delegate_attr_dicts (list): a list of names (strings) of dictionaries
+            which are (or will be) attributes of self, whose keys should be
+            treated as attributes of self
     """
 
-    default = None
+    default = None # type: 'Station'
 
-    def __init__(self, *components, monitor=None, default=True,
-                 update_snapshot=True, **kwargs):
+    def __init__(self, *components: Metadatable,
+                 monitor: Any=None, default: bool=True,
+                 update_snapshot: bool=True, **kwargs) -> None:
         super().__init__(**kwargs)
 
         # when a new station is defined, store it in a class variable
@@ -55,21 +59,22 @@ class Station(Metadatable, DelegateAttributes):
         if default:
             Station.default = self
 
-        self.components = {}
+        self.components = {} # type: Dict[str, Metadatable]
         for item in components:
             self.add_component(item, update_snapshot=update_snapshot)
 
         self.monitor = monitor
 
-        self.default_measurement = []
+        self.default_measurement = [] # type: List
 
-    def snapshot_base(self, update=False):
+    def snapshot_base(self, update: bool=False,
+                      params_to_skip_update: Sequence[str]=None) -> Dict:
         """
         State of the station as a JSON-compatible dict.
 
         Args:
             update (bool): If True, update the state by querying the
-             all the childs: f.ex. instruments, parameters, components, etc.
+             all the children: f.ex. instruments, parameters, components, etc.
              If False, just use the latest values in memory.
 
         Returns:
@@ -96,7 +101,8 @@ class Station(Metadatable, DelegateAttributes):
 
         return snap
 
-    def add_component(self, component, name=None, update_snapshot=True):
+    def add_component(self, component: Metadatable, name: str=None,
+                      update_snapshot: bool=True) -> str:
         """
         Record one component as part of this Station.
 
@@ -118,13 +124,13 @@ class Station(Metadatable, DelegateAttributes):
         if name is None:
             name = getattr(component, 'name',
                            'component{}'.format(len(self.components)))
-        name = make_unique(str(name), self.components)
-        self.components[name] = component
-        return name
+        namestr = make_unique(str(name), self.components)
+        self.components[namestr] = component
+        return namestr
 
     def set_measurement(self, *actions):
         """
-        Save a set \*actions as the default measurement for this Station.
+        Save a set ``*actions``` as the default measurement for this Station.
 
         These actions will be executed by default by a Loop if this is the
         default Station, and any measurements among them can be done once
