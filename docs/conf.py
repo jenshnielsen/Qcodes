@@ -411,6 +411,6 @@ nbsphinx_prolog = r"""
     .. nbinfo::
 
         This page was generated from the notebook `{{ docname }} <https://github.com/QCoDeS/Qcodes/blob/master/{{ docname }}>`__.
-        See the notebook online in nbviewer `here. <https://nbviewer.jupyter.org/github/QCoDeS/Qcodes/blob/master/{{ docname }}>`__
+        See the notebook online on nbviewer `here. <https://nbviewer.jupyter.org/github/QCoDeS/Qcodes/blob/master/{{ docname }}>`__
 
 """
