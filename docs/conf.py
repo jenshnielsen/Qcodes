@@ -399,3 +399,18 @@ numfig = True
 nbsphinx_kernel_name = 'python3'
 # always execute notebooks.
 nbsphinx_execute = 'always'
+
+nbsphinx_prolog = r"""
+{% set docname = env.doc2path(env.docname, base='docs') %}
+
+.. only:: html
+
+    .. role:: raw-html(raw)
+        :format: html
+
+    .. nbinfo::
+
+        This page was generated from the notebook `{{ docname }} <https://github.com/QCoDeS/Qcodes/blob/master/{{ docname }}>`__.
+        See the notebook online in nbviewer `here. <https://nbviewer.jupyter.org/github/QCoDeS/Qcodes/blob/master/{{ docname }}>`__
+
+"""
