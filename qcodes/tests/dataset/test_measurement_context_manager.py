@@ -299,10 +299,13 @@ def test_adding_scalars_as_array_raises(DAC):
     meas.register_parameter(DAC.ch1, paramtype='array')
     meas.register_parameter(DAC.ch2, paramtype='array')
 
-    with meas.run() as datasaver:
-        with pytest.raises(ValueError):
-            datasaver.add_result((DAC.ch1, DAC.ch1()),
-                                 (DAC.ch2, DAC.ch2()))
+    try:
+        with meas.run() as datasaver:
+            with pytest.raises(ValueError):
+                datasaver.add_result((DAC.ch1, DAC.ch1()),
+                                     (DAC.ch2, DAC.ch2()))
+    finally:
+        datasaver.dataset.conn.close()
 
 
 @pytest.mark.usefixtures("experiment")
@@ -314,11 +317,13 @@ def test_mixing_array_and_numeric_raises(DAC):
     meas.register_parameter(DAC.ch1, paramtype='numeric')
     meas.register_parameter(DAC.ch2, paramtype='array')
 
-    with meas.run() as datasaver:
-        with pytest.raises(RuntimeError):
-            datasaver.add_result((DAC.ch1, np.array([DAC.ch1(), DAC.ch1()])),
-                                 (DAC.ch2, np.array([DAC.ch2(), DAC.ch1()])))
-
+    try:
+        with meas.run() as datasaver:
+            with pytest.raises(RuntimeError):
+                datasaver.add_result((DAC.ch1, np.array([DAC.ch1(), DAC.ch1()])),
+                                     (DAC.ch2, np.array([DAC.ch2(), DAC.ch1()])))
+    finally:
+        datasaver.dataset.conn.close()
 
 def test_measurement_name(experiment, DAC, DMM):
     fmt = experiment.format_string
@@ -332,10 +337,13 @@ def test_measurement_name(experiment, DAC, DMM):
     meas.register_parameter(DAC.ch1)
     meas.register_parameter(DMM.v1, setpoints=[DAC.ch1])
 
-    with meas.run() as datasaver:
-        run_id = datasaver.run_id
-        expected_name = fmt.format(name, exp_id, run_id)
-        assert datasaver.dataset.table_name == expected_name
+    try:
+        with meas.run() as datasaver:
+            run_id = datasaver.run_id
+            expected_name = fmt.format(name, exp_id, run_id)
+            assert datasaver.dataset.table_name == expected_name
+    finally:
+        datasaver.dataset.conn.close()
 
 
 @settings(deadline=None)
@@ -356,8 +364,11 @@ def test_setting_write_period(wp):
         meas.write_period = wp
         assert meas._write_period == float(wp)
 
-        with meas.run() as datasaver:
-            assert datasaver.write_period == float(wp)
+        try:
+            with meas.run() as datasaver:
+                assert datasaver.write_period == float(wp)
+        finally:
+            datasaver.dataset.conn.close()
 
 @pytest.mark.usefixtures("experiment")
 def test_method_chaining(DAC):

@@ -75,12 +75,15 @@ def test_numpy_types():
     dtypes = [np.int8, np.int16, np.int32, np.int64, np.float16, np.float32,
               np.float64]
 
-    for dtype in dtypes:
-        data_saver.add_result(("p", dtype(2)))
+    try:
+        for dtype in dtypes:
+            data_saver.add_result(("p", dtype(2)))
 
-    data_saver.flush_data_to_database()
-    data = test_set.get_data("p")
-    assert data == [[2] for _ in range(len(dtypes))]
+        data_saver.flush_data_to_database()
+        data = test_set.get_data("p")
+        assert data == [[2] for _ in range(len(dtypes))]
+    finally:
+        data_saver.dataset.conn.close()
 
 
 @pytest.mark.usefixtures("experiment")

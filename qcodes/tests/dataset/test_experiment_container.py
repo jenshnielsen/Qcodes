@@ -32,11 +32,15 @@ def test_run_loaded_experiment():
     exp_loaded = load_experiment_by_name("test", "test1")
 
     meas = Measurement(exp=exp_loaded)
-    with meas.run():
-        pass
+    try:
+        with meas.run() as ds1:
+            pass
 
-    with meas.run():
-        pass
+        with meas.run() as ds2:
+            pass
+    finally:
+        ds1.dataset.conn.close()
+        ds2.dataset.conn.close()
 
 def test_last_data_set_from_experiment(dataset):
     experiment = load_experiment(dataset.exp_id)
