@@ -74,7 +74,9 @@ class DataSaver:
 
     def __init__(self, dataset: DataSet,
                  write_period: numeric_types,
-                 interdeps: InterDependencies_) -> None:
+                 interdeps: InterDependencies_,
+                 plot_obj=None,
+                 plotting_buffer=None) -> None:
         self._dataset = dataset
         if DataSaver.default_callback is not None \
                 and 'run_tables_subscription_callback' \
@@ -104,6 +106,8 @@ class DataSaver:
         self._last_save_time = perf_counter()
         self._known_dependencies: Dict[str, List[str]] = {}
         self.parent_datasets: List[DataSet] = []
+        self.plot_obj = plot_obj
+        self.plotting_buffer = plotting_buffer
 
         for link in self._dataset.parent_dataset_links:
             self.parent_datasets.append(load_by_guid(link.tail))
@@ -162,6 +166,11 @@ class DataSaver:
         self._validate_result_types(results_dict)
 
         self._enqueue_results(results_dict)
+
+        # TODO: How would this work with array/multiparameter
+        if self.plotting_buffer is not None:
+            results_dict_hv = {key.name: np.atleast_1d(value) for key, value in results_dict.items()}
+            self.plotting_buffer.send(results_dict_hv)
 
         if perf_counter() - self._last_save_time > self.write_period:
             self.flush_data_to_database()
@@ -557,7 +566,9 @@ class Runner:
             subscribers: Sequence[Tuple[Callable,
                                         Union[MutableSequence,
                                               MutableMapping]]] = None,
-            parent_datasets: List[Dict] = []) -> None:
+            parent_datasets: List[Dict] = [],
+            plot_obj=None,
+            plotting_buffer=None) -> None:
 
         self.enteractions = enteractions
         self.exitactions = exitactions
@@ -577,6 +588,8 @@ class Runner:
             if write_period is not None else 5.0
         self.name = name if name else 'results'
         self._parent_datasets = parent_datasets
+        self.plot_obj = plot_obj
+        self.plotting_buffer = plotting_buffer
 
     def __enter__(self) -> DataSaver:
         # TODO: should user actions really precede the dataset?
@@ -624,7 +637,9 @@ class Runner:
 
         self.datasaver = DataSaver(dataset=self.ds,
                                    write_period=self.write_period,
-                                   interdeps=self._interdependencies)
+                                   interdeps=self._interdependencies,
+                                   plot_obj=self.plot_obj,
+                                   plotting_buffer=self.plotting_buffer)
 
         return self.datasaver
 
@@ -670,6 +685,8 @@ class Measurement:
         self.name = ''
         self._interdeps = InterDependencies_()
         self._parent_datasets: List[Dict] = []
+        self.plotting_buffer = None
+        self.plot_obj = None
 
     @property
     def parameters(self) -> Dict[str, ParamSpecBase]:
@@ -678,6 +695,36 @@ class Measurement:
     @property
     def write_period(self) -> Optional[float]:
         return self._write_period
+
+    def setup_live_plotting(self):
+        import holoviews as hv
+        from holoviews.streams import Buffer
+        from functools import partial
+        plots = []
+        bufferdata = {}
+        for param in self._interdeps.paramspecs:
+            # TODO: we may need to consider types here
+            bufferdata[param.name] = np.array([])
+
+        mybuffer = Buffer(data=bufferdata)
+
+        for dep, dependents in self._interdeps.dependencies.items():
+            if len(dependents) == 1:
+                plot = partial(hv.Curve, kdims=[dependents[0].name], vdims=[dep.name])
+                plots.append(hv.DynamicMap(plot, streams=[mybuffer]))
+            elif len(dependents) == 2:
+                raise RuntimeError("We don't support 2D at the moment ")
+            else:
+                raise RuntimeError("We only support 1d and 2d at the moment")
+
+        for i, plot in enumerate(plots):
+            if i == 0:
+                plotagg = plot
+            else:
+                plotagg += plot
+        self.plotting_buffer = mybuffer
+        self.plot_obj = plotagg
+        return plotagg
 
     @write_period.setter
     def write_period(self, wp: numeric_types) -> None:
@@ -1159,4 +1206,6 @@ class Measurement:
                       interdeps=self._interdeps,
                       name=self.name,
                       subscribers=self.subscribers,
-                      parent_datasets=self._parent_datasets)
+                      parent_datasets=self._parent_datasets,
+                      plot_obj=self.plot_obj,
+                      plotting_buffer=self.plotting_buffer)
