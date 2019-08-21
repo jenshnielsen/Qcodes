@@ -9,7 +9,7 @@ from collections import OrderedDict
 from typing import List, Union, Callable, Dict, Any, Optional
 
 from qcodes.instrument.parameter import Parameter
-from qcodes import Instrument
+from qcodes.instrument.base import Instrument
 
 
 class GroupParameter(Parameter):
