@@ -2,7 +2,8 @@ import textwrap
 import numpy as np
 
 import qcodes.utils.validators as vals
-from qcodes import VisaInstrument, InstrumentChannel
+from qcodes.instrument.visa import VisaInstrument
+from qcodes.instrument.channel import InstrumentChannel
 from qcodes.instrument_drivers.Keysight.private.error_handling import \
     KeysightErrorQueueMixin
 

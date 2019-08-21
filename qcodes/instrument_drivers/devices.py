@@ -1,6 +1,7 @@
 from typing import Union, cast
 
-from qcodes import Parameter, Instrument
+from qcodes.instrument.parameter import Parameter
+from qcodes.instrument.base import Instrument
 
 
 class VoltageDivider(Parameter):

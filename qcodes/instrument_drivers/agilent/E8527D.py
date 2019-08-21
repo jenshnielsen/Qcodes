@@ -1,10 +1,10 @@
 from numpy import pi
 
-from qcodes import VisaInstrument, validators as vals
-
+from qcodes.utils import validators as vals
+from qcodes.instrument.visa import VisaInstrument
 
 class Agilent_E8527D(VisaInstrument):
-    '''
+    """
     This is the qcodes driver for the Agilent_E8527D signal generator
 
     Status: beta-version.
@@ -15,7 +15,7 @@ class Agilent_E8527D(VisaInstrument):
 
     This driver does not contain all commands available for the E8527D but
     only the ones most commonly used.
-    '''
+    """
     def __init__(self, name, address, step_attenuator=False, **kwargs):
         super().__init__(name, address, **kwargs)
 
