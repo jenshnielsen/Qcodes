@@ -88,22 +88,25 @@ if legacy_import:
     from qcodes.dataset.sqlite.database import initialise_database, \
         initialise_or_create_database_at
 
-try:
-    get_ipython() # type: ignore # Check if we are in iPython
-    from qcodes.utils.magic import register_magic_class
-    _register_magic = config.core.get('register_magic', False)
-    if _register_magic is not False:
-        register_magic_class(magic_commands=_register_magic)
-except NameError:
-    pass
-except RuntimeError as e:
-    print(e)
+    try:
+        get_ipython() # type: ignore # Check if we are in iPython
+        from qcodes.utils.magic import register_magic_class
+        _register_magic = config.core.get('register_magic', False)
+        if _register_magic is not False:
+            register_magic_class(magic_commands=_register_magic)
+    except NameError:
+        pass
+    except RuntimeError as e:
+        print(e)
+
 
 import logging
-
+import qcodes.instrument.base
 # ensure to close all instruments when interpreter is closed
 import atexit
-atexit.register(Instrument.close_all)
+
+
+atexit.register(qcodes.instrument.base.Instrument.close_all)
 atexit.register(logging.shutdown)
 
 
