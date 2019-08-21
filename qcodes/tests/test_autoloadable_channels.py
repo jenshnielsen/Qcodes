@@ -9,7 +9,7 @@ from typing import List, Union, Any, Dict, Callable
 import pytest
 import re
 
-from qcodes import Instrument
+from qcodes.instrument import Instrument
 from qcodes.instrument.channel import (
     AutoLoadableInstrumentChannel, AutoLoadableChannelList, InstrumentChannel
 )

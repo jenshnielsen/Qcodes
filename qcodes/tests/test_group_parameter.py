@@ -2,7 +2,7 @@ import re
 import pytest
 
 from qcodes.instrument.group_parameter import GroupParameter, Group
-from qcodes import Instrument
+from qcodes.instrument import Instrument
 
 
 class Dummy(Instrument):

@@ -11,7 +11,7 @@ from datetime import datetime
 import numpy as np
 from hypothesis import given, event, settings
 import hypothesis.strategies as hst
-from qcodes import Function
+from qcodes.instrument.base import Function
 from qcodes.instrument.parameter import (
     Parameter, ArrayParameter, MultiParameter, ManualParameter,
     InstrumentRefParameter, ScaledParameter, DelegateParameter)

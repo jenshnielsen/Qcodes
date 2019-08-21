@@ -8,7 +8,7 @@ import qcodes
 import qcodes.utils.validators as validators
 from qcodes.utils.helpers import get_qcodes_path
 from qcodes.instrument.parameter import DelegateParameter
-from qcodes import Instrument
+from qcodes.instrument import Instrument
 from qcodes.station import Station
 from qcodes.instrument.parameter import Parameter
 from qcodes.monitor.monitor import Monitor
