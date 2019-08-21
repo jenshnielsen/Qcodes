@@ -24,6 +24,7 @@ from qcodes.dataset.legacy_import import import_dat_file
 from qcodes.dataset.data_set import load_by_id
 from qcodes.instrument.parameter import expand_setpoints_helper
 from qcodes.utils.validators import Arrays, ComplexNumbers, Numbers
+from qcodes.station import Station
 # pylint: disable=unused-import
 from qcodes.tests.dataset.temporary_databases import (empty_temp_db,
                                                       experiment)
@@ -679,7 +680,7 @@ def test_datasaver_scalars(experiment, DAC, DMM, set_values, get_values,
                            breakpoint, write_period):
     no_of_runs = len(experiment)
 
-    station = qc.Station(DAC, DMM)
+    station = Station(DAC, DMM)
 
     meas = Measurement(station=station)
     meas.write_period = write_period

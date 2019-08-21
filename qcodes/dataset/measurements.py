@@ -17,7 +17,7 @@ from copy import deepcopy
 import numpy as np
 
 import qcodes as qc
-from qcodes import Station
+from qcodes.station import Station
 from qcodes.instrument.parameter import ArrayParameter, _BaseParameter, \
     Parameter, MultiParameter, ParameterWithSetpoints
 from qcodes.dataset.experiment_container import Experiment
@@ -596,7 +596,7 @@ class Runner:
 
         # .. and give the dataset a snapshot as metadata
         if self.station is None:
-            station = qc.Station.default
+            station = Station.default
         else:
             station = self.station
 
@@ -662,7 +662,7 @@ class Measurement:
     """
 
     def __init__(self, exp: Optional[Experiment] = None,
-                 station: Optional[qc.Station] = None) -> None:
+                 station: Optional[Station] = None) -> None:
         self.exitactions: List[Tuple[Callable, Sequence]] = []
         self.enteractions: List[Tuple[Callable, Sequence]] = []
         self.subscribers: List[Tuple[Callable, Union[MutableSequence,

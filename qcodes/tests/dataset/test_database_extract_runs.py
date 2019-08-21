@@ -27,7 +27,7 @@ from qcodes.tests.dataset.test_descriptions import some_paramspecs
 from qcodes.tests.dataset.test_dependencies import some_interdeps
 from qcodes.tests.common import error_caused_by
 from qcodes.dataset.measurements import Measurement
-from qcodes import Station
+from qcodes.station import Station
 from qcodes.tests.instrument_mocks import DummyInstrument
 from qcodes.dataset.linked_datasets.links import Link
 
