@@ -34,9 +34,7 @@ if plotlib in {'matplotlib', 'all'}:
 
 
 from qcodes.station import Station
-from qcodes.loops import Loop, active_loop, active_data_set
-from qcodes.measure import Measure
-from qcodes.actions import Task, Wait, BreakIf
+
 haswebsockets = True
 try:
     import websockets
@@ -44,14 +42,6 @@ except ImportError:
     haswebsockets = False
 if haswebsockets:
     from qcodes.monitor.monitor import Monitor
-
-from qcodes.data.data_set import DataSet, new_data, load_data
-from qcodes.data.location import FormatLocation
-from qcodes.data.data_array import DataArray
-from qcodes.data.format import Formatter
-from qcodes.data.gnuplot_format import GNUPlotFormat
-from qcodes.data.hdf5_format import HDF5Format
-from qcodes.data.io import DiskIO
 
 from qcodes.instrument.base import Instrument, find_or_create_instrument
 from qcodes.instrument.ip import IPInstrument
