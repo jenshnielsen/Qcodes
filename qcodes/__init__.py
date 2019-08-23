@@ -15,24 +15,6 @@ config: Config = Config()
 
 from qcodes.version import __version__
 
-plotlib = config.gui.plotlib
-if plotlib in {'QT', 'all'}:
-    try:
-        from qcodes.plots.pyqtgraph import QtPlot
-    except Exception:
-        print('pyqtgraph plotting not supported, '
-              'try "from qcodes.plots.pyqtgraph import QtPlot" '
-              'to see the full error')
-
-if plotlib in {'matplotlib', 'all'}:
-    try:
-        from qcodes.plots.qcmatplotlib import MatPlot
-    except Exception:
-        print('matplotlib plotting not supported, '
-              'try "from qcodes.plots.qcmatplotlib import MatPlot" '
-              'to see the full error')
-
-
 from qcodes.station import Station
 
 haswebsockets = True
@@ -60,7 +42,6 @@ from qcodes.instrument.parameter import (
     ScaledParameter,
     combine,
     CombinedParameter)
-from qcodes.instrument.sweep_values import SweepFixedValues, SweepValues
 
 from qcodes.utils import validators
 from qcodes.utils.zmq_helpers import Publisher
@@ -74,17 +55,6 @@ from qcodes.dataset.sqlite.settings import SQLiteSettings
 from qcodes.dataset.descriptions.param_spec import ParamSpec
 from qcodes.dataset.sqlite.database import initialise_database, \
     initialise_or_create_database_at
-
-try:
-    get_ipython() # type: ignore # Check if we are in iPython
-    from qcodes.utils.magic import register_magic_class
-    _register_magic = config.core.get('register_magic', False)
-    if _register_magic is not False:
-        register_magic_class(magic_commands=_register_magic)
-except NameError:
-    pass
-except RuntimeError as e:
-    print(e)
 
 import logging
 
