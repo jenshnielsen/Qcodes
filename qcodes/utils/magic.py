@@ -1,9 +1,7 @@
 import sys
 from IPython.core.magic import Magics, magics_class, line_cell_magic
 
-if sys.version_info < (3, 6):
-    raise RuntimeError('Magic only supported for Python version 3.6 and up')
-
+from qcodes import config
 
 @magics_class
 class QCoDeSMagic(Magics):
@@ -161,3 +159,10 @@ def register_magic_class(cls=QCoDeSMagic, magic_commands=True):
                                       if key in magic_commands}
                           for line_cell, magics in cls.magics.items()}
         ip.magics_manager.register(cls)
+
+
+def register_magic_from_config():
+    get_ipython() # type: ignore # Check if we are in iPython
+    _register_magic = config.core.get('register_magic', False)
+    if _register_magic is not False:
+        register_magic_class(magic_commands=_register_magic)
