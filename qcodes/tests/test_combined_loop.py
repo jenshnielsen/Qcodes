@@ -6,7 +6,7 @@ import hypothesis.strategies as hst
 
 from .instrument_mocks import DummyInstrument
 from qcodes.instrument.parameter import combine
-from qcodes import Task, Loop
+from qcodes.loops import Task, Loop
 from qcodes.instrument.parameter import Parameter
 
 

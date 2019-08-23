@@ -4,7 +4,8 @@ import numpy as np
 from typing import List, Dict, Optional
 
 import qcodes as qc
-from qcodes import VisaInstrument, DataSet
+from qcodes import VisaInstrument
+from qcodes.data.data_set import DataSet
 from qcodes.instrument.channel import InstrumentChannel
 from qcodes.instrument.base import Instrument
 from qcodes.instrument.parameter import ArrayParameter
