@@ -1,5 +1,7 @@
 import signal
 import logging
+import sys
+import win32api
 
 log = logging.getLogger(__name__)
 
@@ -18,11 +20,13 @@ class DelayedKeyboardInterrupt:
     def __enter__(self) -> None:
         if signal.getsignal(signal.SIGINT) is signal.default_int_handler:
             self.old_handler = signal.signal(signal.SIGINT, self.handler)
+            #win32api.SetConsoleCtrlHandler(self.handler, True)
 
     def handler(self, sig, frame):
         self.signal_received = (sig, frame)
         print("Received SIGINT, Will interrupt at first suitable time. "
               "Send second SIGINT to interrupt immediately.")
+        sys.stdout.flush()
         # now that we have gotten one SIGINT make the signal
         # trigger a keyboard interrupt normally
         signal.signal(signal.SIGINT, self.forceful_handler)
@@ -31,6 +35,7 @@ class DelayedKeyboardInterrupt:
     @staticmethod
     def forceful_handler(sig, frame):
         print("Second SIGINT received. Triggering KeyboardInterrupt immediately.")
+        sys.stdout.flush()
         log.info('Second SIGINT received. Triggering KeyboardInterrupt immediately.')
         signal.default_int_handler(sig, frame)
 
