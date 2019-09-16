@@ -1,59 +1,69 @@
 import os
-from signal import SIGINT, CTRL_C_EVENT
-import threading
+import signal
 import time
+import subprocess
 
-from qcodes.utils.delaykeyboardinterrupt import DelayedKeyboardInterrupt
-
-
-def not_to_be_interrupted(output):
-    with DelayedKeyboardInterrupt():
-        for i in range(20):
-            time.sleep(0.1)
-            output.append(i)
-        output.append("done_looping")
-    output.append('completed')
-
-
-pid = os.getpid()
-
-
-def trigger_double_kill():
-    # You could do something more robust, e.g. wait until port is listening
-    time.sleep(1)
-    os.kill(pid, CTRL_C_EVENT)
-    os.kill(pid, CTRL_C_EVENT)
-
-
-def trigger_single_kill():
-    # You could do something more robust, e.g. wait until port is listening
-    time.sleep(1)
-    os.kill(pid, CTRL_C_EVENT)
+# import win32api
+# import win32con
+# import win32process
 
 
 def test_double_kill():
-    try:
-        thread = threading.Thread(target=trigger_double_kill)
-        thread.daemon = True
-        thread.start()
-        output = []
-        not_to_be_interrupted(output)
-    except KeyboardInterrupt:
-        pass
+    proc = subprocess.Popen("python nointerupt.py", shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    time.sleep(2)
+    pid = proc.pid
+    while pid is None:
+        pid = proc.pid
+    os.kill(pid, signal.CTRL_C_EVENT)
+    os.kill(pid, signal.CTRL_C_EVENT)
+    output = proc.communicate()
+    a = output[0].splitlines()
+    for line in a:
+        print(line)
 
-    #assert "done_looping" not in output
-    #assert "completed" in output
+    stdout = output[0].splitlines()[-1]
+    result = eval(stdout.decode())
+    print(result)
+    assert isinstance(result[-1], int)
 
 
-def foo_single_kill():
-    try:
-        thread = threading.Thread(target=trigger_single_kill)
-        thread.daemon = True
-        thread.start()
-        output = []
-        not_to_be_interrupted(output)
-    except KeyboardInterrupt:
-        pass
+def test_single_kill():
+    proc = subprocess.Popen("python nointerupt.py",
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+    time.sleep(2)
+    pid = proc.pid
+    while pid is None:
+        pid = proc.pid
+    print(pid)
+    proc.send_signal(signal.CTRL_BREAK_EVENT)
+    output = proc.communicate()
+    print(output)
+    # stdout = output[0].splitlines()[-1]
+    # result = eval(stdout.decode())
+    # assert result[-1] == 'done_looping'
+
+
+def test_no_kill():
+    proc = subprocess.Popen("python nointerupt.py", shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    output = proc.communicate()
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+
+    stdout = output[0].splitlines()[-1]
+    result = eval(stdout.decode())
+    assert result[-1] == 'completed'
+    assert result[-2] == 'done_looping'
+
 
 if __name__ == '__main__':
-    foo_single_kill()
+    # test_no_kill()
+    test_single_kill()
+    # test_double_kill()
+
