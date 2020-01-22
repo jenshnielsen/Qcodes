@@ -1,8 +1,9 @@
+from typing import Optional, Tuple, Union, Sequence
 import numpy as np
 import collections
 
 from qcodes.utils.helpers import DelegateAttributes, full_class, warn_units
-
+from qcodes.instrument.parameter import Parameter
 
 class DataArray(DelegateAttributes):
 
@@ -27,24 +28,24 @@ class DataArray(DelegateAttributes):
     because we delegate attributes through to the numpy array
 
     Args:
-        parameter (Optional[Parameter]): The parameter whose values will
+        parameter: The parameter whose values will
             populate this array, if any. Will copy ``name``, ``full_name``,
             ``label``, ``unit``, and ``snapshot`` from here unless you
             provide them explicitly.
 
-        name (Optional[str]): The short name of this array.
+        name: The short name of this array.
             TODO: use full_name as name, and get rid of short name
 
-        full_name (Optional[str]): The complete name of this array. If the
+        full_name: The complete name of this array. If the
             array is based on a parameter linked to an instrument, this is
             typically '<instrument_name>_<param_name>'
 
-        label (Optional[str]): A description of the values in this array to
+        label: A description of the values in this array to
             use for axis and colorbar labels on plots.
 
-        snapshot (Optional[dict]): Metadata snapshot to save with this array.
+        snapshot: Metadata snapshot to save with this array.
 
-        array_id (Optional[str]): A name for this array that's unique within
+        array_id: A name for this array that's unique within
             its ``DataSet``. Typically the full_name, but when the ``DataSet``
             is constructed we will append '_<i>' (``i`` is an integer starting
             from 1) if necessary to differentiate arrays with the same id.
@@ -58,24 +59,24 @@ class DataArray(DelegateAttributes):
             per dimension. The first should have one dimension, the second
             two dimensions, etc.
 
-        shape (Optional[Tuple[int]]): The shape (as in numpy) of the array.
+        shape: The shape (as in numpy) of the array.
             Will be prepended with new dimensions by any calls to ``nest``.
 
-        action_indices (Optional[Tuple[int]]): If used within a ``Loop``,
+        action_indices: If used within a ``Loop``,
             these are the indices at each level of nesting within the
             ``Loop`` of the loop action that's populating this array.
             TODO: this shouldn't be in DataArray at all, the loop should
             handle converting this to array_id internally (maybe it
             already does?)
 
-        unit (Optional[str]): The unit of the values stored in this array.
+        unit: The unit of the values stored in this array.
 
-        units (Optional[str]): DEPRECATED, redirects to ``unit``.
+        units: DEPRECATED, redirects to ``unit``.
 
-        is_setpoint (bool): True if this is a setpoint array, False if it
+        is_setpoint: True if this is a setpoint array, False if it
             is measured. Default False.
 
-        preset_data (Optional[Union[numpy.ndarray, Sequence]]): Contents of the
+        preset_data: Contents of the
             array, if already known (for example if this is a setpoint
             array). ``shape`` will be inferred from this array instead of
             from the ``shape`` argument.
@@ -108,10 +109,20 @@ class DataArray(DelegateAttributes):
         'array_id',
         'action_indices')
 
-    def __init__(self, parameter=None, name=None, full_name=None, label=None,
-                 snapshot=None, array_id=None, set_arrays=(), shape=None,
-                 action_indices=(), unit=None, units=None, is_setpoint=False,
-                 preset_data=None):
+    def __init__(self,
+                 parameter: Optional[Parameter] = None,
+                 name: str = None,
+                 full_name: str = None,
+                 label: str = None,
+                 snapshot: dict = None,
+                 array_id: Optional[str] = None,
+                 set_arrays: Tuple['DataArray', ...] = (),
+                 shape: Optional[Tuple[int, ...]] = None,
+                 action_indices: Optional[Tuple[int, ...]] = (),
+                 unit: Optional[str] = None,
+                 units: Optional[str] = None,
+                 is_setpoint: bool = False,
+                 preset_data: Optional[Union[np.ndarray, Sequence]] = None):
         self.name = name
         self.full_name = full_name or name
         self.label = label

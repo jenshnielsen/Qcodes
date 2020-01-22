@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Any
 from datetime import datetime
 
 from qcodes.instrument.parameter import Parameter
@@ -13,7 +13,7 @@ class Measure(Metadatable):
     Create a DataSet from a single (non-looped) set of actions.
 
     Args:
-        *actions (Any): sequence of actions to perform. Any action that is
+        *actions: sequence of actions to perform. Any action that is
             valid in a ``Loop`` can be used here. If an action is a gettable
             ``Parameter``, its output will be included in the DataSet.
             Scalars returned by an action will be saved as length-1 arrays,
@@ -23,7 +23,7 @@ class Measure(Metadatable):
                                 label='Single Measurement',
                                 set_cmd=None, get_cmd=None)
 
-    def __init__(self, *actions):
+    def __init__(self, *actions: Any):
         super().__init__()
         self._dummyLoop = Loop(self.dummy_parameter[0]).each(*actions)
 
@@ -36,19 +36,20 @@ class Measure(Metadatable):
     def get_data_set(self, *args, **kwargs):
         return self._dummyLoop.get_data_set(*args, **kwargs)
 
-    def run(self, use_threads=False, quiet=False, station=None, **kwargs):
+    def run(self, use_threads: bool = False, quiet: bool = False,
+            station: bool = None, **kwargs):
         """
         Run the actions in this measurement and return their data as a DataSet
 
         Args:
-            quiet (Optional[bool]): Set True to not print anything except
+            quiet: Set True to not print anything except
                 errors. Default False.
 
-            station (Optional[Station]): the ``Station`` this measurement
+            station: the ``Station`` this measurement
                 pertains to. Defaults to ``Station.default`` if one is defined.
                 Only used to supply metadata.
 
-            use_threads (Optional[bool]): whether to parallelize ``get``
+            use_threads: whether to parallelize ``get``
                 operations using threads. Default False.
 
             location (Optional[Union[str, bool]]): the location of the

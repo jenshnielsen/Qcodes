@@ -487,9 +487,9 @@ def strip_attrs(obj, whitelist=()):
 
 
 def compare_dictionaries(dict_1: Dict, dict_2: Dict,
-                         dict_1_name: Optional[str]='d1',
-                         dict_2_name: Optional[str]='d2',
-                         path: str="") -> Tuple[bool, str]:
+                         dict_1_name: Optional[str] = 'd1',
+                         dict_2_name: Optional[str] = 'd2',
+                         path: str = "") -> Tuple[bool, str]:
     """
     Compare two dictionaries recursively to find non matching elements.
 
@@ -501,8 +501,8 @@ def compare_dictionaries(dict_1: Dict, dict_2: Dict,
         dict_2_name: Optional name of the second dictionary used in the
                      differences string.
     Returns:
-        Tuple: Are the dicts equal and the difference rendered as
-               a string.
+        Are the dicts equal and the difference rendered as
+            a string.
 
     """
     err = ''

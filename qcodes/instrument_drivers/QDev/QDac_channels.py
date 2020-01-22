@@ -11,6 +11,7 @@ from operator import xor
 from collections import OrderedDict
 
 from qcodes.instrument.channel import InstrumentChannel, ChannelList
+from qcodes.instrument.base import InstrumentBase
 from qcodes.instrument.channel import MultiChannelInstrumentParameter
 from qcodes.instrument.visa import VisaInstrument
 from qcodes.utils import validators as vals
@@ -28,13 +29,13 @@ class QDacChannel(InstrumentChannel):
 
     _CHANNEL_VALIDATION = vals.Numbers(1, 48)
 
-    def __init__(self, parent, name, channum):
+    def __init__(self, parent: InstrumentBase, name: str, channum: int):
         """
         Args:
-            parent (Instrument): The instrument to which the channel is
+            parent: The instrument to which the channel is
                 attached.
-            name (str): The name of the channel
-            channum (int): The number of the channel in question (1-48)
+            name: The name of the channel
+            channum: The number of the channel in question (1-48)
         """
         super().__init__(parent, name)
 

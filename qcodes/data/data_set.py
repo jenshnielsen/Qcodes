@@ -5,7 +5,7 @@ import logging
 from traceback import format_exc
 from copy import deepcopy
 from collections import OrderedDict
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional, Union
 
 from .gnuplot_format import GNUPlotFormat
 from .io import DiskIO
@@ -15,13 +15,16 @@ from qcodes.utils.helpers import DelegateAttributes, full_class, deep_update
 log = logging.getLogger(__name__)
 
 
-def new_data(location=None, loc_record=None, name=None, overwrite=False,
+def new_data(location: Optional[Union[str, Callable, bool]] = None,
+             loc_record: Optional[dict] = None,
+             name: Optional[str] = None,
+             overwrite: bool = False,
              io=None, **kwargs):
     """
     Create a new DataSet.
 
     Args:
-        location (Optional[Union[str,Callable, Bool]]): If you provide a string,
+        location: If you provide a string,
             it must be an unused location in the io manager. Can also be:
 
             - a Callable ``location provider`` with one required parameter
@@ -35,12 +38,12 @@ def new_data(location=None, loc_record=None, name=None, overwrite=False,
             Default ``DataSet.location_provider`` which is initially
             ``FormatLocation()``
 
-        loc_record (Optional[dict]): If location is a callable, this will be
+        loc_record: If location is a callable, this will be
             passed to it as ``record``
 
-        name (Optional[str]): overrides the ``name`` key in the ``loc_record``.
+        name: overrides the ``name`` key in the ``loc_record``.
 
-        overwrite (bool): Are we allowed to overwrite an existing location?
+        overwrite: Are we allowed to overwrite an existing location?
             Default False.
 
         io (Optional[io_manager]): base physical location of the ``DataSet``.
@@ -75,7 +78,7 @@ def new_data(location=None, loc_record=None, name=None, overwrite=False,
         location = location(io, record=loc_record)
 
     if location and (not overwrite) and io.list(location):
-        raise FileExistsError('"' + location + '" already has data')
+        raise FileExistsError('"' + str(location) + '" already has data')
 
     return DataSet(location=location, io=io, **kwargs)
 
