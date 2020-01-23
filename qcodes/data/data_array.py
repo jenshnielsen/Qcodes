@@ -1,9 +1,11 @@
-from typing import Optional, Tuple, Union, Sequence
+from typing import Optional, Tuple, Union, Sequence, TYPE_CHECKING
 import numpy as np
 import collections
 
 from qcodes.utils.helpers import DelegateAttributes, full_class, warn_units
-from qcodes.instrument.parameter import Parameter
+if TYPE_CHECKING:
+    from qcodes.instrument.parameter import Parameter
+
 
 class DataArray(DelegateAttributes):
 
@@ -110,7 +112,7 @@ class DataArray(DelegateAttributes):
         'action_indices')
 
     def __init__(self,
-                 parameter: Optional[Parameter] = None,
+                 parameter: Optional['Parameter'] = None,
                  name: str = None,
                  full_name: str = None,
                  label: str = None,
