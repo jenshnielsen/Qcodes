@@ -1,10 +1,11 @@
 """Standard location_provider class(es) for creating DataSet locations."""
-from typing import cast
+from typing import cast, Optional
 from datetime import datetime
 import re
 import string
 
 import qcodes.config
+
 
 class SafeFormatter(string.Formatter):
 
@@ -59,23 +60,23 @@ class FormatLocation:
         > '2016-04-30/#001_13-28-15_Rainbow_test'
 
     Args:
-        fmt (Optional[str]): a format string that all the other info will be
+        fmt: a format string that all the other info will be
             inserted into. Default '{date}/{time}', or '{date}/{time}_{name}'
             if there is a ``name`` in the record.
 
-        fmt_date (Optional[str]): a ``datetime.strftime`` format string,
+        fmt_date: a ``datetime.strftime`` format string,
             should only use the date part. The result will be inserted in
             '{date}' in ``fmt``. Default '%Y-%m-%d'.
 
-        fmt_time (Optional[str]): a ``datetime.strftime`` format string,
+        fmt_time: a ``datetime.strftime`` format string,
             should only use the time part. The result will be inserted in
             '{time}' in ``fmt``. Default '%H-%M-%S'.
 
-        fmt_counter (Optional[str]): a format string for the counter (integer)
+        fmt_counter: a format string for the counter (integer)
             which is automatically generated from existing DataSets that the
             io manager can see. Default '{03}'.
 
-        record (Optional[dict]): A dict of default values to provide when
+        record: A dict of default values to provide when
             calling the location_provider. Values provided later will
             override these values.
 
@@ -90,8 +91,11 @@ class FormatLocation:
     # That confuses mypy so ignore the type above.
     default_fmt = cast(str, default_fmt)
 
-    def __init__(self, fmt=None, fmt_date=None, fmt_time=None,
-                 fmt_counter=None, record=None):
+    def __init__(self, fmt: Optional[str] = None,
+                 fmt_date: Optional[str] = None,
+                 fmt_time: Optional[str] = None,
+                 fmt_counter: Optional[str] = None,
+                 record: Optional[dict] = None):
         # TODO(giulioungaretti) this should be
         # FormatLocation.default_fmt
         self.fmt = fmt or self.default_fmt
