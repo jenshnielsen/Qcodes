@@ -726,6 +726,34 @@ def abstractmethod(funcobj: Callable) -> Callable:
     return funcobj
 
 
+def finalmethod(funcobj: Callable) -> Callable:
+    """
+    A decorator indicating abstract methods.
+
+    This is heavily inspired by the decorator of the same name in
+    the ABC standard library. But we make our own version because
+    we actually want to allow the class with the abstract method to be
+    instantiated and we will use this property to detect if the
+    method is abstract and should be overwritten.
+    """
+    funcobj.__qcodes_is_final_method__ = True  # type: ignore[attr-defined]
+    return funcobj
+
+
+def defaultmethod(funcobj: Callable) -> Callable:
+    """
+    A decorator indicating abstract methods.
+
+    This is heavily inspired by the decorator of the same name in
+    the ABC standard library. But we make our own version because
+    we actually want to allow the class with the abstract method to be
+    instantiated and we will use this property to detect if the
+    method is abstract and should be overwritten.
+    """
+    funcobj.__qcodes_is_default_method__ = True  # type: ignore[attr-defined]
+    return funcobj
+
+
 def _ruamel_importer():
     try:
         from ruamel_yaml import YAML
