@@ -55,11 +55,8 @@ class GroupParameter(Parameter):
         self._initial_value = initial_value
         super().__init__(name, instrument=instrument, **kwargs)
 
-        self.set = self._wrap_set(self.set_raw)
-
-        self.get_raw = lambda result=None: result if result is not None else self._get_raw_value()  # type: ignore[assignment]
-
-        self.get = self._wrap_get(self.get_raw)
+    def get_raw(self, result=None):
+            return result if result is not None else self._get_raw_value()
 
     def _get_raw_value(self) -> Any:
         if self.group is None:
