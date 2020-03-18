@@ -89,7 +89,7 @@ from functools import wraps
 import numpy
 
 from qcodes.utils.deprecate import deprecate, issue_deprecation_warning
-from qcodes.utils.helpers import abstractmethod
+from qcodes.utils.helpers import abstractmethod, finalmethod, defaultmethod
 from qcodes.utils.helpers import (permissive_range, is_sequence_of,
                                   DelegateAttributes, full_class, named_repr,
                                   warn_units)
@@ -295,19 +295,6 @@ class _BaseParameter(Metadatable):
         # be deprecated and removed in the future versions.
         self.get_latest: GetLatest
         self.get_latest = GetLatest(self)
-
-        self.get: Callable[..., ParamDataType]
-        implements_get_raw = (
-            hasattr(self, 'get_raw')
-            and not getattr(self.get_raw,
-                            '__qcodes_is_abstract_method__', False)
-        )
-        if implements_get_raw:
-            self.get = self._wrap_get(self.get_raw)
-        elif hasattr(self, 'get'):
-            raise RuntimeError(f'Overwriting get in a subclass of '
-                               f'_BaseParameter: '
-                               f'{self.full_name} is not allowed.')
 
         self.set: Callable[..., None]
         implements_set_raw = (
@@ -576,28 +563,25 @@ class _BaseParameter(Metadatable):
 
         return value
 
-    def _wrap_get(self, get_function: Callable[..., ParamDataType]) ->\
-            Callable[..., ParamDataType]:
-        @wraps(get_function)
-        def get_wrapper(*args: Any, **kwargs: Any) -> ParamDataType:
-            try:
-                # There might be cases where a .get also has args/kwargs
-                raw_value = get_function(*args, **kwargs)
+    # TODO init should check that this has not been overwritten
+    @finalmethod
+    def get(self, *args: Any, **kwargs: Any) -> ParamDataType:
+        try:
+            # There might be cases where a .get also has args/kwargs
+            raw_value = self.get_raw(*args, **kwargs)
 
-                value = self._from_raw_value_to_value(raw_value)
+            value = self._from_raw_value_to_value(raw_value)
 
-                if self._validate_on_get:
-                    self.validate(value)
+            if self._validate_on_get:
+                self.validate(value)
 
-                self.cache._update_with(value=value, raw_value=raw_value)
+            self.cache._update_with(value=value, raw_value=raw_value)
 
-                return value
+            return value
 
-            except Exception as e:
-                e.args = e.args + ('getting {}'.format(self),)
-                raise e
-
-        return get_wrapper
+        except Exception as e:
+            e.args = e.args + ('getting {}'.format(self),)
+            raise e
 
     def _wrap_set(self, set_function: Callable[..., None]) -> \
             Callable[..., None]:
@@ -1005,7 +989,11 @@ class Parameter(_BaseParameter):
         super().__init__(name=name, instrument=instrument, vals=vals,
                          max_val_age=max_val_age, **kwargs)
 
-        no_get = not hasattr(self, 'get') and (get_cmd is None
+        get_raw_is_not_overwritten = getattr(self.get_raw,
+                                             '__qcodes_is_default_method__',
+                                             False)
+
+        no_get = get_raw_is_not_overwritten and (get_cmd is None
                                                or get_cmd is False)
         # TODO: a matching check should be in _BaseParameter but
         #   due to the current limited design the _BaseParameter cannot
@@ -1016,22 +1004,27 @@ class Parameter(_BaseParameter):
             raise SyntaxError('Must have get method or specify get_cmd '
                               'when max_val_age is set')
 
+
+        def no_get_cmd() -> None:
+            raise RuntimeError("No get")
+
         # Enable set/get methods from get_cmd/set_cmd if given and
-        # no `get`/`set` or `get_raw`/`set_raw` methods have been defined
-        # in the scope of this class.
-        # (previous call to `super().__init__` wraps existing
-        # get_raw/set_raw into get/set methods)
-        if not hasattr(self, 'get') and get_cmd is not False:
+        # `get_raw`/`set_raw` has not been overwritten
+        if get_raw_is_not_overwritten:
             if get_cmd is None:
-                self.get_raw = (  # type: ignore[assignment]
+                self._internal_get_raw = (
                     lambda: self.cache.raw_value)
+            elif get_cmd is False:
+                self._internal_get_raw = no_get_cmd
             else:
                 exec_str_ask = getattr(instrument, "ask", None) \
                     if instrument else None
-                self.get_raw = Command(arg_count=0,  # type: ignore[assignment]
-                                       cmd=get_cmd,
-                                       exec_str=exec_str_ask)
-            self.get = self._wrap_get(self.get_raw)
+                self._internal_get_raw = Command(arg_count=0,
+                                                 cmd=get_cmd,
+                                                 exec_str=exec_str_ask)
+        else:
+            # in this case the internal method should never be called
+            self._internal_get_raw = no_get_cmd
 
         if not hasattr(self, 'set') and set_cmd is not False:
             if set_cmd is None:
@@ -1072,6 +1065,10 @@ class Parameter(_BaseParameter):
         to iterate over during a sweep
         """
         return SweepFixedValues(self, keys)
+
+    @defaultmethod
+    def get_raw(self, *args: Any, **kwargs: Any) -> ParamRawDataType:
+        self._internal_get_raw(*args, **kwargs)
 
     def increment(self, value: ParamDataType) -> None:
         """ Increment the parameter with a value
