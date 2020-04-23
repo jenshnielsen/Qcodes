@@ -1,7 +1,7 @@
 
 from functools import partial
 import logging
-from typing import Sequence, Dict, Optional
+from typing import Sequence, Dict, Optional, Callable
 
 import numpy as np
 
@@ -126,6 +126,111 @@ class DummyInstrument(Instrument):
                                unit="V",
                                vals=Numbers(-800, 400),
                                get_cmd=None, set_cmd=None)
+
+
+
+class DummyBufferInstrument(Instrument):
+
+    def __init__(self, name: str = 'dummy'):
+
+        """
+        Create a dummy instrument that can be used for testing
+
+        Args:
+            name: name for the instrument
+            gates: list of names that is used to create parameters for
+                            the instrument
+        """
+        super().__init__(name)
+
+        self._buffer = []
+
+        # make gates
+        self.add_parameter('parameter1',
+                           parameter_class=Parameter,
+                           initial_value=0,
+                           label='Parameter 1',
+                           unit="Parameter 1 Unit",
+                           vals=Numbers(0, 100),
+                           get_cmd=None, set_cmd=None)
+        self.add_parameter('parameter2',
+                    parameter_class=Parameter,
+                    initial_value=0,
+                    label='Parameter 2',
+                    unit="Parameter 2 Unit",
+                    vals=Numbers(0, 100),
+                    get_cmd=None, set_cmd=None)
+
+        self.add_parameter('parameter3',
+                           set_cmd=False,
+                           get_cmd=self.get_value)
+        
+        self.add_parameter('buffered_array',
+                           parameter_class=BufferParameter)
+
+    def get_value(self):
+        return self.parameter1() + self.parameter2()
+
+    def clean_buffer(self):
+        self._buffer = []
+
+
+class call1d():
+    def __init__(self, set_parameter: Callable, setpoints: Sequence,
+                 post_delay: float, *args,
+                 inst_setpoints: Sequence = [None],
+                 enter_actions: Sequence[Callable[[], None]] = (),
+                 exit_actions: Sequence[Callable[[], None]] = ()):
+        self.set_parameter = set_parameter
+        self.post_delay = post_delay
+        self.setpoints = setpoints
+        self.enter_actions = enter_actions
+        self.exit_actions = exit_actions
+        self.calls = [i for i in args if callable(i)]
+        for i in inst_setpoints:
+            i.setpoints = (tuple(self.setpoints),)
+            i.shape = self.setpoints.shape           
+            i.setpoint_units = (set_parameter.unit,)
+            i.setpoint_names = (set_parameter.name,)
+            i.setpoint_labels = (set_parameter.label,)   
+
+    def __call__(self):
+            self.set_parameter.post_delay = self.post_delay
+            [i() for i in self.enter_actions if callable(i)]
+            [i[0](*i[1:]) for i in self.enter_actions if type(i) is tuple]
+            for i,v in enumerate(self.setpoints):
+                self.set_parameter(v)
+                [u() for u in self.calls]
+            self.set_parameter(self.setpoints[0])
+            [i() for i in self.exit_actions if callable(i)]
+            [i[0](*i[1:]) for i in self.exit_actions if type(i) is tuple]
+
+
+class BufferParameter(ArrayParameter):
+    """
+    """
+
+    def __init__(self, instrument=None, name='testparameter'):
+        shape = (1,)
+        label = 'buffer label'
+        unit = 'buffer unit'
+        sp_base = tuple()
+        setpoints = (sp_base,)
+        setpoint_names = ('this_setpoint',)
+        setpoint_labels = ('this setpoint',)
+        setpoint_units = ('this setpointunit',)
+        super().__init__(name,
+                         shape,
+                         instrument,
+                         label=label,
+                         unit=unit,
+                         setpoints=setpoints,
+                         setpoint_labels=setpoint_labels,
+                         setpoint_names=setpoint_names,
+                         setpoint_units=setpoint_units)
+
+    def get_raw(self):
+        return np.array(self.instrument._buffer)
 
 
 class DummyChannel(InstrumentChannel):
