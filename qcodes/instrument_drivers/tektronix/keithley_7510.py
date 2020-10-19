@@ -23,17 +23,12 @@ class DataArray7510(MultiParameter):
                          names=names,
                          shapes=shapes,
                          setpoints=setpoints,
+                         snapshot_exclude=True,
                          **kwargs)
-        for param_name in self.names:
-            self.__dict__.update({param_name: []})
-
-    def set_raw(self, value: tuple) -> None:
-        self.value = value
-        for i in range(len(self.names)):
-            setattr(self, self.names[i], value[i])
+        self._data = ()
 
     def get_raw(self) -> Optional[tuple]:
-        return self.value
+        return self._data
 
 
 class GeneratedSetPoints(Parameter):
@@ -55,20 +50,6 @@ class GeneratedSetPoints(Parameter):
         return np.linspace(self._start(), self._stop(), self._n_points())
 
 
-class ParameterWithSetpointsCustomized(ParameterWithSetpoints):
-    """
-    A Parameter class which can includes string values.
-    """
-    def validate(self, value: Any) -> None:
-        """
-        Overwrites the standard ``validate`` method to only check the the
-        parameter has consistent shape with its setpoints.
-
-        Note: the validation of the datatype is removed!
-        """
-        self.validate_consistent_shape()
-
-
 class Buffer7510(InstrumentChannel):
     """
     Treat the reading buffer as a submodule, similar to Sense.
@@ -79,6 +60,25 @@ class Buffer7510(InstrumentChannel):
         "date": "DATE",
         "measurement_formatted": "FORMatted",
         "fractional_seconds": "FRACtional",
+        "measurement": "READing",
+        "relative_time": "RELative",
+        "seconds": "SEConds",
+        "source_value": "SOURce",
+        "source_value_formatted": "SOURFORMatted",
+        "source_value_status": "SOURSTATus",
+        "source_value_unit": "SOURUNIT",
+        "measurement_status": "STATus",
+        "time": "TIME",
+        "timestamp": "TSTamp",
+        "measurement_unit": "UNIT"
+    }
+
+    # todo fill this out with correct units for
+    # each element
+    elements_units = {
+        "date": "str",
+        "measurement_formatted": "FORMatted",
+        "fractional_seconds": "float",
         "measurement": "READing",
         "relative_time": "RELative",
         "seconds": "SEConds",
@@ -228,22 +228,6 @@ class Buffer7510(InstrumentChannel):
         )
 
         self.add_parameter(
-            "reading",
-            parameter_class=ParameterWithSetpoints,
-            get_cmd=None,
-            set_cmd=None,
-            vals=Arrays(shape=(self.n_pts.get_latest,))
-        )
-
-        self.add_parameter(
-            "reading_customized",
-            parameter_class=ParameterWithSetpointsCustomized,
-            get_cmd=None,
-            set_cmd=None,
-            vals=Arrays(shape=(self.n_pts.get_latest,))
-        )
-
-        self.add_parameter(
             "fill_mode",
             get_cmd=":TRACe:FILL:MODE?",
             set_cmd=":TRACe:FILL:MODE {}",
@@ -290,7 +274,7 @@ class Buffer7510(InstrumentChannel):
         return max(1, len(self.elements()))
 
     @property
-    def data(self) -> Union[Parameter, DataArray7510]:
+    def data(self) -> DataArray7510:
         return self._get_data()
 
     def get_last_reading(self) -> str:
@@ -307,7 +291,7 @@ class Buffer7510(InstrumentChannel):
             f":FETCh? '{self.short_name}', {','.join(fetch_elements)}"
         )
 
-    def _get_data(self) -> Union[Parameter, DataArray7510]:
+    def _get_data(self) -> DataArray7510:
         """
         This command returns the data in the buffer, depends on the user
         selected elements.
@@ -326,40 +310,33 @@ class Buffer7510(InstrumentChannel):
                                 f"{self.data_start()}, "
                                 f"{self.data_end()}, "
                                 f"'{self.short_name}'")
-            reading = np.array([float(i) for i in raw_data.split(",")])
-            self.reading.setpoints = (self.setpoints,)
-            self.reading(reading)
-            return self.reading
-
         else:
             elements = \
                 [self.buffer_elements[element] for element in self.elements()]
-            raw_data_with_extra = self.ask(f":TRACe:DATA? {self.data_start()}, "
-                                           f"{self.data_end()}, "
-                                           f"'{self.short_name}', "
-                                           f"{','.join(elements)}")
-            all_data = np.array(raw_data_with_extra.split(","))
-            n_elements = len(elements)
+            raw_data = self.ask(f":TRACe:DATA? {self.data_start()}, "
+                                f"{self.data_end()}, "
+                                f"'{self.short_name}', "
+                                f"{','.join(elements)}")
 
-            if n_elements == 1:
-                # When there is only one element selected, the return data may
-                # include letters (such as units). Hence, a modified
-                # "ParameterWithSetpoints" class is used here, to bypass the
-                # type validation:
-                self.reading_customized.setpoints = (self.setpoints,)
-                self.reading_customized(all_data)
-                return self.reading_customized
-            else:
-                # When more than one elements are selected, the return data will
-                # be in the format of a "MultiParameter" subclass:
-                data_array = all_data.reshape(self.n_pts(), len(elements)).T
-                data = DataArray7510(
-                    names=tuple(self.elements()),
-                    shapes=((self.n_pts(),),) * n_elements,
-                    setpoints=((self.setpoints(),),) * n_elements
-                )
-                data(data_array)
-            return data
+        all_data = raw_data.split(",")
+        n_elements = len(self.elements)
+
+        # todo here process data such that we have a dict from element name to
+        # numpy array stipping out any unit in the numpy array
+        processed_data = {}
+        elements = self.elements()
+
+        units = tuple(self.elements_units[element] for element in elements)
+
+        data = DataArray7510(
+            names=tuple(self.elements()),
+            shapes=((self.n_pts(),),) * n_elements,
+            units=units,
+            setpoints=((self.setpoints(),),) * n_elements,
+            setpoint_units=((self.setpoints.unit,),) * n_elements,
+        )
+        data._data = tuple(processed_data.values())
+        return data
 
     def clear_buffer(self) -> None:
         """
