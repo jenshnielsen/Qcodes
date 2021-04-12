@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
 
@@ -24,13 +24,15 @@ if TYPE_CHECKING:
     import xarray as xr
 
     from .data_set import DataSet, ParameterData
+    from .data_set_in_memory import DataSetInMem
     from .data_set_protocol import DataSetProtocol
 
+DatasetType = TypeVar("DatasetType", bound="DataSetProtocol")
 
 log = logging.getLogger(__name__)
 
 
-class DataSetCache:
+class DataSetCache(Generic[DatasetType]):
     """
     The DataSetCache contains a in memory representation of the
     data in this dataset as well a a method to progressively read data
@@ -42,7 +44,7 @@ class DataSetCache:
     :py:class:`.DataSet.to_pandas_dataframe_dict`
     """
 
-    def __init__(self, dataset: DataSetProtocol):
+    def __init__(self, dataset: DatasetType):
         self._dataset = dataset
         self._data: ParameterData = {}
         #: number of rows read per parameter tree (by the name of the dependent parameter)
@@ -55,7 +57,6 @@ class DataSetCache:
     @property
     def rundescriber(self) -> RunDescriber:
         return self._dataset.description
-
 
     @property
     def live(self) -> Optional[bool]:
@@ -435,7 +436,11 @@ def _expand_single_param_dict(
     return expanded_param_dict
 
 
-class DataSetCacheWithDBBackend(DataSetCache):
+class DataSetCacheInMem(DataSetCache["DataSetInMem"]):
+    pass
+
+
+class DataSetCacheWithDBBackend(DataSetCache["DataSet"]):
 
     def load_data_from_db(self) -> None:
         """
@@ -446,7 +451,6 @@ class DataSetCacheWithDBBackend(DataSetCache):
         If the dataset is marked completed and data has already been loaded
         no load will be performed.
         """
-        assert isinstance(self._dataset, DataSet)
         if self.live:
             raise RuntimeError("Cannot load data into this cache from the "
                                "database because this dataset is being built "
