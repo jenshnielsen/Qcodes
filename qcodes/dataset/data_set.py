@@ -262,7 +262,7 @@ class DataSet(Sized):
         self.subscribers: Dict[str, _Subscriber] = {}
         self._parent_dataset_links: List[Link]
         #: In memory representation of the data in the dataset.
-        self.cache: DataSetCacheWithDBBackend = DataSetCacheWithDBBackend(self)
+        self._cache: DataSetCacheWithDBBackend = DataSetCacheWithDBBackend(self)
         self._results: List[Dict[str, VALUE]] = []
         self._in_memory_cache = in_memory_cache
         self._export_path: Optional[str] = None
@@ -343,6 +343,10 @@ class DataSet(Sized):
                  for pdict in parent_datasets]
         self.parent_dataset_links = links
         self.mark_started(start_bg_writer=write_in_background)
+
+    @property
+    def cache(self) -> DataSetCacheWithDBBackend:
+        return self._cache
 
     @property
     def run_id(self) -> int:

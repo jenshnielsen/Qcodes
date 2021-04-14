@@ -12,6 +12,7 @@ from tqdm.auto import tqdm
 
 from qcodes import config
 from qcodes.dataset.data_set import DataSet
+from qcodes.dataset.data_set_protocol import DataSetProtocol
 from qcodes.dataset.descriptions.detect_shapes import \
     detect_shape_of_measurement
 from qcodes.dataset.descriptions.versioning.rundescribertypes import Shapes
@@ -28,7 +29,7 @@ ParamMeasT = Union[_BaseParameter, Callable[[], None]]
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
 AxesTupleList = Tuple[List[matplotlib.axes.Axes],
                       List[Optional[matplotlib.colorbar.Colorbar]]]
-AxesTupleListWithDataSet = Tuple[DataSet, List[matplotlib.axes.Axes],
+AxesTupleListWithDataSet = Tuple[DataSetProtocol, List[matplotlib.axes.Axes],
                                  List[Optional[matplotlib.colorbar.Colorbar]]]
 
 OutType = List[res_type]
@@ -496,7 +497,7 @@ def do2d(
 
 
 def _handle_plotting(
-        data: DataSet,
+        data: DataSetProtocol,
         do_plot: bool = True,
         interrupted: bool = False) -> AxesTupleListWithDataSet:
     """
@@ -520,10 +521,10 @@ def _handle_plotting(
 
 
 def plot(
-        data: DataSet,
+        data: DataSetProtocol,
         save_pdf: bool = True,
         save_png: bool = True
-) -> Tuple[DataSet,
+) -> Tuple[DataSetProtocol,
            List[matplotlib.axes.Axes],
            List[Optional[matplotlib.colorbar.Colorbar]]]:
     """

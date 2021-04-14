@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Mapping,
-                    Optional, Sequence, Sized, Union)
+                    Optional, Sequence, Sized, Union,
+                    Tuple)
 
 import numpy as np
 from typing_extensions import Protocol, runtime_checkable
@@ -22,6 +25,7 @@ SpecsOrInterDeps = Union[SPECS, InterDependencies_]
 
 if TYPE_CHECKING:
     from qcodes.station import Station
+    from .data_set_cache import DataSetCache
 
 
 @runtime_checkable
@@ -149,6 +153,14 @@ class DataSetProtocol(Protocol, Sized):
 
     @property
     def metadata(self) -> Dict[str, Any]:
+        pass
+
+    @property
+    def dependent_parameters(self) -> Tuple[ParamSpecBase, ...]:
+        pass
+
+    @property
+    def cache(self) -> DataSetCache[DataSetProtocol]:
         pass
 
 
