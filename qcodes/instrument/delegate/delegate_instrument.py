@@ -1,4 +1,4 @@
-from typing import Callable, List, Dict, Union, Any, Optional, Sequence
+from typing import Callable, List, Dict, Union, Any, Optional, Sequence, cast
 
 from functools import partial
 
@@ -13,6 +13,8 @@ from qcodes.station import Station
 import logging
 
 _log = logging.getLogger(__name__)
+
+PARAM_CLS = DelegateParameter
 
 
 class DelegateInstrument(InstrumentBase):
@@ -68,7 +70,6 @@ class DelegateInstrument(InstrumentBase):
         units: Optional units to set for parameters.
         metadata: Optional metadata to pass to instrument. Defaults to None.
     """
-    param_cls = DelegateParameter
 
     def __init__(
         self,
@@ -99,7 +100,7 @@ class DelegateInstrument(InstrumentBase):
         station.my_instrument.my_param
 
         Args:
-            station: Measurement station
+            parent: Measurement station or instrument
             path: Relative path to parse
         """
         def _parse_path(parent: Any, elem: Sequence[str]) -> Any:
@@ -191,7 +192,7 @@ class DelegateInstrument(InstrumentBase):
             setter_method = self.parse_instrument_path(
                 station, setter.pop("method")
             )
-            setter_fn = partial(setter_method, **setter)
+            setter_fn: Optional["partial[Any]"] = partial(setter_method, **setter)
         else:
             setter_fn = None
 
@@ -199,11 +200,11 @@ class DelegateInstrument(InstrumentBase):
         for name, source in zip(parameter_names, source_parameters):
             param_name = f"{group_name}_{name}"
             self.add_parameter(
-                parameter_class=self.param_cls,
+                parameter_class=PARAM_CLS,
                 name=param_name,
                 source=source
             )
-            parameters.append(self.parameters[param_name])
+            parameters.append(cast(PARAM_CLS, self.parameters[param_name]))
 
         group = DelegateGroup(
             name=group_name,
