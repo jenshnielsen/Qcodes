@@ -1,17 +1,14 @@
-from qcodes.instrument.group_parameter import Group
 from typing import (
     Any,
     Dict,
-    Iterable,
-    NamedTuple,
     Optional,
-    OrderedDict,
     Tuple,
     Union,
     Sequence,
     Callable
 )
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
+from qcodes.instrument.group_parameter import _BaseGroup
 from qcodes.instrument.parameter import (
     DelegateParameter,
     ParamDataType,
@@ -25,7 +22,7 @@ import logging
 _log = logging.getLogger(__name__)
 
 
-class DelegateGroup(Group):
+class DelegateGroup(_BaseGroup[DelegateParameter]):
     """The DelegateGroup combines :class:`.DelegateParameter`s that
     are to be gotten or set using one :class:`.GroupedParameter`.
     Each :class:`.DelegateParameter` maps to one source parameter
@@ -72,7 +69,7 @@ class DelegateGroup(Group):
         self,
         name: str,
         parameters: Sequence[DelegateParameter],
-        parameter_names: Optional[Iterable[str]] = None,
+        parameter_names: Optional[Sequence[str]] = None,
         setter: Optional[Callable[..., Any]] = None,
         getter: Optional[Callable[..., Any]] = None,
         formatter: Optional[Callable[..., Any]] = None,

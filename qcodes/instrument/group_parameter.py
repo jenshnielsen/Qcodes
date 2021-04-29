@@ -6,11 +6,14 @@ should be of type :class:`GroupParameter`
 
 
 from collections import OrderedDict
-from typing import Union, Callable, Dict, Any, Optional, Sequence
+from typing import Union, Callable, Dict, Any, Optional, Sequence, TypeVar, Generic
+from typing import OrderedDict as TOrderedDict
 
-from qcodes.instrument.parameter import (DelegateParameter, Parameter,
+from qcodes.instrument.parameter import (Parameter,
                                          ParamRawDataType,
-                                         ParamDataType)
+                                         ParamDataType,
+                                         DelegateParameter,
+                                         _BaseParameter)
 from qcodes.instrument.base import InstrumentBase
 
 
@@ -53,7 +56,7 @@ class GroupParameter(Parameter):
             raise ValueError("A GroupParameter does not use 'set_cmd' or "
                              "'get_cmd' kwarg")
 
-        self._group: Union[Group, None] = None
+        self._group: Optional[Group] = None
         self._initial_value = initial_value
         super().__init__(name, instrument=instrument, **kwargs)
 
@@ -78,7 +81,10 @@ class GroupParameter(Parameter):
         self.group._set_one_parameter_from_raw(self, value)
 
 
-class Group:
+GenericParameter = TypeVar("GenericParameter", GroupParameter, DelegateParameter)
+
+
+class _BaseGroup(Generic[GenericParameter]):
     """
     The group combines :class:`.GroupParameter` s that are to be gotten or set
     via the same command. The command has to be a string, for example,
@@ -159,15 +165,14 @@ class Group:
         single instrument, which in turn does additional checks. Defaults to True.
     """
     def __init__(self,
-                 parameters: Sequence[GroupParameter],
+                 parameters: Sequence[GenericParameter],
                  set_cmd: Optional[str] = None,
                  get_cmd: Optional[str] = None,
-                 get_parser: Union[Callable[[str],
-                                            Dict[str, Any]], None] = None,
+                 get_parser: Optional[Callable[[str], Dict[str, Any]]] = None,
                  separator: str = ',',
                  single_instrument: bool = True
                  ) -> None:
-        self._parameters = OrderedDict((p.name, p) for p in parameters)
+        self._parameters: TOrderedDict[str, GenericParameter] = OrderedDict((p.name, p) for p in parameters)
 
         for p in parameters:
             p._group = self
@@ -177,20 +182,20 @@ class Group:
                 raise ValueError(
                     "All parameters should belong to the same instrument")
 
-        self._instrument = parameters[0].root_instrument
+        self._instrument: Optional[InstrumentBase] = parameters[0].root_instrument
 
-        self._set_cmd = set_cmd
-        self._get_cmd = get_cmd
+        self._set_cmd: Optional[str] = set_cmd
+        self._get_cmd: Optional[str] = get_cmd
 
         if get_parser:
-            self.get_parser = get_parser
+            self.get_parser: Callable[[str], Dict[str, Any]] = get_parser
         else:
             self.get_parser = self._separator_parser(separator)
 
         if single_instrument:
             self._check_initial_values(parameters)
 
-    def _check_initial_values(self, parameters: Sequence[Union[GroupParameter, DelegateParameter]]) -> None:
+    def _check_initial_values(self, parameters: Sequence[GenericParameter]) -> None:
         have_initial_values = [p._initial_value is not None
                                for p in parameters]
         if any(have_initial_values):
@@ -298,7 +303,7 @@ class Group:
             p.cache._set_from_raw_value(ret[name])
 
     @property
-    def parameters(self) -> "OrderedDict[str, DelegateParameter]":
+    def parameters(self) -> "OrderedDict[str, GenericParameter]":
         """
         All parameters in this group as a dict from parameter name to
         :class:`.Parameter`
@@ -311,3 +316,7 @@ class Group:
         The ``root_instrument`` that this parameter belongs to.
         """
         return self._instrument
+
+
+class Group(_BaseGroup[GroupParameter]):
+    pass
