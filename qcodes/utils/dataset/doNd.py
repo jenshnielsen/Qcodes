@@ -12,8 +12,7 @@ from tqdm.auto import tqdm
 from qcodes import config
 from qcodes.dataset.data_set import DataSet
 from qcodes.dataset.data_set_protocol import DataSetProtocol
-from qcodes.dataset.descriptions.detect_shapes import \
-    detect_shape_of_measurement
+from qcodes.dataset.descriptions.detect_shapes import detect_shape_of_measurement
 from qcodes.dataset.descriptions.versioning.rundescribertypes import Shapes
 from qcodes.dataset.experiment_container import Experiment
 from qcodes.dataset.measurements import Measurement, res_type
