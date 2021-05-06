@@ -41,23 +41,9 @@ if TYPE_CHECKING:
 
 @runtime_checkable
 class DataSetProtocol(Protocol, Sized):
-    def __init__(
-        self,
-        path_to_db: Optional[str] = None,
-        run_id: Optional[int] = None,
-        conn: Optional[ConnectionPlus] = None,
-        exp_id: Optional[int] = None,
-        name: Optional[str] = None,
-        specs: Optional[SpecsOrInterDeps] = None,
-        values: Optional[VALUES] = None,
-        metadata: Optional[Mapping[str, Any]] = None,
-        shapes: Optional[Shapes] = None,
-        in_memory_cache: bool = True,
-    ) -> None:
-        pass
-
     def prepare(
         self,
+        *,
         station: "Optional[Station]",
         interdeps: InterDependencies_,
         write_in_background: bool,
@@ -172,23 +158,4 @@ class DataSetProtocol(Protocol, Sized):
 
     @property
     def cache(self) -> DataSetCache[DataSetProtocol]:
-        pass
-
-
-@runtime_checkable
-class DataSetWithSubscriberProtocol(DataSetProtocol, Protocol, Sized):
-    def subscribe(
-        self,
-        callback: Callable[[Any, int, Optional[Any]], None],
-        min_wait: int = 0,
-        min_count: int = 1,
-        state: Optional[Any] = None,
-        callback_kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> str:
-        pass
-
-    def subscribe_from_config(self, name: str) -> str:
-        pass
-
-    def unsubscribe_all(self) -> None:
         pass
