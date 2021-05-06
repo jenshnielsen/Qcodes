@@ -324,23 +324,24 @@ class DataSet(Sized):
                 active_datasets=set())
             _WRITERS[self.path_to_db] = ws
 
-    def prepare(self,
-                station: "Optional[Station]",
-                interdeps: InterDependencies_,
-                write_in_background: bool,
-                shapes: Shapes = None,
-                parent_datasets: Sequence[Dict[Any, Any]] = ()) -> None:
+    def prepare(
+        self,
+        station: "Optional[Station]",
+        interdeps: InterDependencies_,
+        write_in_background: bool,
+        shapes: Shapes = None,
+        parent_datasets: Sequence[Dict[Any, Any]] = (),
+    ) -> None:
         if station:
-            self.add_snapshot(json.dumps({'station': station.snapshot()},
-                              cls=NumpyJSONEncoder))
+            self.add_snapshot(
+                json.dumps({"station": station.snapshot()}, cls=NumpyJSONEncoder)
+            )
 
         if interdeps == InterDependencies_():
             raise RuntimeError("No parameters supplied")
         else:
-            self.set_interdependencies(interdeps,
-                                       shapes)
-        links = [Link(head=self.guid, **pdict)
-                 for pdict in parent_datasets]
+            self.set_interdependencies(interdeps, shapes)
+        links = [Link(head=self.guid, **pdict) for pdict in parent_datasets]
         self.parent_dataset_links = links
         self.mark_started(start_bg_writer=write_in_background)
 

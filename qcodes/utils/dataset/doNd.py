@@ -3,8 +3,7 @@ import os
 import sys
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import (Callable, Iterator, List, Optional,
-                    Sequence, Tuple, Union, Dict)
+from typing import Callable, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 
 import matplotlib
 import numpy as np
@@ -16,10 +15,10 @@ from qcodes.dataset.data_set_protocol import DataSetProtocol
 from qcodes.dataset.descriptions.detect_shapes import \
     detect_shape_of_measurement
 from qcodes.dataset.descriptions.versioning.rundescribertypes import Shapes
+from qcodes.dataset.experiment_container import Experiment
 from qcodes.dataset.measurements import Measurement, res_type
 from qcodes.dataset.plotting import plot_dataset
-from qcodes.instrument.parameter import _BaseParameter, ParamDataType
-from qcodes.dataset.experiment_container import Experiment
+from qcodes.instrument.parameter import ParamDataType, _BaseParameter
 from qcodes.utils.threading import RespondingThread
 
 ActionsT = Sequence[Callable[[], None]]
@@ -27,10 +26,14 @@ ActionsT = Sequence[Callable[[], None]]
 ParamMeasT = Union[_BaseParameter, Callable[[], None]]
 
 AxesTuple = Tuple[matplotlib.axes.Axes, matplotlib.colorbar.Colorbar]
-AxesTupleList = Tuple[List[matplotlib.axes.Axes],
-                      List[Optional[matplotlib.colorbar.Colorbar]]]
-AxesTupleListWithDataSet = Tuple[DataSetProtocol, List[matplotlib.axes.Axes],
-                                 List[Optional[matplotlib.colorbar.Colorbar]]]
+AxesTupleList = Tuple[
+    List[matplotlib.axes.Axes], List[Optional[matplotlib.colorbar.Colorbar]]
+]
+AxesTupleListWithDataSet = Tuple[
+    DataSetProtocol,
+    List[matplotlib.axes.Axes],
+    List[Optional[matplotlib.colorbar.Colorbar]],
+]
 
 OutType = List[res_type]
 
@@ -497,9 +500,8 @@ def do2d(
 
 
 def _handle_plotting(
-        data: DataSetProtocol,
-        do_plot: bool = True,
-        interrupted: bool = False) -> AxesTupleListWithDataSet:
+    data: DataSetProtocol, do_plot: bool = True, interrupted: bool = False
+) -> AxesTupleListWithDataSet:
     """
     Save the plots created by datasaver as pdf and png
 
@@ -521,12 +523,12 @@ def _handle_plotting(
 
 
 def plot(
-        data: DataSetProtocol,
-        save_pdf: bool = True,
-        save_png: bool = True
-) -> Tuple[DataSetProtocol,
-           List[matplotlib.axes.Axes],
-           List[Optional[matplotlib.colorbar.Colorbar]]]:
+    data: DataSetProtocol, save_pdf: bool = True, save_png: bool = True
+) -> Tuple[
+    DataSetProtocol,
+    List[matplotlib.axes.Axes],
+    List[Optional[matplotlib.colorbar.Colorbar]],
+]:
     """
     The utility function to plot results and save the figures either in pdf or
     png or both formats.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from copy import copy
 from typing import TYPE_CHECKING, Dict, Generic, Mapping, Optional, Tuple, TypeVar
 
 import numpy as np
@@ -10,6 +11,7 @@ from qcodes.dataset.sqlite.connection import ConnectionPlus
 from qcodes.dataset.sqlite.queries import completed, load_new_data_for_rundescriber
 from qcodes.utils.deprecate import deprecate
 
+from .exporters.export_to_csv import dataframe_to_csv
 from .exporters.export_to_pandas import (
     load_to_concatenated_dataframe,
     load_to_dataframe_dict,
@@ -18,7 +20,6 @@ from .exporters.export_to_xarray import (
     load_to_xarray_dataarray_dict,
     load_to_xarray_dataset,
 )
-from .exporters.export_to_csv import dataframe_to_csv
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
     from .data_set import DataSet, ParameterData
     from .data_set_in_memory import DataSetInMem
     from .data_set_protocol import DataSetProtocol
+
 
 DatasetType = TypeVar("DatasetType", bound="DataSetProtocol", covariant=True)
 
@@ -197,16 +199,19 @@ class DataSetCache(Generic[DatasetType]):
         data = self.data()
         return load_to_xarray_dataset(self._dataset, data)
 
-    def to_csv(self,
-               path: str,
-               single_file: bool = False,
-               single_file_name: Optional[str] = None,
-               ) -> None:
+    def to_csv(
+        self,
+        path: str,
+        single_file: bool = False,
+        single_file_name: Optional[str] = None,
+    ) -> None:
         dfdict = self.to_pandas_dataframe_dict()
-        dataframe_to_csv(dfdict=dfdict,
-                         path=path,
-                         single_file=single_file,
-                         single_file_name=single_file_name)
+        dataframe_to_csv(
+            dfdict=dfdict,
+            path=path,
+            single_file=single_file,
+            single_file_name=single_file_name,
+        )
 
 
 def load_new_data_from_db_and_append(
@@ -453,7 +458,6 @@ class DataSetCacheInMem(DataSetCache["DataSetInMem"]):
 
 
 class DataSetCacheWithDBBackend(DataSetCache["DataSet"]):
-
     def load_data_from_db(self) -> None:
         """
         Loads data from the dataset into the cache.
@@ -464,27 +468,29 @@ class DataSetCacheWithDBBackend(DataSetCache["DataSet"]):
         no load will be performed.
         """
         if self.live:
-            raise RuntimeError("Cannot load data into this cache from the "
-                               "database because this dataset is being built "
-                               "in-memory.")
+            raise RuntimeError(
+                "Cannot load data into this cache from the "
+                "database because this dataset is being built "
+                "in-memory."
+            )
 
         if self._loaded_from_completed_ds:
             return
-        self._dataset.completed = completed(
-            self._dataset.conn, self._dataset.run_id)
+        self._dataset.completed = completed(self._dataset.conn, self._dataset.run_id)
         if self._dataset.completed:
             self._loaded_from_completed_ds = True
 
-
-        (self._write_status,
-         self._read_status,
-         self._data) = load_new_data_from_db_and_append(
+        (
+            self._write_status,
+            self._read_status,
+            self._data,
+        ) = load_new_data_from_db_and_append(
             self._dataset.conn,
             self._dataset.table_name,
             self.rundescriber,
             self._write_status,
             self._read_status,
-            self._data
+            self._data,
         )
         if not all(status is None for status in self._write_status.values()):
             self._live = False

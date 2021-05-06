@@ -95,9 +95,12 @@ class DataSaver:
 
     default_callback: Optional[Dict[Any, Any]] = None
 
-    def __init__(self, dataset: DataSetProtocol,
-                 write_period: float,
-                 interdeps: InterDependencies_) -> None:
+    def __init__(
+        self,
+        dataset: DataSetProtocol,
+        write_period: float,
+        interdeps: InterDependencies_,
+    ) -> None:
         self._dataset = dataset
         if DataSaver.default_callback is not None \
                 and 'run_tables_subscription_callback' \
@@ -110,13 +113,16 @@ class DataSaver:
                 'run_tables_subscription_min_count']
             snapshot = dataset.get_metadata('snapshot')
             if isinstance(self._dataset, DataSetWithSubscriberProtocol):
-                self._dataset.subscribe(callback,
-                                        min_wait=min_wait,
-                                        min_count=min_count,
-                                        state={},
-                                        callback_kwargs={'run_id':
-                                                         self._dataset.run_id,
-                                                         'snapshot': snapshot})
+                self._dataset.subscribe(
+                    callback,
+                    min_wait=min_wait,
+                    min_count=min_count,
+                    state={},
+                    callback_kwargs={
+                        "run_id": self._dataset.run_id,
+                        "snapshot": snapshot,
+                    },
+                )
 
         if isinstance(self._dataset, DataSetWithSubscriberProtocol):
             default_subscribers = qc.config.subscription.default_subscribers
@@ -547,14 +553,14 @@ class Runner:
         # next set up the "datasaver"
         if self.experiment is not None:
             self.ds = self._dataset_class(
-                name=self.name, exp_id=self.experiment.exp_id,
+                name=self.name,
+                exp_id=self.experiment.exp_id,
                 conn=self.experiment.conn,  # todo this is sqlite specific
                 in_memory_cache=self._in_memory_cache
             )
         else:
             self.ds = self._dataset_class(
-                name=self.name,
-                in_memory_cache=self._in_memory_cache
+                name=self.name, in_memory_cache=self._in_memory_cache
             )
 
         # .. and give the dataset a snapshot as metadata
@@ -568,7 +574,7 @@ class Runner:
             interdeps=self._interdependencies,
             write_in_background=self._write_in_background,
             shapes=self._shapes,
-            parent_datasets=self._parent_datasets
+            parent_datasets=self._parent_datasets,
         )
 
         # register all subscribers
@@ -577,7 +583,7 @@ class Runner:
                 # We register with minimal waiting time.
                 # That should make all subscribers be called when data is flushed
                 # to the database
-                log.debug(f'Subscribing callable {callble} with state {state}')
+                log.debug(f"Subscribing callable {callble} with state {state}")
                 self.ds.subscribe(callble, min_wait=0, min_count=1, state=state)
 
         print(f'Starting experimental run with id: {self.ds.run_id}.'
@@ -1161,9 +1167,12 @@ class Measurement:
                                              shapes=shapes)
         self._shapes = shapes
 
-    def run(self, write_in_background: Optional[bool] = None,
-            in_memory_cache: bool = True,
-            dataset_class: Type[DataSetProtocol] = DataSet) -> Runner:
+    def run(
+        self,
+        write_in_background: Optional[bool] = None,
+        in_memory_cache: bool = True,
+        dataset_class: Type[DataSetProtocol] = DataSet,
+    ) -> Runner:
         """
         Returns the context manager for the experimental run
 
@@ -1179,15 +1188,19 @@ class Measurement:
         """
         if write_in_background is None:
             write_in_background = qc.config.dataset.write_in_background
-        return Runner(self.enteractions, self.exitactions,
-                      self.experiment, station=self.station,
-                      write_period=self._write_period,
-                      interdeps=self._interdeps,
-                      name=self.name,
-                      subscribers=self.subscribers,
-                      parent_datasets=self._parent_datasets,
-                      extra_log_info=self._extra_log_info,
-                      write_in_background=write_in_background,
-                      shapes=self._shapes,
-                      in_memory_cache=in_memory_cache,
-                      dataset_class=dataset_class)
+        return Runner(
+            self.enteractions,
+            self.exitactions,
+            self.experiment,
+            station=self.station,
+            write_period=self._write_period,
+            interdeps=self._interdeps,
+            name=self.name,
+            subscribers=self.subscribers,
+            parent_datasets=self._parent_datasets,
+            extra_log_info=self._extra_log_info,
+            write_in_background=write_in_background,
+            shapes=self._shapes,
+            in_memory_cache=in_memory_cache,
+            dataset_class=dataset_class,
+        )
