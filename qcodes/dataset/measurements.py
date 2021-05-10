@@ -46,6 +46,7 @@ from qcodes.dataset.data_set import (
     setpoints_type,
     values_type,
 )
+from qcodes.dataset.data_set_in_memory import DataSetInMem
 from qcodes.dataset.data_set_protocol import DataSetProtocol
 from qcodes.dataset.descriptions.dependencies import (
     DependencyError,
@@ -546,33 +547,35 @@ class Runner:
         for func, args in self.enteractions:
             func(*args)
 
+        dataset_class: Type[DataSetProtocol]
+
         # next set up the "datasaver"
         if self.experiment is not None:
             if self._dataset_class is DataSet:
-                self.ds = self._dataset_class(
+                dataset_class = cast(Type[DataSet], self._dataset_class)
+                self.ds = dataset_class(
                     name=self.name,
                     exp_id=self.experiment.exp_id,
                     conn=self.experiment.conn,  # todo this is sqlite specific
                     in_memory_cache=self._in_memory_cache,
                 )
-            else:
-                self.ds = self._dataset_class(
+            elif self._dataset_class is DataSetInMem:
+                dataset_class = cast(Type[DataSetInMem], self._dataset_class)
+                self.ds = dataset_class.create_new_run(
                     name=self.name,
                     exp_id=self.experiment.exp_id,
-                    conn=self.experiment.conn,  # todo this is sqlite specific
-                    in_memory_cache=self._in_memory_cache,
+                    conn=self.experiment.conn,
                 )
         else:
             if self._dataset_class is DataSet:
-                self.ds = self._dataset_class(
+                dataset_class = cast(Type[DataSet], self._dataset_class)
+                self.ds = dataset_class(
                     name=self.name, in_memory_cache=self._in_memory_cache
                 )
             else:
-                self.ds = self._dataset_class(
+                dataset_class = cast(Type[DataSetInMem], self._dataset_class)
+                self.ds = dataset_class.create_new_run(
                     name=self.name,
-                    exp_id=self.experiment.exp_id,
-                    conn=self.experiment.conn,  # todo this is sqlite specific
-                    in_memory_cache=self._in_memory_cache,
                 )
 
         # .. and give the dataset a snapshot as metadata
