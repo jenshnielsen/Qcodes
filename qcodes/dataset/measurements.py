@@ -71,6 +71,9 @@ from qcodes.station import Station
 from qcodes.utils.delaykeyboardinterrupt import DelayedKeyboardInterrupt
 from qcodes.utils.helpers import NumpyJSONEncoder
 
+if TYPE_CHECKING:
+    from qcodes.dataset.sqlite.connection import ConnectionPlus
+
 log = logging.getLogger(__name__)
 
 
@@ -551,32 +554,29 @@ class Runner:
 
         # next set up the "datasaver"
         if self.experiment is not None:
-            if self._dataset_class is DataSet:
-                dataset_class = cast(Type[DataSet], self._dataset_class)
-                self.ds = dataset_class(
-                    name=self.name,
-                    exp_id=self.experiment.exp_id,
-                    conn=self.experiment.conn,  # todo this is sqlite specific
-                    in_memory_cache=self._in_memory_cache,
-                )
-            elif self._dataset_class is DataSetInMem:
-                dataset_class = cast(Type[DataSetInMem], self._dataset_class)
-                self.ds = dataset_class.create_new_run(
-                    name=self.name,
-                    exp_id=self.experiment.exp_id,
-                    conn=self.experiment.conn,
-                )
+            exp_id: Optional[int] = self.experiment.exp_id
+            path_to_db: Optional[str] = self.experiment.path_to_db
+            conn: Optional["ConnectionPlus"] = self.experiment.conn
         else:
-            if self._dataset_class is DataSet:
-                dataset_class = cast(Type[DataSet], self._dataset_class)
-                self.ds = dataset_class(
-                    name=self.name, in_memory_cache=self._in_memory_cache
-                )
-            else:
-                dataset_class = cast(Type[DataSetInMem], self._dataset_class)
-                self.ds = dataset_class.create_new_run(
-                    name=self.name,
-                )
+            exp_id = None
+            path_to_db = None
+            conn = None
+
+        if self._dataset_class is DataSet:
+            dataset_class = cast(Type[DataSet], self._dataset_class)
+            self.ds = dataset_class(
+                name=self.name,
+                exp_id=exp_id,
+                conn=conn,
+                in_memory_cache=self._in_memory_cache,
+            )
+        elif self._dataset_class is DataSetInMem:
+            dataset_class = cast(Type[DataSetInMem], self._dataset_class)
+            self.ds = dataset_class.create_new_run(
+                name=self.name,
+                exp_id=exp_id,
+                path_to_db=path_to_db,
+            )
 
         # .. and give the dataset a snapshot as metadata
         if self.station is None:
