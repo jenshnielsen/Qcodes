@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Dict,
     List,
     Mapping,
@@ -23,8 +22,6 @@ from qcodes.dataset.descriptions.rundescriber import RunDescriber
 from qcodes.dataset.descriptions.versioning.rundescribertypes import Shapes
 from qcodes.dataset.export_config import DataExportType
 from qcodes.dataset.linked_datasets.links import Link
-from qcodes.dataset.sqlite.connection import ConnectionPlus
-from qcodes.dataset.sqlite.query_helpers import VALUES
 
 SPECS = List[ParamSpec]
 # Transition period type: SpecsOrInterDeps. We will allow both as input to
@@ -44,11 +41,11 @@ class DataSetProtocol(Protocol, Sized):
     def prepare(
         self,
         *,
-        station: "Optional[Station]",
+        station: Optional[Station],
         interdeps: InterDependencies_,
         write_in_background: bool,
         shapes: Shapes = None,
-        parent_datasets: Sequence[Dict[Any, Any]] = (),
+        parent_datasets: Sequence[Mapping[Any, Any]] = (),
     ) -> None:
         pass
 

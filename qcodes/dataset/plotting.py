@@ -9,21 +9,14 @@ from contextlib import contextmanager
 from functools import partial
 from typing import Any, List, Optional, Sequence, Tuple, Union, cast
 
-from typing import (Optional, List, Sequence, Union, Tuple, Dict,
-                    Any, cast)
-import inspect
-import numpy as np
-
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union, cast
-
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FuncFormatter
 
 import qcodes as qc
-
-from qcodes.dataset.data_set import DataSet, load_by_run_spec
+from qcodes.dataset.data_set import load_by_run_spec
+from qcodes.dataset.data_set_protocol import DataSetProtocol
 from qcodes.utils.plotting import auto_color_scale_from_config, find_scale_and_prefix
 
 from .data_export import (
@@ -34,28 +27,6 @@ from .data_export import (
     get_2D_plottype,
     reshape_2D_data,
 )
-
-from qcodes.dataset.data_set import load_by_run_spec, DataSet
-from qcodes.utils.plotting import (auto_color_scale_from_config,
-                                   find_scale_and_prefix)
-
-from .data_export import (_get_data_from_ds, flatten_1D_data_for_plot,
-                          get_1D_plottype, get_2D_plottype, reshape_2D_data,
-                          _strings_as_ints)
-
-from qcodes.dataset.data_set import load_by_run_spec
-from qcodes.dataset.data_set_protocol import DataSetProtocol
-from qcodes.utils.plotting import auto_color_scale_from_config, find_scale_and_prefix
-
-from .data_export import (
-    _get_data_from_ds,
-    _strings_as_ints,
-    flatten_1D_data_for_plot,
-    get_1D_plottype,
-    get_2D_plottype,
-    reshape_2D_data,
-)
-
 
 log = logging.getLogger(__name__)
 DB = qc.config["core"]["db_location"]

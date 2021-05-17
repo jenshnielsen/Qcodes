@@ -330,7 +330,7 @@ class DataSet(Sized):
         interdeps: InterDependencies_,
         write_in_background: bool,
         shapes: Shapes = None,
-        parent_datasets: Sequence[Dict[Any, Any]] = (),
+        parent_datasets: Sequence[Mapping[Any, Any]] = (),
     ) -> None:
         if station:
             self.add_snapshot(

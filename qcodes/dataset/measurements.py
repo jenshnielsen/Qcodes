@@ -6,7 +6,6 @@ using the :class:`.Measurement` class.
 
 
 import io
-import json
 import logging
 import traceback as tb_module
 import warnings
@@ -37,7 +36,6 @@ import numpy as np
 
 import qcodes as qc
 import qcodes.utils.validators as vals
-from qcodes import Station
 from qcodes.dataset.data_set import (
     VALUE,
     DataSet,
@@ -69,7 +67,6 @@ from qcodes.instrument.parameter import (
 )
 from qcodes.station import Station
 from qcodes.utils.delaykeyboardinterrupt import DelayedKeyboardInterrupt
-from qcodes.utils.helpers import NumpyJSONEncoder
 
 if TYPE_CHECKING:
     from qcodes.dataset.sqlite.connection import ConnectionPlus
@@ -500,7 +497,7 @@ class Runner:
         write_in_background: bool = False,
         shapes: Optional[Shapes] = None,
         in_memory_cache: bool = True,
-        dataset_class: Type[DataSetProtocol] = DataSet
+        dataset_class: Type[DataSetProtocol] = DataSet,
     ) -> None:
 
         self._dataset_class = dataset_class
