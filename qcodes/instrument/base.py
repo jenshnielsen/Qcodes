@@ -142,8 +142,9 @@ class InstrumentBase(Metadatable, DelegateAttributes):
         """Short name of the instrument"""
         return self._short_name
 
-    def add_parameter(self, name: str,
-                      parameter_class: type = Parameter, **kwargs: Any) -> _BaseParameter:
+    def add_parameter(
+        self, name: str, parameter_class: type = Parameter, **kwargs: Any
+    ) -> _BaseParameter:
         """
         Bind one Parameter to this instrument.
 

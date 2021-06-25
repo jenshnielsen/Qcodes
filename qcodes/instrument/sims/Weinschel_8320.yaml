@@ -18,8 +18,8 @@ devices:
           q: "ATTN? 1"  # the set/get commands have to simply be copied over from the driver
           r: "{:02.0f}"
         setter:
-          q: "ATTN ALL {:02.0f}"          
+          q: "ATTN ALL {:02.0f}"
 
-resources:  
+resources:
   GPIB::1::INSTR:
     device: device 1

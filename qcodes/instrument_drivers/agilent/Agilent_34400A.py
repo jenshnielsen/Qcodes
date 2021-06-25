@@ -1,8 +1,8 @@
 from typing import Any
 
-from qcodes import VisaInstrument
+from qcodes import Parameter, VisaInstrument
 from qcodes.utils.validators import Enum, Strings
-from qcodes import Parameter
+
 
 class Agilent_34400A(VisaInstrument):
     """
@@ -29,12 +29,14 @@ class Agilent_34400A(VisaInstrument):
                                               1e-07, 3e-08]
                                    }[self.model]
 
-        self.resolution = self.add_parameter('resolution',
-                           get_cmd='VOLT:DC:RES?',
-                           get_parser=float,
-                           set_cmd=self._set_resolution,
-                           label='Resolution',
-                           unit='V')
+        self.resolution = self.add_parameter(
+            "resolution",
+            get_cmd="VOLT:DC:RES?",
+            get_parser=float,
+            set_cmd=self._set_resolution,
+            label="Resolution",
+            unit="V",
+        )
         """Resolution """
 
         self.add_parameter('volt',
