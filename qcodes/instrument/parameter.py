@@ -290,6 +290,18 @@ class _BaseParameter(Metadatable):
         vals: Optional[Validator[Any]] = None,
         abstract: Optional[bool] = False
     ) -> None:
+
+        if instrument is not None:
+            existing_parameter = instrument.parameters.get(name, None)
+
+            if existing_parameter:
+
+                if not existing_parameter.abstract:
+                    raise KeyError(f"Duplicate parameter name {name}")
+
+            if name in instrument.parameters:
+                raise KeyError(f'Duplicate parameter name {name}')
+            instrument.parameters[name] = self
         super().__init__(metadata)
         if not str(name).isidentifier():
             raise ValueError(f"Parameter name must be a valid identifier "
@@ -1142,6 +1154,20 @@ class Parameter(_BaseParameter):
             docstring: Optional[str] = None,
             initial_cache_value: Optional[Union[float, str]] = None,
             **kwargs: Any) -> None:
+        if instrument is not None:
+            existing_parameter = instrument.parameters.get(name, None)
+
+            if existing_parameter:
+
+                existing_unit = getattr(existing_parameter, "unit", None)
+                new_unit = kwargs.get("unit", None)
+                if existing_unit != new_unit:
+                    raise ValueError(
+                        f"The unit of the parameter '{name}' is '{new_unit}'. "
+                        f"This is inconsistent with the unit defined in the "
+                        f"base class"
+                    )
+
         super().__init__(name=name, instrument=instrument, vals=vals,
                          max_val_age=max_val_age, **kwargs)
 
