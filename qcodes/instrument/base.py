@@ -109,7 +109,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
             KeyError: If this instrument already has a parameter with this
                 name.
         """
-        param = parameter_class(name=name, instrument=self, **kwargs)
+        parameter_class(name=name, instrument=self, **kwargs)
 
     def add_function(self, name: str, **kwargs: Any) -> None:
         """
