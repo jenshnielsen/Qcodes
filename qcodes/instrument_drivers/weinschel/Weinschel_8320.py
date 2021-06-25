@@ -24,5 +24,7 @@ class Weinschel_8320(VisaInstrument):
             vals=vals.Enum(*np.arange(0, 60.1, 2).tolist()),
             get_parser=float,
         )
+        """This is a attribute docstring. Unfortunatly it does not tell you much more than that"""
+
 
         self.connect_message()
