@@ -109,10 +109,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
             KeyError: If this instrument already has a parameter with this
                 name.
         """
-        if name in self.parameters:
-            raise KeyError(f'Duplicate parameter name {name}')
         param = parameter_class(name=name, instrument=self, **kwargs)
-        self.parameters[name] = param
 
     def add_function(self, name: str, **kwargs: Any) -> None:
         """

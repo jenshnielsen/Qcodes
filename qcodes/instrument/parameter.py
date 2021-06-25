@@ -282,6 +282,11 @@ class _BaseParameter(Metadatable):
         max_val_age: Optional[float] = None,
         vals: Optional[Validator[Any]] = None,
     ) -> None:
+
+        if instrument is not None:
+            if name in instrument.parameters:
+                raise KeyError(f'Duplicate parameter name {name}')
+            instrument.parameters[name] = self
         super().__init__(metadata)
         if not str(name).isidentifier():
             raise ValueError(f"Parameter name must be a valid identifier "
