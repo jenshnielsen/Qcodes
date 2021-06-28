@@ -29,7 +29,7 @@ class Agilent_34400A(VisaInstrument):
                                               1e-07, 3e-08]
                                    }[self.model]
 
-        self.resolution = self.add_parameter(
+        self.resolution = Parameter(
             "resolution",
             get_cmd="VOLT:DC:RES?",
             get_parser=float,

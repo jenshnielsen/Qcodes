@@ -55,7 +55,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
     "sphinx.ext.todo",
-    "qcodes.sphinx_extensions.add_parameter",
+    "qcodes.sphinx_extensions.parse_parameter_attr",
 ]
 
 # include special __xxx__ that DO have a docstring

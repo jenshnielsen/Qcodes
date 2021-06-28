@@ -144,7 +144,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
 
     def add_parameter(
         self, name: str, parameter_class: type = Parameter, **kwargs: Any
-    ) -> _BaseParameter:
+    ) -> None:
         """
         Bind one Parameter to this instrument.
 
@@ -173,8 +173,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
                 unit of the new parameter is inconsistent with the existing
                 one.
         """
-        a = parameter_class(name=name, instrument=self, **kwargs)
-        return a
+        parameter_class(name=name, instrument=self, **kwargs)
 
     def add_function(self, name: str, **kwargs: Any) -> None:
         """

@@ -1252,6 +1252,9 @@ class Parameter(_BaseParameter):
                 '',
                 self.__doc__))
 
+    def __repr__(self) -> str:
+        return super().__repr__()
+
     def __getitem__(self, keys: Any) -> 'SweepFixedValues':
         """
         Slice a Parameter to get a SweepValues object
