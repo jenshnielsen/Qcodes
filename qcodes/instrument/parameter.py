@@ -1253,7 +1253,10 @@ class Parameter(_BaseParameter):
                 self.__doc__))
 
     def __repr__(self) -> str:
-        return super().__repr__()
+        return (
+            super().__repr__()
+            + f"name {self.name}, unit {self.unit}, label {self.label}"
+        )
 
     def __getitem__(self, keys: Any) -> 'SweepFixedValues':
         """
