@@ -1,20 +1,29 @@
 import inspect
 from typing import Any, Dict, Optional, Tuple
 
+import numpy as np
 import parso
 from sphinx.util.inspect import safe_getattr
 
-from qcodes.instrument.base import Instrument, InstrumentBase
+# adhock imports required to run eval below
+# this should be parsed out rather
+import qcodes.utils.validators as vals
+from qcodes.instrument.base import InstrumentBase
 from qcodes.instrument.parameter import Parameter
 
 
-def parse_init_function_from_str(code: str, classname) -> parso.python.tree.Function:
+def parse_init_function_from_str(
+    code: str, classname
+) -> Optional[parso.python.tree.Function]:
     module = parso.parse(code)
     classes = tuple(
         child
         for child in module.children
         if isinstance(child, parso.python.tree.Class) and child.name.value == classname
     )
+    if len(classes) != 1:
+        print(f"Could not find exactly one class for {classname}")
+        return None
     assert len(classes) == 1
     myclass = classes[0]
     nodes = tuple(
@@ -22,7 +31,9 @@ def parse_init_function_from_str(code: str, classname) -> parso.python.tree.Func
         for child in myclass.children
         if isinstance(child, parso.python.tree.PythonNode)
     )
-    assert len(nodes) == 1
+    if len(nodes) != 1:
+        print(f"Could not find a single node from {classname}")
+        return None
     node = nodes[0]
     init_funcs = tuple(
         child
@@ -30,7 +41,9 @@ def parse_init_function_from_str(code: str, classname) -> parso.python.tree.Func
         if isinstance(child, parso.python.tree.Function)
         and child.name.value == "__init__"
     )
-    assert len(init_funcs) == 1
+    if len(init_funcs) != 1:
+        print(f"Did not find an init func or found more than one from {init_funcs}")
+        return None
     return init_funcs[0]
 
 
@@ -54,28 +67,22 @@ def extract_statements_from_func_node(parso_func: parso.python.tree.Function):
 
 def eval_params_from_code(code: str, classname: str) -> Dict[str, Parameter]:
     init_func_tree = parse_init_function_from_str(code, classname)
+    if init_func_tree is None:
+        return {}
     stms = extract_statements_from_func_node(init_func_tree)
-    print(stms)
-    print(len(stms))
-    print("\n\n\n\n\n\n")
     param_dict = {}
 
     for stm in stms:
-        print(stm)
         try:
             name_code = extract_code_without_self_from_statement(stm)
         except:
             continue
-        print("and")
         if name_code is not None:
             name, code = name_code
-            print(name, code)
             try:
                 param_dict[name] = eval(code)
             except Exception as e:
-                print(e)
                 param_dict[name] = None
-        print("then")
     return param_dict
 
 
@@ -102,15 +109,12 @@ def extract_code_without_self_from_statement(
     stm: parso.python.tree.ExprStmt,
 ) -> Optional[Tuple[str, str]]:
     lhs = stm.children[0]
-    print(lhs)
     rhs = stm.get_rhs()
     if len(lhs.children) == 2 and lhs.children[0].value == "self":
-        # more robust extraction of arglist
         name = lhs.children[1].children[1].value
         arglist = rhs.children[1].children[1]
         to_remove = []
         for i, arg in enumerate(arglist.children):
-            print(arg, parse_string_or_node(arg))
             if parse_string_or_node(arg):
                 to_remove.append(i)
                 to_remove.append(i + 1)
@@ -126,19 +130,23 @@ def qcodes_parameter_attr_getter(object: Any, name: str, *default: Any) -> Any:
     if (
         inspect.isclass(object)
         and issubclass(object, InstrumentBase)
-        and "resolution" in name
+        and not name.startswith("_")
     ):
-        print(f"Getting attribute {name} on {object}")
-        obj_name = object.__name__
-        with open(inspect.getfile(object)) as file:
-            code = file.read()
-        param_dict = eval_params_from_code(code, obj_name)
-        print(param_dict)
-        if param_dict.get(name) is not None:
-            return param_dict[name]
-        else:
-            return safe_getattr(object, name, default)
+        try:
+            return safe_getattr(object, name)
+        except AttributeError:
+            print(f"Parsing attribute {name} on {object}")
+            obj_name = object.__name__
+            with open(inspect.getfile(object), encoding="utf8") as file:
+                code = file.read()
+            param_dict = eval_params_from_code(code, obj_name)
+            if param_dict.get(name) is not None:
+                return param_dict[name]
+            else:
+                print("fall back to default")
+                return safe_getattr(object, name, default)
     else:
+
         return safe_getattr(object, name, default)
 
 
