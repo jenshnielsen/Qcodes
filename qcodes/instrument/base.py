@@ -236,14 +236,18 @@ class InstrumentBase(Metadatable, DelegateAttributes):
             params_to_skip_update = []
 
         snap: Dict[str, Any] = {
-            "functions": {name: func.snapshot(update=update)
-                          for name, func in self.functions.items()},
-            "submodules": {name: subm.snapshot(update=update)
-                           for name, subm in self.submodules.items()},
-            "__class__": full_class(self)
+            "functions": {
+                name: func.snapshot(update=update)
+                for name, func in self.functions.items()
+            },
+            "submodules": {
+                name: subm.snapshot(update=update)
+                for name, subm in self.submodules.items()
+            },
+            "__class__": full_class(self),
+            "parameters": {},
         }
 
-        snap['parameters'] = {}
         for name, param in self.parameters.items():
             if param.snapshot_exclude:
                 continue
