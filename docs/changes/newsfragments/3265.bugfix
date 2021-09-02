@@ -1,0 +1,2 @@
+Fixed a bug where multiple results for the same parameter could be passed to ``dataset.add_result`` resulting in only
+one of them being used.
