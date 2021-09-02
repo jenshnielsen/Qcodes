@@ -12,4 +12,5 @@ isort = true
 package = "qcodes"
 name = "QCoDeS"
 directory = "docs/changes/newsfragments"
-single_file = false
+single_file = true
+filename = "docs/changes/{version}.rst"
