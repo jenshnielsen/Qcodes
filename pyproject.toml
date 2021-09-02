@@ -8,3 +8,6 @@ build-backend = 'setuptools.build_meta'
 profile = "black"
 [tool.darker]
 isort = true
+[tool.towncrier]
+directory = "docs/changes/newsfragments"
+single_file = false
