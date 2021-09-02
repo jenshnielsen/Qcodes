@@ -9,5 +9,7 @@ profile = "black"
 [tool.darker]
 isort = true
 [tool.towncrier]
+package = "qcodes"
+name = "QCoDeS"
 directory = "docs/changes/newsfragments"
 single_file = false
