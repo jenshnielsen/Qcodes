@@ -50,9 +50,10 @@ class StationGraph:
         def deactivate(self) -> None:
             pass
 
-    class Edge(Enum):
-        Active = True
-        Inactive = False
+    class Edge(str, Enum):
+        Active = "Active"
+        Inactive = "Inactive"
+        Disconnected = "Disconnected"
         Parent = "Parent"
 
     def __init__(self, graph: Optional[networkx.DiGraph] = None):

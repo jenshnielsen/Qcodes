@@ -1037,3 +1037,59 @@ class MockCustomChannel(InstrumentChannel):
             get_cmd=None,
             set_cmd=None,
         )
+
+
+from qcodes.instrument.graph.graph import MutableStationGraph, StationGraph
+
+
+class ToggleSwitch(Instrument):
+    def __init__(self, name: str):
+        super().__init__(name)
+        self._graph = self._make_graph()
+        self.switch_position = Parameter(
+            "switch_position",
+            get_cmd=self.get_position,
+            set_cmd=self.set_position,
+            initial_value="a",
+        )
+
+    def get_position(self):
+        return self._position
+
+    def set_position(self, value):
+        if value == "a":
+            self._graph[
+                f"{self.name}.node_common", f"{self.name}.node_a"
+            ] = StationGraph.Edge.Inactive
+            self._graph[
+                f"{self.name}.node_common", f"{self.name}.node_b"
+            ] = StationGraph.Edge.Disconnected
+        elif value == "b":
+            self._graph[
+                f"{self.name}.node_common", f"{self.name}.node_b"
+            ] = StationGraph.Edge.Inactive
+            self._graph[
+                f"{self.name}.node_common", f"{self.name}.node_a"
+            ] = StationGraph.Edge.Disconnected
+        else:
+            raise ValueError()
+        self._position = value
+
+    def _make_graph(self):
+        graph = MutableStationGraph()
+
+        # name the nodes
+        node_a = f"{self.name}.node_a"
+        node_b = f"{self.name}.node_b"
+        switch_node = f"{self.name}.node_common"
+
+        # define nodes
+        graph[node_a] = node_a
+        graph[node_b] = node_b
+        graph[switch_node] = switch_node
+
+        # define edges
+        graph[switch_node, node_a] = StationGraph.Edge.Disconnected
+        graph[switch_node, node_b] = StationGraph.Edge.Inactive
+
+        return graph
