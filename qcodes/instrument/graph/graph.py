@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import itertools
 from enum import Enum
-from typing import Any, Callable, Iterator, Optional, Tuple, Union, overload
+from typing import Any, Callable, Iterator, Optional, Tuple, Union, overload, TYPE_CHECKING, Iterable
 
 import networkx
-from typing_extensions import Protocol, TypeAlias
+from typing_extensions import Protocol
+
+if TYPE_CHECKING:
+    from qcodes.instrument.parameter import Parameter
 
 NodeId = str
 EdgeId = Tuple[NodeId, NodeId]
+
+
+class SourceError(Exception):
+    pass
 
 
 class Node(Protocol):
@@ -27,6 +34,62 @@ class Node(Protocol):
     @property
     def is_active(self) -> bool:
         pass
+
+class ParameterNode
+
+
+class SwitchNode(Node):
+
+    def __init__(self, switch_parameter: "Parameter"):
+        self._parameter = switch_parameter
+
+    def activate(self) -> None:
+        self._parameter.set(True)
+
+    def deactivate(self) -> None:
+        self._parameter.set(False)
+
+    def add_source(self, source: Node) -> None:
+        pass
+
+    def remove_source(self, source: Node) -> None:
+        pass
+
+
+class ForwardingNode(Node):
+    def __init__(self) -> None:
+        self._source: Optional[Node] = None
+
+    @property
+    def parameters(self) -> Iterable[Parameter]:
+        if self._source is None:
+            return []
+        return self._source.parameters
+
+    def activate(self) -> None:
+        pass
+
+    def deactivate(self) -> None:
+        pass
+
+    @property
+    def source(self) -> Optional[Node]:
+        return self._source
+
+    def add_source(self, source: Node) -> None:
+        if self._source is None or self._source is source:
+            self._source = source
+        else:
+            raise SourceError(f"Node {self} is already connected to a source.")
+
+    def remove_source(self, source: Node) -> None:
+        if self._source == source:
+            self._source = None
+        else:
+            raise SourceError(
+                f"{source} cannot be removed because it is not a source for {self}."
+            )
+
 
 
 class Edge(Enum):
