@@ -1,0 +1,38 @@
+QCoDeS 0.30.0 (2021-09-28)
+==========================
+
+Breaking Changes:
+-----------------
+
+- The deprecated BarFoo has been removed (#5001)
+
+
+New:
+----
+
+- A new FooBar generator has been added to the Bar (#5002)
+
+
+Improved:
+---------
+
+- Fixed a bug where multiple results for the same parameter could be passed to ``dataset.add_result`` resulting in only
+  one of them being used. (#3265)
+
+
+New Drivers:
+------------
+
+- A driver for the FooBar AWG has been added. (#5000)
+
+
+Improved Drivers:
+-----------------
+
+- The Foo driver has gained a Bar ability (#5003)
+
+
+Under the hood:
+---------------
+
+- A thing has been fixed under the hood. (#5004)
