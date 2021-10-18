@@ -337,6 +337,7 @@ def test_export_to_xarray_extra_metadate_can_be_stored(mock_dataset, tmp_path):
     assert loaded_data.attrs["foo_metadata"] == json.dumps(nt_metadata)
     # check that all attrs roundtrip correctly within the xarray ds
     data_as_xarray.attrs.pop("export_info")
+    loaded_data.attrs.pop("export_info")
     assert loaded_data.attrs == data_as_xarray.attrs
 
 

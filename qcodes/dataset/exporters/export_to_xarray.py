@@ -73,6 +73,7 @@ def _add_metadata_to_xarray(
             "run_id": dataset.run_id,
             "run_description": serial.to_json_for_storage(dataset.description),
             "parent_dataset_links": links_to_str(dataset.parent_dataset_links),
+            "export_info": dataset.export_info.to_str(),
         }
     )
     if dataset.run_timestamp_raw is not None:

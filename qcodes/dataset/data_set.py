@@ -276,9 +276,13 @@ class DataSet(Sized):
             self._parent_dataset_links = str_to_links(
                 get_parent_dataset_links(self.conn, self.run_id)
             )
-            self._export_info = ExportInfo.from_str(
-                self.metadata.get("export_info", "")
+            export_info_raw = get_data_by_tag_and_table_name(
+                self.conn, "export_info", self.table_name
             )
+            if export_info_raw is not None:
+                self._export_info = ExportInfo.from_str(export_info_raw)
+            else:
+                self._export_info = ExportInfo({})
         else:
             # Actually perform all the side effects needed for the creation
             # of a new dataset. Note that a dataset is created (in the DB)
@@ -1619,7 +1623,11 @@ class DataSet(Sized):
         return self._export_info
 
     def _set_export_info(self, export_info: ExportInfo) -> None:
-        self.add_metadata("export_info", export_info.to_str())
+
+        with atomic(self.conn) as conn:
+            add_data_to_dynamic_columns(
+                conn, self.run_id, {"export_info": export_info.to_str()}
+            )
         self._export_info = export_info
 
 
