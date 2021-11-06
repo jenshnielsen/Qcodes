@@ -23,7 +23,7 @@ ipywidgets==7.6.5
 jedi==0.18.0
 Jinja2==3.0.2
 jsonpointer==2.2
-jsonschema==4.2.0
+jsonschema==4.2.1
 jupyter==1.0.0
 jupyter-client==7.0.6
 jupyter-console==6.4.0
@@ -85,5 +85,5 @@ wcwidth==0.2.5
 webencodings==0.5.1
 widgetsnbextension==3.5.2
 wincertstore==0.2
-xarray==0.20.0
+xarray==0.20.1
 zipp==3.6.0
