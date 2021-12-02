@@ -1003,3 +1003,15 @@ def find_or_create_instrument(
             instrument.connect_message()  # prints the message
 
     return instrument
+
+
+def instrument_graph(self):
+    """
+
+
+
+    Returns:
+
+    """
+    if hasattr(self, "graph"):
+        return self.graph
