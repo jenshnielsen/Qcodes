@@ -13,7 +13,6 @@ from typing import Dict, List, Optional
 
 import pkg_resources
 import requirements
-import versioningit
 
 if sys.version_info >= (3, 8):
     from importlib.metadata import PackageNotFoundError, distribution, version
@@ -54,6 +53,7 @@ def get_qcodes_version() -> str:
     Get the version of the currently installed QCoDeS
     """
     if is_qcodes_installed_editably():
+        import versioningit
         pyprojectpath = Path(os.path.abspath(__file__)).parent.parent.parent
         __version__ = versioningit.get_version(project_dir=pyprojectpath)
     else:
