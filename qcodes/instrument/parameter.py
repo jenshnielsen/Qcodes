@@ -104,7 +104,6 @@ from typing import (
 import numpy
 from typing_extensions import Protocol
 
-from qcodes.data.data_array import DataArray
 from qcodes.instrument.sweep_values import SweepFixedValues
 from qcodes.utils.command import Command
 from qcodes.utils.deprecate import deprecate, issue_deprecation_warning
@@ -1793,7 +1792,7 @@ class ArrayParameter(_BaseParameter):
             snapshot_exclude=snapshot_exclude,
             **kwargs,
         )
-
+        from qcodes.data.data_array import DataArray
         if self.settable:
             # TODO (alexcjohnson): can we support, ala Combine?
             raise AttributeError('ArrayParameters do not support set '
@@ -2000,6 +1999,7 @@ class MultiParameter(_BaseParameter):
         metadata: Optional[Mapping[Any, Any]] = None,
         **kwargs: Any,
     ) -> None:
+        from qcodes.data.data_array import DataArray
         super().__init__(
             name,
             instrument,
