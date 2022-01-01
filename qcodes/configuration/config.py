@@ -3,7 +3,14 @@ import copy
 import json
 import logging
 import os
-import pkg_resources as pkgr
+import sys
+if sys.version_info >= (3,9):
+    from importlib.resources import files as ir_files
+    from importlib.resources import as_file as ir_as_file
+else:
+    # use backport module for python < 3.9
+    from importlib_resources import files as ir_files
+    from importlib_resources import as_file as ir_as_file
 from os.path import expanduser
 from pathlib import Path
 import jsonschema
@@ -24,7 +31,6 @@ BASE_SCHEMA = {
     "required": []
 }
 
-
 class Config:
     """
     QCoDeS config system
@@ -39,15 +45,14 @@ class Config:
     schema_file_name = "qcodesrc_schema.json"
     """Name of schema file"""
     # get abs path of packge config file
-    default_file_name = pkgr.resource_filename(__name__, config_file_name)
+    default_file_name = ir_files(__package__) / config_file_name
     """Filename of default config"""
     current_config_path = default_file_name
     """Path of the last loaded config file"""
     _loaded_config_files = [default_file_name]
 
     # get abs path of schema  file
-    schema_default_file_name = pkgr.resource_filename(__name__,
-                                                      schema_file_name)
+    schema_default_file_name = ir_files(__package__) / schema_file_name
     """Filename of default schema"""
 
     # home dir, os independent
