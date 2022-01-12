@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import abc
+import itertools
 import logging
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
+    Callable,
     Dict,
     Iterable,
+    Iterator,
     Mapping,
     Optional,
     Sequence,
     Tuple,
     Union,
+    overload,
 )
 
+import networkx
 from typing_extensions import Protocol
 
 NodeId = str
@@ -61,6 +65,12 @@ class Node(abc.ABC):
         return self._nodeid
 
     @property
+    def name(self) -> str:
+        return self._nodeid
+
+    # todo how should we unify nodeid and name
+
+    @property
     @abc.abstractmethod
     def parameters(self) -> Iterable[Parameter]:
         pass
@@ -89,6 +99,7 @@ class Node(abc.ABC):
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         pass
 
+    @abc.abstractmethod
     @property
     def active(self) -> bool:
         pass
@@ -100,80 +111,181 @@ class Edge(abc.ABC):
     def active(self) -> bool:
         pass
 
-
-class Router(Protocol):
-    """
-    Router class for dynamic routing of station components during
-    experimental runs.
-    """
-
-    def route_to_source(
-        self, terminal_id: Union[NodeId, Iterable[NodeId]], unit: Optional[str] = None
-    ) -> None:
+    @abc.abstractmethod
+    def activate(self) -> None:
         pass
 
-    def route_to_meter(
-        self, terminal_id: Union[NodeId, Iterable[NodeId]], unit: Optional[str] = None
-    ) -> None:
+    @abc.abstractmethod
+    def deactivate(self) -> None:
         pass
 
-    def route_to_ground(
-        self, terminal_id: Union[NodeId, Iterable[NodeId]], unit: Optional[str] = "V"
-    ) -> None:
-        pass
 
-    def route_to_float(
-        self, terminal_id: Union[NodeId, Iterable[NodeId]], unit: Optional[str] = "V"
-    ) -> None:
-        pass
+class StationGraph:
 
-    def route_to_highz(
-        self, terminal_id: Union[NodeId, Iterable[NodeId]], unit: Optional[str] = "V"
-    ) -> None:
-        pass
+    @classmethod
+    def compose(cls, *graphs: StationGraph) -> StationGraph:
+        composition = networkx.DiGraph()
+        for graph in graphs:
+            composition = networkx.compose(
+                composition, graph._graph  # pylint: disable=protected-access
+            )
+        composed = StationGraph(composition)
+        for edge in composed.edges:
+            if composed[edge].active is False:
+                source = composed[edge[0]]
+                destination = composed[edge[1]]
+                destination.add_source(source)
+        return composed
 
-    def connect(
-        self,
-        connections: Mapping[NodeId, Sequence[NodeId]],
-    ) -> None:
+    @classmethod
+    def prune(cls, graph: StationGraph) -> StationGraph:
+        pruned = graph._graph.copy()  # pylint: disable=protected-access
+        orphans = [
+            node_id for node_id, node in pruned.nodes.items() if "value" not in node
+        ]
+        for node_id in orphans:
+            pruned.remove_node(node_id)
+        return StationGraph(pruned)
+
+    @classmethod
+    def subgraph_of(
+        cls,
+        graph: StationGraph,
+        is_node_included: Callable[[NodeId], bool] = lambda _: True,
+        is_edge_included: Callable[[EdgeId], bool] = lambda _: True,
+    ) -> StationGraph:
+        def _is_edge_included(start: NodeId, end: NodeId) -> bool:
+            return is_edge_included((start, end))
+
+        subgraph = networkx.classes.graphviews.subgraph_view(
+            graph._graph,  # pylint: disable=protected-access
+            filter_node=is_node_included,
+            filter_edge=_is_edge_included,
+        )
+        return StationGraph(subgraph)
+
+    def __init__(self, graph: Optional[networkx.DiGraph] = None):
+        if graph is None:
+            self._graph = networkx.DiGraph()
+        else:
+            self._graph = graph
+
+    @overload
+    def __getitem__(self, identifier: NodeId) -> Node:
+        ...
+
+    @overload
+    def __getitem__(self, identifier: EdgeId) -> Edge:
+        ...
+
+    def __getitem__(self, identifier: Union[NodeId, EdgeId]) -> Optional[ValueType]:
+        if isinstance(identifier, tuple):
+            attributes = self._graph[identifier[0]][identifier[1]]
+        else:
+            attributes = self._graph.nodes[identifier]
+        return attributes.get("value")
+
+    def __setitem__(self, identifier: Union[NodeId, EdgeId], value: ValueType) -> None:
+        if isinstance(identifier, tuple):
+            attributes = self._graph[identifier[0]][identifier[1]]
+        else:
+            attributes = self._graph.nodes[identifier]
+        attributes["value"] = value
+
+    @property
+    def nodes(self) -> Iterator[NodeId]:
+        return iter(self._graph.nodes)
+
+    @property
+    def edges(self) -> Iterator[EdgeId]:
+        return iter(self._graph.edges)
+
+    def neighbors_of(self, vertex_id: NodeId) -> Iterator[NodeId]:
+        return iter(
+            set(
+                itertools.chain(
+                    self.predecessors_of(vertex_id), self.successors_of(vertex_id)
+                )
+            )
+        )
+
+    def successors_of(self, vertex_id: NodeId) -> Iterator[NodeId]:
+        return self._graph.successors(vertex_id)
+
+    def predecessors_of(self, vertex_id: NodeId) -> Iterator[NodeId]:
+        return self._graph.predecessors(vertex_id)
+
+    def draw(self) -> None:
         """
-        Connect the Sources (keys) to the terminals (values) given.
+        Draw station graph using :py:meth:`networkx.draw` and:
 
-        Args:
-            connections: A mapping from NodeId of a source to a sequence of NodeIds for the
-                terminals that this source node should be connected to.
-        Raises:
-            RoutingError: If the set of terminal and source nodes could not be
-                connected.
+          * show labels of the nodes
+          * show non-``None`` values of the edges (actually, showing string
+            representation of ``value`` attribute of the edges if that
+            ``value`` is not ``None``)
+          * color active edges in red, and other edges in black
+          * color nodes without values in yellow, and other nodes in blue
+
         """
-        pass
+        graph = self._graph
 
-    def route(
-        self,
-        *terminal_ids: Union[NodeId, Iterable[NodeId]],
-        source_appraiser: NodeAppraiser,
-    ) -> None:
-        """Routes a set of terminal nodes to the corresponding set of "source" nodes with the highest appraisal value.
+        positions = networkx.spring_layout(graph)
 
-        Args:
-            terminal_ids: Identifiers of the terminals to route.
-                Identifiers may be enclosed in an iterable (e.g., list, tuple, generator) in which case the enclosed
-                terminals will all be routed to the same source.
-            source_appraiser:  A function that evaluates a set of candidate source nodes.
-                The number of arguments given to source_appraiser will match the number of terminal_ids.
-                The appraiser must return an integer-like value.  A positive return value means that the set
-                of source nodes may be routed to the terminals.  A non-positive value means that
-                the set of source nodes may not be routed to the terminals.  Then set of sources
-                nodes with the highest appraisal value is used for the route.
-        Raises:
-            RoutingError: The set of terminal nodes could not be routed with the given appraiser.
-        """
-        pass
+        edge_values = networkx.get_edge_attributes(graph, "value")
+        edge_labels = {
+            edge_name: edge_label if edge_label is not None else ""
+            for edge_name, edge_label in edge_values.items()
+        }
 
-    def eligible_sources_of(
-        self, terminal_id: NodeId, source_appraiser: NodeAppraiser = always_true
-    ) -> Iterable[NodeId]:
-        pass
+        edge_colors = [
+            "k" if graph[node_from][node_to]["value"] is None else "r"
+            for node_from, node_to in graph.edges()
+        ]
 
-    def vacate(self, terminal_id: NodeId) -> None:
-        pass
+        node_colors = [
+            "b" if "value" in graph.nodes[node] else "y" for node in graph.nodes
+        ]
+
+        networkx.draw(
+            graph,
+            positions,
+            with_labels=True,
+            edge_color=edge_colors,
+            width=1,
+            node_size=50,
+            node_color=node_colors,
+        )
+
+        networkx.draw_networkx_edge_labels(graph, positions, edge_labels=edge_labels)
+
+    def draw_spring(self, **kwargs: Any) -> None:
+        return networkx.draw_spring(self._graph, with_labels=True, **kwargs)
+
+    def draw_spectral(self, **kwargs: Any) -> None:
+        return networkx.draw_spectral(self._graph, with_labels=True, **kwargs)
+
+    def draw_circular(self, **kwargs: Any) -> None:
+        return networkx.draw_circular(self._graph, with_labels=True, **kwargs)
+
+    def breadth_first_nodes_from(
+        self, node_id: NodeId, reverse: bool = False
+    ) -> Iterator[NodeId]:
+        edges = networkx.algorithms.traversal.breadth_first_search.bfs_edges(
+            self._graph, node_id, reverse=reverse
+        )
+        return itertools.chain([node_id], map(lambda edge: edge[1], edges))
+
+    def breadth_first_edges_from(
+        self, node_id: NodeId, reverse: bool = False
+    ) -> Iterator[EdgeId]:
+        edges = networkx.algorithms.traversal.breadth_first_search.bfs_edges(
+            self._graph, node_id, reverse=reverse
+        )
+        return itertools.chain(edges)
+
+    def shortest_paths_between(
+        self, source: NodeId, destination: NodeId
+    ) -> Iterator[Iterator[NodeId]]:
+        return networkx.algorithms.simple_paths.shortest_simple_paths(
+            self._graph, source, destination
+        )
