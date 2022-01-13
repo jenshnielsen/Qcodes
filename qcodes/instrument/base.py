@@ -21,6 +21,14 @@ from typing import (
 
 import numpy as np
 
+from qcodes.graph.graph import (
+    BasicEdge,
+    EdgeStatus,
+    EdgeType,
+    InstrumentChannelNode,
+    MutableStationGraph,
+    StationGraph,
+)
 from qcodes.logger.instrument_logger import get_instrument_logger
 from qcodes.utils.helpers import DelegateAttributes, full_class, strip_attrs
 from qcodes.utils.metadata import Metadatable
@@ -32,6 +40,7 @@ from .parameter import Parameter, _BaseParameter
 if TYPE_CHECKING:
     from qcodes.instrument.channel import ChannelList
     from qcodes.logger.instrument_logger import InstrumentLoggerAdapter
+    from qcodes.graph.graph import StationGraph
 
 from qcodes.utils.deprecate import QCoDeSDeprecationWarning
 
@@ -888,6 +897,38 @@ class Instrument(InstrumentBase, AbstractInstrument):
             f"Instrument {type(self).__name__} has not defined an ask method"
         )
 
+    def instrument_graph(self) -> "StationGraph":
+        """
+
+        Returns:
+
+        """
+        if hasattr(self, "graph"):
+            # todo fallback for legacy
+            return self.graph
+        # todo make lazy
+        return self._make_graph()
+
+    def _make_graph(self) -> "StationGraph":
+        subgraph_primary_node_names = []
+        subgraphs = []
+        for submodule in self.submodules.values():
+            subgraph = submodule._make_graph()
+            if subgraph is not None:
+                subgraph_primary_node_names.append(submodule.full_name)
+                subgraphs.append(subgraph)
+
+        graph = MutableStationGraph.compose(*subgraphs)
+        graph[self.full_name] = InstrumentChannelNode(
+            nodeid=self.full_name, channel=self
+        )
+
+        for name in subgraph_primary_node_names:
+            graph[self.full_name, name] = BasicEdge(
+                edge_type=EdgeType.PART_OF, edge_status=EdgeStatus.NOT_ACTIVATABLE
+            )
+
+        return graph.as_station_graph()
 
 def find_or_create_instrument(
     instrument_class: Type[T],
@@ -932,15 +973,3 @@ def find_or_create_instrument(
             instrument.connect_message()  # prints the message
 
     return instrument
-
-
-def instrument_graph(self):
-    """
-
-
-
-    Returns:
-
-    """
-    if hasattr(self, "graph"):
-        return self.graph
