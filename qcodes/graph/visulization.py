@@ -7,7 +7,7 @@ import ipycytoscape
 import ipywidgets
 import networkx as nx
 
-from .graph import StationGraph
+from .graph import EdgeStatus, StationGraph
 
 DEFAULT_STYLE = [
     {
@@ -33,7 +33,7 @@ DEFAULT_STYLE = [
     },
     {"selector": "edge", "style": {"width": 4, "line-color": "#9dbaea"}},
     {
-        "selector": "edge.directed.Edge_Active",
+        "selector": "edge.directed.EdgeStatus_ACTIVE",
         "style": {
             "curve-style": "bezier",
             "target-arrow-shape": "triangle",
@@ -41,12 +41,21 @@ DEFAULT_STYLE = [
         },
     },
     {
-        "selector": "edge.directed.Edge_Inactive",
+        "selector": "edge.directed.EdgeStatus_INACTIVE",
         "style": {
             "curve-style": "bezier",
             "target-arrow-shape": "triangle",
             "target-arrow-color": "red",
             "line-color": "red",
+        },
+    },
+    {
+        "selector": "edge.directed.EdgeStatus_NOT_ACTIVATABLE",
+        "style": {
+            "curve-style": "bezier",
+            "target-arrow-shape": "triangle",
+            "target-arrow-color": "green",
+            "line-color": "green",
         },
     },
     {"selector": "edge.multiple_edges", "style": {"curve-style": "bezier"}},
@@ -120,7 +129,7 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     for edge, edgeattrs in nxgraph.edges.items():
         cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
         cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = str(
-            edgeattrs["value"]
+            edgeattrs["value"].status
         ).replace(".", "_")
 
     return cytoscapegraph
@@ -184,7 +193,7 @@ def _get_active_edges(graph: StationGraph) -> list:
     active_edges = [
         (str(edge[0]), str(edge[1]))
         for edge in graph.edges
-        if graph[edge].active is True
+        if graph[edge].status == EdgeStatus.ACTIVE
     ]
     return active_edges
 
