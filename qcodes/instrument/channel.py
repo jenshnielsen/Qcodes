@@ -18,6 +18,7 @@ from typing import (
     overload,
 )
 
+from ..graph.graph import InstrumentChannelNode, MutableStationGraph
 from ..utils.helpers import full_class
 from ..utils.metadata import Metadatable
 from ..utils.validators import Validator
@@ -93,6 +94,14 @@ class InstrumentModule(InstrumentBase):
         name_parts.append(self.short_name)
         return name_parts
 
+    def _make_graph(self) -> Optional[MutableStationGraph]:
+        graph = MutableStationGraph()
+        # todo make recursive
+        # for submodule in self.submodules.values():
+        #     nodes.extend(submodule._nodes())
+        node = InstrumentChannelNode(nodeid=self.full_name, channel=self)
+        graph[self.full_name] = node
+        return graph
 
 class InstrumentChannel(InstrumentModule):
     pass
@@ -535,6 +544,10 @@ class ChannelTuple(Metadatable, Sequence[InstrumentModuleType]):
         """
         for chan in self._channels:
             chan.invalidate_cache()
+
+    def _make_graph(self) -> Optional[MutableStationGraph]:
+        return None
+
 
 # we ignore a mypy error here since the __getitem__ signature above
 # taking a tuple is not compatible with MutableSequence
