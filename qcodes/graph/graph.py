@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import itertools
 import logging
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -14,6 +15,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    TypeVar,
     Union,
     overload,
 )
@@ -33,7 +35,7 @@ ConnectionAttributeType = Any
 
 if TYPE_CHECKING:
     from qcodes.instrument.base import InstrumentBase
-    from qcodes.instrument.channel import ChannelList
+    from qcodes.instrument.channel import ChannelList, InstrumentChannel
     from qcodes.instrument.parameter import Parameter, _BaseParameter
 
 
@@ -99,16 +101,50 @@ class Node(abc.ABC):
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         pass
 
-    @abc.abstractmethod
     @property
+    @abc.abstractmethod
     def active(self) -> bool:
         pass
 
 
-class Edge(abc.ABC):
+class InstrumentChannelNode(abc.ABC):
+    def __init__(self, *, nodeid: NodeId, channel: InstrumentChannel):
+        self._nodeid = nodeid
+        self._port = channel
+
+    @property
+    def parameters(self) -> Iterable[_BaseParameter]:
+        return list(self._port.parameters.values())
+
+    def sources(self) -> Iterable[Node]:
+        return []
+
+    def ports(self) -> Iterable[Port]:
+        return [self._port]
+
+    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
+        return {}
+
+    @property
+    def active(self) -> bool:
+        return False
+
+
+class EdgeType(str, Enum):
+    ELECTRICAL_CONNECTION = "electrical_connection"
+    PART_OF = "part_of"
+
+
+class EdgeStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    NOT_ACTIVATABLE = "not_activatable"
+
+
+class EdgeACB(abc.ABC):
     @property
     @abc.abstractmethod
-    def active(self) -> bool:
+    def status(self) -> EdgeStatus:
         pass
 
     @abc.abstractmethod
@@ -119,41 +155,85 @@ class Edge(abc.ABC):
     def deactivate(self) -> None:
         pass
 
+    @property
+    @abc.abstractmethod
+    def type(self) -> EdgeType:
+        pass
+
+
+class BasicEdge(EdgeACB):
+    def __init__(
+        self, *, edge_type: EdgeType, edge_status: EdgeStatus = EdgeStatus.INACTIVE
+    ):
+        self._edge_status = edge_status
+        self._edge_type = edge_type
+
+    @property
+    def status(self) -> EdgeStatus:
+        return self._edge_status
+
+    @property
+    def type(self) -> EdgeType:
+        return self._edge_type
+
+    @property
+    def _can_be_activated(self) -> bool:
+        return (
+            self.status == EdgeStatus.ACTIVE or self.status == EdgeStatus.ACTIVE
+        ) and self.type == EdgeType.ELECTRICAL_CONNECTION
+
+    def activate(self) -> None:
+        if self._can_be_activated:
+            self._edge_status = EdgeStatus.ACTIVE
+        else:
+            raise NotImplementedError(
+                f"Cannot activate an edge of type {self.type} with status {self.status}"
+            )
+
+    def deactivate(self) -> None:
+        if self._can_be_activated:
+            self._edge_status = EdgeStatus.INACTIVE
+        else:
+            raise NotImplementedError(
+                f"Cannot deactivate an edge of type {self.type} with status {self.status}"
+            )
+
+
+T = TypeVar(name="T", bound="StationGraph")
 
 class StationGraph:
-
     @classmethod
-    def compose(cls, *graphs: StationGraph) -> StationGraph:
+    def compose(cls, *graphs: T) -> T:
         composition = networkx.DiGraph()
         for graph in graphs:
             composition = networkx.compose(
                 composition, graph._graph  # pylint: disable=protected-access
             )
-        composed = StationGraph(composition)
+        composed = cls(composition)
         for edge in composed.edges:
-            if composed[edge].active is False:
+            if composed[edge].status == EdgeStatus.ACTIVE:
                 source = composed[edge[0]]
                 destination = composed[edge[1]]
                 destination.add_source(source)
         return composed
 
     @classmethod
-    def prune(cls, graph: StationGraph) -> StationGraph:
+    def prune(cls, graph: T) -> T:
         pruned = graph._graph.copy()  # pylint: disable=protected-access
         orphans = [
             node_id for node_id, node in pruned.nodes.items() if "value" not in node
         ]
         for node_id in orphans:
             pruned.remove_node(node_id)
-        return StationGraph(pruned)
+        return cls(pruned)
 
     @classmethod
     def subgraph_of(
         cls,
-        graph: StationGraph,
+        graph: T,
         is_node_included: Callable[[NodeId], bool] = lambda _: True,
         is_edge_included: Callable[[EdgeId], bool] = lambda _: True,
-    ) -> StationGraph:
+    ) -> T:
         def _is_edge_included(start: NodeId, end: NodeId) -> bool:
             return is_edge_included((start, end))
 
@@ -162,7 +242,7 @@ class StationGraph:
             filter_node=is_node_included,
             filter_edge=_is_edge_included,
         )
-        return StationGraph(subgraph)
+        return cls(subgraph)
 
     def __init__(self, graph: Optional[networkx.DiGraph] = None):
         if graph is None:
@@ -175,7 +255,7 @@ class StationGraph:
         ...
 
     @overload
-    def __getitem__(self, identifier: EdgeId) -> Edge:
+    def __getitem__(self, identifier: EdgeId) -> EdgeACB:
         ...
 
     def __getitem__(self, identifier: Union[NodeId, EdgeId]) -> Optional[ValueType]:
@@ -289,3 +369,16 @@ class StationGraph:
         return networkx.algorithms.simple_paths.shortest_simple_paths(
             self._graph, source, destination
         )
+
+
+class MutableStationGraph(StationGraph):
+    def __setitem__(self, identifier: Union[NodeId, EdgeId], value: ValueType) -> None:
+        if isinstance(identifier, tuple):
+            self._graph.add_edge(*identifier)
+        else:
+            print(f"adding node {identifier}")
+            self._graph.add_node(identifier)
+        super().__setitem__(identifier, value)
+
+    def as_station_graph(self) -> StationGraph:
+        return StationGraph(self._graph)
