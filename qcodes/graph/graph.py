@@ -15,6 +15,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     TypeVar,
     Union,
     overload,
@@ -203,7 +204,7 @@ T = TypeVar(name="T", bound="StationGraph")
 
 class StationGraph:
     @classmethod
-    def compose(cls, *graphs: T) -> T:
+    def compose(cls: Type[T], *graphs: StationGraph) -> T:
         composition = networkx.DiGraph()
         for graph in graphs:
             composition = networkx.compose(
@@ -218,7 +219,7 @@ class StationGraph:
         return composed
 
     @classmethod
-    def prune(cls, graph: T) -> T:
+    def prune(cls: Type[T], graph: StationGraph) -> T:
         pruned = graph._graph.copy()  # pylint: disable=protected-access
         orphans = [
             node_id for node_id, node in pruned.nodes.items() if "value" not in node
@@ -229,8 +230,8 @@ class StationGraph:
 
     @classmethod
     def subgraph_of(
-        cls,
-        graph: T,
+        cls: Type[T],
+        graph: StationGraph,
         is_node_included: Callable[[NodeId], bool] = lambda _: True,
         is_edge_included: Callable[[EdgeId], bool] = lambda _: True,
     ) -> T:
