@@ -108,8 +108,8 @@ class Node(abc.ABC):
         pass
 
 
-class InstrumentChannelNode(Node):
-    def __init__(self, *, nodeid: NodeId, channel: InstrumentChannel):
+class InstrumentNode(Node):
+    def __init__(self, *, nodeid: NodeId, channel: InstrumentBase):
         super().__init__(nodeid=nodeid)
         self._port = channel
 

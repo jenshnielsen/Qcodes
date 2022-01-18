@@ -25,7 +25,7 @@ from qcodes.graph.graph import (
     BasicEdge,
     EdgeStatus,
     EdgeType,
-    InstrumentChannelNode,
+    InstrumentNode,
     MutableStationGraph,
     StationGraph,
 )
@@ -910,18 +910,17 @@ class Instrument(InstrumentBase, AbstractInstrument):
         return self._make_graph()
 
     def _make_graph(self) -> "StationGraph":
-        subgraph_primary_node_names = []
+        subgraph_primary_node_names: List[str] = []
         subgraphs = []
         for submodule in self.submodules.values():
             subgraph = submodule._make_graph()
             if subgraph is not None:
+                reveal_type(submodule)
                 subgraph_primary_node_names.append(submodule.full_name)
                 subgraphs.append(subgraph)
 
         graph = MutableStationGraph.compose(*subgraphs)
-        graph[self.full_name] = InstrumentChannelNode(
-            nodeid=self.full_name, channel=self
-        )
+        graph[self.full_name] = InstrumentNode(nodeid=self.full_name, channel=self)
 
         for name in subgraph_primary_node_names:
             graph[self.full_name, name] = BasicEdge(
