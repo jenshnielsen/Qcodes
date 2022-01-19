@@ -27,7 +27,7 @@ from qcodes.graph.graph import (
     BasicEdge,
     EdgeStatus,
     EdgeType,
-    InstrumentChannelNode,
+    InstrumentModuleNode,
     MutableStationGraph,
     StationGraph,
 )
@@ -989,7 +989,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
             subgraphs.append(subgraph)
 
         graph = MutableStationGraph.compose(*subgraphs)
-        graph[self.full_name] = InstrumentChannelNode(
+        graph[self.full_name] = InstrumentModuleNode(
             nodeid=self.full_name, channel=self
         )
 

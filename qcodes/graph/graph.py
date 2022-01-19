@@ -11,9 +11,7 @@ from typing import (
     Dict,
     Iterable,
     Iterator,
-    Mapping,
     Optional,
-    Sequence,
     Tuple,
     Type,
     TypeVar,
@@ -26,7 +24,7 @@ from typing_extensions import Protocol
 
 NodeId = str
 EdgeId = Tuple[NodeId, NodeId]
-ValueType = Union["Node", "Edge"]
+ValueType = Union["Node", "EdgeABC"]
 
 
 _LOG = logging.getLogger(__name__)
@@ -35,8 +33,8 @@ _LOG = logging.getLogger(__name__)
 ConnectionAttributeType = Any
 
 if TYPE_CHECKING:
-    from qcodes.instrument.base import InstrumentBase
-    from qcodes.instrument.channel import ChannelList, InstrumentChannel
+    from qcodes.instrument.base import Instrument
+    from qcodes.instrument.channel import InstrumentModule
     from qcodes.instrument.parameter import Parameter, _BaseParameter
 
 
@@ -44,7 +42,7 @@ if TYPE_CHECKING:
 class Port(Protocol):
 
     parameters: Dict[str, _BaseParameter]
-    submodules: Dict[str, Union[InstrumentBase, ChannelList]]
+    instrument_modules: Dict[str, InstrumentModule]
 
     @property
     def short_name(self) -> str:
@@ -108,13 +106,13 @@ class Node(abc.ABC):
         pass
 
 
-class InstrumentChannelNode(abc.ABC):
-    def __init__(self, *, nodeid: NodeId, channel: InstrumentChannel):
+class InstrumentModuleNode(Node):
+    def __init__(self, *, nodeid: NodeId, channel: Union[Instrument, InstrumentModule]):
         self._nodeid = nodeid
         self._port = channel
 
     @property
-    def parameters(self) -> Iterable[_BaseParameter]:
+    def parameters(self) -> Iterable[Parameter]:
         return list(self._port.parameters.values())
 
     def sources(self) -> Iterable[Node]:
@@ -142,7 +140,7 @@ class EdgeStatus(str, Enum):
     NOT_ACTIVATABLE = "not_activatable"
 
 
-class EdgeACB(abc.ABC):
+class EdgeABC(abc.ABC):
     @property
     @abc.abstractmethod
     def status(self) -> EdgeStatus:
@@ -162,7 +160,7 @@ class EdgeACB(abc.ABC):
         pass
 
 
-class BasicEdge(EdgeACB):
+class BasicEdge(EdgeABC):
     def __init__(
         self, *, edge_type: EdgeType, edge_status: EdgeStatus = EdgeStatus.INACTIVE
     ):
@@ -200,7 +198,7 @@ class BasicEdge(EdgeACB):
             )
 
 
-T = TypeVar(name="T", bound="StationGraph")
+T = TypeVar("T", bound="StationGraph")
 
 class StationGraph:
     @classmethod
@@ -256,7 +254,7 @@ class StationGraph:
         ...
 
     @overload
-    def __getitem__(self, identifier: EdgeId) -> EdgeACB:
+    def __getitem__(self, identifier: EdgeId) -> EdgeABC:
         ...
 
     def __getitem__(self, identifier: Union[NodeId, EdgeId]) -> Optional[ValueType]:

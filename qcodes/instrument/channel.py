@@ -18,7 +18,7 @@ from typing import (
     overload,
 )
 
-from ..graph.graph import InstrumentChannelNode, MutableStationGraph
+from ..graph.graph import InstrumentModuleNode, MutableStationGraph
 from ..utils.helpers import full_class
 from ..utils.metadata import Metadatable
 from ..utils.validators import Validator
@@ -94,14 +94,15 @@ class InstrumentModule(InstrumentBase):
         name_parts.append(self.short_name)
         return name_parts
 
-    def _make_graph(self) -> Optional[MutableStationGraph]:
+    def _make_graph(self) -> MutableStationGraph:
         graph = MutableStationGraph()
         # todo make recursive
         # for submodule in self.submodules.values():
         #     nodes.extend(submodule._nodes())
-        node = InstrumentChannelNode(nodeid=self.full_name, channel=self)
+        node = InstrumentModuleNode(nodeid=self.full_name, channel=self)
         graph[self.full_name] = node
         return graph
+
 
 class InstrumentChannel(InstrumentModule):
     pass
