@@ -983,11 +983,10 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
     def _make_graph(self) -> "StationGraph":
         subgraph_primary_node_names = []
         subgraphs = []
-        for submodule in self.submodules.values():
+        for submodule in self.instrument_modules.values():
             subgraph = submodule._make_graph()
-            if subgraph is not None:
-                subgraph_primary_node_names.append(submodule.full_name)
-                subgraphs.append(subgraph)
+            subgraph_primary_node_names.append(submodule.full_name)
+            subgraphs.append(subgraph)
 
         graph = MutableStationGraph.compose(*subgraphs)
         graph[self.full_name] = InstrumentChannelNode(
@@ -1000,6 +999,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
             )
 
         return graph.as_station_graph()
+
 
 def find_or_create_instrument(
     instrument_class: Type[T],
