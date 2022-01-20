@@ -12,6 +12,7 @@ from typing import (
     Iterable,
     Iterator,
     Optional,
+    Set,
     Tuple,
     Type,
     TypeVar,
@@ -108,7 +109,7 @@ class Node(abc.ABC):
 
 class InstrumentModuleNode(Node):
     def __init__(self, *, nodeid: NodeId, channel: Union[Instrument, InstrumentModule]):
-        self._nodeid = nodeid
+        super().__init__(nodeid=nodeid)
         self._port = channel
 
     @property
@@ -120,6 +121,42 @@ class InstrumentModuleNode(Node):
 
     def ports(self) -> Iterable[Port]:
         return [self._port]
+
+    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
+        return {}
+
+    @property
+    def active(self) -> bool:
+        return False
+
+
+class ConnectorNode(Node):
+    def __init__(self, *, nodeid: NodeId):
+        super().__init__(nodeid=nodeid)
+        self._sources: Set[Node] = set()
+
+    @property
+    def parameters(self) -> Iterable[Parameter]:
+        return itertools.chain.from_iterable(
+            source.parameters for source in self._sources
+        )
+
+    def add_source(self, source: Node) -> None:
+        super().add_source(source=source)
+        self._sources.add(source)
+
+    def remove_source(self, source: Node) -> None:
+        super().remove_source(source=source)
+        self._sources.remove(source)
+
+    def sources(self) -> Iterable[Node]:
+        return self._sources
+
+    def ports(self) -> Iterable[Port]:
+
+        return itertools.chain.from_iterable(
+            source.ports() for source in self.sources()
+        )
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}

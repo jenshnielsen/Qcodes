@@ -1,9 +1,17 @@
 import re
+from difflib import get_close_matches
 from typing import Any, Sequence, Tuple
 
 from typing_extensions import NotRequired, TypedDict
 
-from qcodes.graph.graph import MutableStationGraph, StationGraph
+from qcodes.graph.graph import (
+    BasicEdge,
+    ConnectorNode,
+    EdgeStatus,
+    EdgeType,
+    MutableStationGraph,
+    StationGraph,
+)
 from qcodes.instrument.base import Instrument
 
 
@@ -81,21 +89,9 @@ class Connector(Instrument):
             connector_node = f"{self.name}[{dict_id}]"
             name = substitute_non_identifier_characters(f"resistance_{connector_node}")
 
-            self.graph[connector_node] = self._make_connector_node(name, dictionary)
+            self.graph[connector_node] = ConnectorNode(nodeid=name)
             for endpoint in dictionary["endpoints"]:
                 self._add_edges_to_graph(endpoint, connector_node)
-
-    def _make_connector_node(
-        self, name: str, dictionary: ConnectorMapping
-    ) -> _ConnectorNode:
-        value = dictionary.get("ohms", 0)
-        if not "ohms" in dictionary.keys():
-            self._check_similar_key("ohms", dictionary)
-        self.add_parameter(
-            name, initial_cache_value=value, unit="ohms", set_cmd=False, get_cmd=None
-        )
-
-        return _ConnectorNode(getattr(self, name), name=name)
 
     @staticmethod
     def _check_similar_key(name: str, dictionary: ConnectorMapping) -> None:
@@ -107,8 +103,12 @@ class Connector(Instrument):
             )
 
     def _add_edges_to_graph(self, node1: str, node2: str) -> None:
-        self.graph[node1, node2] = Edge.Inactive
-        self.graph[node2, node1] = Edge.Inactive
+        self.graph[node1, node2] = BasicEdge(
+            edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
+        )
+        self.graph[node2, node1] = BasicEdge(
+            edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
+        )
 
     def quell(self) -> None:
         pass
