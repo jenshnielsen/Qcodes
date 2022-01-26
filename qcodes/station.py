@@ -38,6 +38,7 @@ import ruamel.yaml
 
 import qcodes
 import qcodes.utils.validators as validators
+from qcodes.graph.graph import StationGraph
 from qcodes.instrument.base import Instrument, InstrumentBase
 from qcodes.instrument.channel import ChannelTuple
 from qcodes.instrument.parameter import (
@@ -729,6 +730,20 @@ class Station(Metadatable, DelegateAttributes):
             self.load_instrument(instrument)
 
         return tuple(instrument_names_to_load)
+
+    def _create_station_graph(self) -> StationGraph:
+        """Generates station level connectivity graph"""
+        # todo this needs to filter only instruments
+        graphs: List[StationGraph] = []
+        for component in self.components.values():
+            graphs.append(component.instrument_graph)
+        graph = StationGraph.compose(*graphs)
+        graph = StationGraph.prune(graph)
+        return graph
+
+    @property
+    def graph(self) -> StationGraph:
+        return self._create_station_graph()
 
 
 def update_config_schema(

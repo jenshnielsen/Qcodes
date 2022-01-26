@@ -968,6 +968,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
             f"Instrument {type(self).__name__} has not defined an ask method"
         )
 
+    @property
     def instrument_graph(self) -> "StationGraph":
         """
 

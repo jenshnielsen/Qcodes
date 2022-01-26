@@ -89,7 +89,7 @@ class Connector(Instrument):
             connector_node = f"{self.name}[{dict_id}]"
             name = substitute_non_identifier_characters(f"resistance_{connector_node}")
 
-            self.graph[connector_node] = ConnectorNode(nodeid=name)
+            self.instrument_graph[connector_node] = ConnectorNode(nodeid=name)
             for endpoint in dictionary["endpoints"]:
                 self._add_edges_to_graph(endpoint, connector_node)
 
@@ -103,10 +103,10 @@ class Connector(Instrument):
             )
 
     def _add_edges_to_graph(self, node1: str, node2: str) -> None:
-        self.graph[node1, node2] = BasicEdge(
+        self.instrument_graph[node1, node2] = BasicEdge(
             edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
         )
-        self.graph[node2, node1] = BasicEdge(
+        self.instrument_graph[node2, node1] = BasicEdge(
             edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
         )
 
@@ -114,7 +114,7 @@ class Connector(Instrument):
         pass
 
     @property
-    def graph(self) -> StationGraph:
+    def instrument_graph(self) -> StationGraph:
         return self._graph
 
 
