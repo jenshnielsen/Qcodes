@@ -108,9 +108,16 @@ class Node(abc.ABC):
 
 
 class InstrumentModuleNode(Node):
-    def __init__(self, *, nodeid: NodeId, channel: Union[Instrument, InstrumentModule]):
+    def __init__(
+        self,
+        *,
+        nodeid: NodeId,
+        channel: Union[Instrument, InstrumentModule],
+        parent: Optional[str] = None,
+    ):
         super().__init__(nodeid=nodeid)
         self._port = channel
+        self._parent = parent
 
     @property
     def parameters(self) -> Iterable[Parameter]:
@@ -236,6 +243,7 @@ class BasicEdge(EdgeABC):
 
 
 T = TypeVar("T", bound="StationGraph")
+
 
 class StationGraph:
     @classmethod

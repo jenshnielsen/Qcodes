@@ -3,11 +3,13 @@ Utils for visualizing StationGraphs. Note that these only work in
 Jupyter and require you to have ipycytoscape installed. This can be
 installed with ``pip install qchar[live_plotting]``
 """
+from typing import Optional
+
 import ipycytoscape
 import ipywidgets
 import networkx as nx
 
-from .graph import EdgeStatus, StationGraph
+from .graph import EdgeStatus, EdgeType, StationGraph
 
 DEFAULT_STYLE = [
     {
@@ -21,6 +23,7 @@ DEFAULT_STYLE = [
             "background-color": "#11479e",
         },
     },
+    {"selector": "node:parent", "css": {"background-opacity": 0.333}},
     {
         "selector": ":selected",
         "css": {
@@ -94,21 +97,22 @@ def _draw_networkx_graph(graph: nx.DiGraph, disjoint: bool = True) -> ipywidgets
     Create an Cytoscape graphwidget from a networkx style graph.
     """
 
-    temp_graph = _create_cytoscape_compatible_graph(graph)
-
     if disjoint:
         graphwidgets = []
         components = [
-            temp_graph.subgraph(c).copy()
-            for c in nx.weakly_connected_components(temp_graph)
+            graph.subgraph(c).copy() for c in nx.weakly_connected_components(graph)
         ]
         for component in components:
             graphwidget = ipycytoscape.CytoscapeWidget()
-            graphwidget.graph.add_graph_from_networkx(component, directed=True)
+            graphwidget.graph.add_graph_from_networkx(
+                _create_cytoscape_compatible_graph(component), directed=True
+            )
             graphwidgets.append(graphwidget)
     else:
         graphwidget = ipycytoscape.CytoscapeWidget()
-        graphwidget.graph.add_graph_from_networkx(temp_graph, directed=True)
+        graphwidget.graph.add_graph_from_networkx(
+            _create_cytoscape_compatible_graph(graph), directed=True
+        )
         graphwidgets = [graphwidget]
 
     for graphwidget in graphwidgets:
@@ -122,15 +126,17 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     by ipycytoscape"""
     nodes_dict = {}
     cytoscapegraph = nx.DiGraph()
-    for node in nxgraph.nodes():
-        new_node = CustomNode(node, classes="node")
+    for node, node_attrs in nxgraph.nodes().items():
+        parent = getattr(node_attrs.get("value", None), "_parent", None)
+        new_node = CustomNode(node, classes="node", parent=parent)
         nodes_dict[node] = new_node
         cytoscapegraph.add_node(new_node)
     for edge, edgeattrs in nxgraph.edges.items():
-        cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
-        cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = str(
-            edgeattrs["value"].status
-        ).replace(".", "_")
+        if not edgeattrs["value"].type == EdgeType.PART_OF:
+            cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
+            cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = str(
+                edgeattrs["value"].status
+            ).replace(".", "_")
 
     return cytoscapegraph
 
@@ -141,9 +147,11 @@ class CustomNode(ipycytoscape.Node):
     with ipycytoscape
     """
 
-    def __init__(self, name: str, classes: str = ""):
+    def __init__(self, name: str, classes: str = "", parent: Optional[str] = None):
         super().__init__()
         self.data["id"] = name
+        if parent is not None:
+            self.data["parent"] = parent
         self.classes = classes
 
 

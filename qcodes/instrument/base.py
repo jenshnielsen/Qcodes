@@ -983,16 +983,17 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
 
     def _make_graph(self) -> "StationGraph":
         subgraph_primary_node_names = []
-        subgraphs = []
+        self_graph = MutableStationGraph()
+
+        node = InstrumentModuleNode(nodeid=self.full_name, channel=self)
+        self_graph[self.full_name] = node
+        subgraphs = [self_graph]
         for submodule in self.instrument_modules.values():
             subgraph = submodule._make_graph()
             subgraph_primary_node_names.append(submodule.full_name)
             subgraphs.append(subgraph)
 
         graph = MutableStationGraph.compose(*subgraphs)
-        graph[self.full_name] = InstrumentModuleNode(
-            nodeid=self.full_name, channel=self
-        )
 
         for name in subgraph_primary_node_names:
             graph[self.full_name, name] = BasicEdge(

@@ -99,7 +99,9 @@ class InstrumentModule(InstrumentBase):
         # todo make recursive
         # for submodule in self.submodules.values():
         #     nodes.extend(submodule._nodes())
-        node = InstrumentModuleNode(nodeid=self.full_name, channel=self)
+        node = InstrumentModuleNode(
+            nodeid=self.full_name, channel=self, parent=self.parent.full_name
+        )
         graph[self.full_name] = node
         return graph
 
