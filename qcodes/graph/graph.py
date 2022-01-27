@@ -104,6 +104,43 @@ class Activator(abc.ABC):
         pass
 
 
+class EndpointActivator(Activator):
+    def __init__(self, *, port: Port, parent: Optional[Port] = None):
+        super().__init__(port=port)
+        self._parent = parent
+        self._sources: Set[Port] = set()
+
+    @property
+    def parameters(self) -> Iterable[Parameter]:
+        return []
+
+    def add_source(self, source: Port) -> None:
+        self._sources.add(source)
+        super().add_source(source)
+
+    def remove_source(self, source: Port) -> None:
+        self._sources.remove(source)
+        super().remove_source(source)
+
+    def activate(self) -> None:
+        _LOG.info(f"Activating Node: {self.port.full_name}")
+
+    def deactivate(self) -> None:
+        _LOG.info(f"Deactivating Node: {self.port.full_name}")
+
+    def upstream_ports(self) -> Iterable[Port]:
+        return itertools.chain.from_iterable(
+            source.activator.upstream_ports() for source in self._sources
+        )
+
+    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
+        return {}
+
+    @property
+    def active(self) -> bool:
+        return False
+
+
 class InstrumentModuleActivator(Activator):
     def __init__(
         self,
@@ -119,7 +156,7 @@ class InstrumentModuleActivator(Activator):
         return list(self.port.parameters.values())
 
     def upstream_ports(self) -> Iterable[Port]:
-        return []
+        return [self.port]
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
@@ -149,12 +186,8 @@ class ConnectorActivator(Activator):
         self._sources.remove(source)
 
     def upstream_ports(self) -> Iterable[Port]:
-        return list(self._sources)
-
-    def ports(self) -> Iterable[Port]:
-
         return itertools.chain.from_iterable(
-            source.ports() for source in self.sources()
+            source.activator.upstream_ports() for source in self._sources
         )
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:

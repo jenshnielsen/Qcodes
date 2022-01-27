@@ -1,6 +1,6 @@
 import re
 from difflib import get_close_matches
-from typing import Any, Sequence, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from typing_extensions import NotRequired, TypedDict
 
@@ -9,6 +9,7 @@ from qcodes.graph.graph import (
     ConnectorActivator,
     EdgeStatus,
     EdgeType,
+    EndpointActivator,
     MutableStationGraph,
     StationGraph,
 )
@@ -126,6 +127,21 @@ class Connector(Instrument):
     @property
     def instrument_graph(self) -> StationGraph:
         return self._graph
+
+
+class Device(InstrumentModule):
+    def __init__(self, parent: InstrumentBase, name: str, **kwargs: Any) -> None:
+        super().__init__(parent, name, **kwargs)
+        self._activator = EndpointActivator(port=self, parent=parent)
+
+
+class Chip(Instrument):
+    def __init__(self, name: str, metadata: Optional[Mapping[Any, Any]] = None) -> None:
+        super().__init__(name, metadata)
+        self._activator = EndpointActivator(port=self)
+
+        self.add_submodule("device1", Device(parent=self, name="device1"))
+        self.add_submodule("device2", Device(parent=self, name="device2"))
 
 
 def substitute_non_identifier_characters(
