@@ -331,58 +331,6 @@ class StationGraph:
     def predecessors_of(self, vertex_id: NodeId) -> Iterator[NodeId]:
         return self._graph.predecessors(vertex_id)
 
-    def draw(self) -> None:
-        """
-        Draw station graph using :py:meth:`networkx.draw` and:
-
-          * show labels of the nodes
-          * show non-``None`` values of the edges (actually, showing string
-            representation of ``value`` attribute of the edges if that
-            ``value`` is not ``None``)
-          * color active edges in red, and other edges in black
-          * color nodes without values in yellow, and other nodes in blue
-
-        """
-        graph = self._graph
-
-        positions = networkx.spring_layout(graph)
-
-        edge_values = networkx.get_edge_attributes(graph, "value")
-        edge_labels = {
-            edge_name: edge_label if edge_label is not None else ""
-            for edge_name, edge_label in edge_values.items()
-        }
-
-        edge_colors = [
-            "k" if graph[node_from][node_to]["value"] is None else "r"
-            for node_from, node_to in graph.edges()
-        ]
-
-        node_colors = [
-            "b" if "value" in graph.nodes[node] else "y" for node in graph.nodes
-        ]
-
-        networkx.draw(
-            graph,
-            positions,
-            with_labels=True,
-            edge_color=edge_colors,
-            width=1,
-            node_size=50,
-            node_color=node_colors,
-        )
-
-        networkx.draw_networkx_edge_labels(graph, positions, edge_labels=edge_labels)
-
-    def draw_spring(self, **kwargs: Any) -> None:
-        return networkx.draw_spring(self._graph, with_labels=True, **kwargs)
-
-    def draw_spectral(self, **kwargs: Any) -> None:
-        return networkx.draw_spectral(self._graph, with_labels=True, **kwargs)
-
-    def draw_circular(self, **kwargs: Any) -> None:
-        return networkx.draw_circular(self._graph, with_labels=True, **kwargs)
-
     def breadth_first_nodes_from(
         self, node_id: NodeId, reverse: bool = False
     ) -> Iterator[NodeId]:
