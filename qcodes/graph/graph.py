@@ -25,7 +25,7 @@ from typing_extensions import Protocol
 
 NodeId = str
 EdgeId = Tuple[NodeId, NodeId]
-ValueType = Union["Node", "EdgeABC"]
+ValueType = Union["Port", "EdgeABC"]
 
 
 _LOG = logging.getLogger(__name__)
@@ -57,44 +57,41 @@ class Port(Protocol):
         """
         pass
 
-
-class Node(abc.ABC):
-    def __init__(self, *, nodeid: NodeId):
-        self._nodeid = nodeid
-
     @property
-    def nodeid(self) -> str:
-        return self._nodeid
+    def activator(self) -> Activator:
+        ...
 
-    @property
-    def name(self) -> str:
-        return self._nodeid
 
-    # todo how should we unify nodeid and name
+class Activator(abc.ABC):
+    def __init__(self, *, port: Port):
+        self._port = port
 
     @property
     @abc.abstractmethod
     def parameters(self) -> Iterable[Parameter]:
         pass
 
-    def add_source(self, source: Node) -> None:
-        _LOG.info(f"Adding Source {source.name} to Node: {self.name}")
+    def add_source(self, source: Port) -> None:
+        _LOG.info(f"Adding Source {source.full_name} to Node: {self.port.full_name}")
 
-    def remove_source(self, source: Node) -> None:
-        _LOG.info(f"Removing Source {source.name} from Node: {self.name}")
+    def remove_source(self, source: Port) -> None:
+        _LOG.info(
+            f"Removing Source {source.full_name} from Node: {self.port.full_name}"
+        )
 
     def activate(self) -> None:
-        _LOG.info(f"Activating Node: {self.name}")
+        _LOG.info(f"Activating Node: {self.port.full_name}")
 
     def deactivate(self) -> None:
-        _LOG.info(f"Deactivating Node: {self.name}")
+        _LOG.info(f"Deactivating Node: {self.port.full_name}")
+
+    @property
+    def port(self) -> Port:
+        return self._port
 
     @abc.abstractmethod
-    def sources(self) -> Iterable[Node]:
-        pass
-
-    @abc.abstractmethod
-    def ports(self) -> Iterable[Port]:
+    def upstream_ports(self) -> Iterable[Port]:
+        # todo naming
         pass
 
     @abc.abstractmethod
@@ -107,27 +104,22 @@ class Node(abc.ABC):
         pass
 
 
-class InstrumentModuleNode(Node):
+class InstrumentModuleActivator(Activator):
     def __init__(
         self,
         *,
-        nodeid: NodeId,
-        channel: Union[Instrument, InstrumentModule],
-        parent: Optional[str] = None,
+        port: Port,
+        parent: Optional[Port] = None,
     ):
-        super().__init__(nodeid=nodeid)
-        self._port = channel
+        super().__init__(port=port)
         self._parent = parent
 
     @property
     def parameters(self) -> Iterable[Parameter]:
-        return list(self._port.parameters.values())
+        return list(self.port.parameters.values())
 
-    def sources(self) -> Iterable[Node]:
+    def upstream_ports(self) -> Iterable[Port]:
         return []
-
-    def ports(self) -> Iterable[Port]:
-        return [self._port]
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
@@ -137,10 +129,10 @@ class InstrumentModuleNode(Node):
         return False
 
 
-class ConnectorNode(Node):
-    def __init__(self, *, nodeid: NodeId):
-        super().__init__(nodeid=nodeid)
-        self._sources: Set[Node] = set()
+class ConnectorActivator(Activator):
+    def __init__(self, *, port: Port):
+        super().__init__(port=port)
+        self._sources: Set[Port] = set()
 
     @property
     def parameters(self) -> Iterable[Parameter]:
@@ -148,16 +140,16 @@ class ConnectorNode(Node):
             source.parameters for source in self._sources
         )
 
-    def add_source(self, source: Node) -> None:
+    def add_source(self, source: Port) -> None:
         super().add_source(source=source)
         self._sources.add(source)
 
-    def remove_source(self, source: Node) -> None:
+    def remove_source(self, source: Port) -> None:
         super().remove_source(source=source)
         self._sources.remove(source)
 
-    def sources(self) -> Iterable[Node]:
-        return self._sources
+    def upstream_ports(self) -> Iterable[Port]:
+        return list(self._sources)
 
     def ports(self) -> Iterable[Port]:
 
@@ -295,7 +287,7 @@ class StationGraph:
             self._graph = graph
 
     @overload
-    def __getitem__(self, identifier: NodeId) -> Node:
+    def __getitem__(self, identifier: NodeId) -> Port:
         ...
 
     @overload

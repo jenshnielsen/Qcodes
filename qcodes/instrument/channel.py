@@ -18,7 +18,7 @@ from typing import (
     overload,
 )
 
-from ..graph.graph import InstrumentModuleNode, MutableStationGraph
+from ..graph.graph import InstrumentModuleActivator, MutableStationGraph
 from ..utils.helpers import full_class
 from ..utils.metadata import Metadatable
 from ..utils.validators import Validator
@@ -60,6 +60,8 @@ class InstrumentModule(InstrumentBase):
         self._parent = parent
         super().__init__(name=name, **kwargs)
 
+        self._activator = InstrumentModuleActivator(port=self, parent=parent)
+
     def __repr__(self) -> str:
         """Custom repr to give parent information"""
         return (
@@ -99,10 +101,7 @@ class InstrumentModule(InstrumentBase):
         # todo make recursive
         # for submodule in self.submodules.values():
         #     nodes.extend(submodule._nodes())
-        node = InstrumentModuleNode(
-            nodeid=self.full_name, channel=self, parent=self.parent.full_name
-        )
-        graph[self.full_name] = node
+        graph[self.full_name] = self
         return graph
 
 

@@ -6,19 +6,27 @@ from typing_extensions import NotRequired, TypedDict
 
 from qcodes.graph.graph import (
     BasicEdge,
-    ConnectorNode,
+    ConnectorActivator,
     EdgeStatus,
     EdgeType,
     MutableStationGraph,
     StationGraph,
 )
-from qcodes.instrument.base import Instrument
+from qcodes.instrument.base import Instrument, InstrumentBase
+from qcodes.instrument.channel import InstrumentModule
 
 
 class ConnectorMapping(TypedDict):
     name: NotRequired[str]
     endpoints: Tuple[str, str]
     ohms: NotRequired[float]
+
+
+class ConnectorModule(InstrumentModule):
+    def __init__(self, parent: InstrumentBase, name: str, **kwargs: Any) -> None:
+
+        super().__init__(parent, name, **kwargs)
+        self._activator = ConnectorActivator(port=self)
 
 
 class Connector(Instrument):
@@ -89,7 +97,9 @@ class Connector(Instrument):
             connector_node = f"{self.name}[{dict_id}]"
             name = substitute_non_identifier_characters(f"resistance_{connector_node}")
 
-            self.instrument_graph[connector_node] = ConnectorNode(nodeid=name)
+            self.instrument_graph[connector_node] = ConnectorModule(
+                parent=self, name=name
+            )
             for endpoint in dictionary["endpoints"]:
                 self._add_edges_to_graph(endpoint, connector_node)
 

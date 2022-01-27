@@ -127,8 +127,10 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     nodes_dict = {}
     cytoscapegraph = nx.DiGraph()
     for node, node_attrs in nxgraph.nodes().items():
-        parent = getattr(node_attrs.get("value", None), "_parent", None)
-        new_node = CustomNode(node, classes="node", parent=parent)
+        module = node_attrs.get("value", None)
+        parent = getattr(module, "parent", None)
+        parent_name = getattr(parent, "full_name", None)
+        new_node = CustomNode(node, classes="node", parent=parent_name)
         nodes_dict[node] = new_node
         cytoscapegraph.add_node(new_node)
     for edge, edgeattrs in nxgraph.edges.items():

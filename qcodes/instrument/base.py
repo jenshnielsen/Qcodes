@@ -27,7 +27,7 @@ from qcodes.graph.graph import (
     BasicEdge,
     EdgeStatus,
     EdgeType,
-    InstrumentModuleNode,
+    InstrumentModuleActivator,
     MutableStationGraph,
     StationGraph,
 )
@@ -98,6 +98,8 @@ class InstrumentBase(Metadatable, DelegateAttributes):
         self._meta_attrs = ['name']
 
         self.log = get_instrument_logger(self, __name__)
+
+        self._activator = InstrumentModuleActivator(port=self)
 
     def add_parameter(
         self, name: str, parameter_class: type = Parameter, **kwargs: Any
@@ -517,6 +519,10 @@ class InstrumentBase(Metadatable, DelegateAttributes):
                 if verbose:
                     print(f'validate_status: param {k}: {value}')
                 p.validate(value)
+
+    @property
+    def activator(self):
+        return self._activator
 
 
 class InstrumentMeta(ABCMeta):
@@ -969,6 +975,10 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         )
 
     @property
+    def activator(self):
+        return self._activator
+
+    @property
     def instrument_graph(self) -> "StationGraph":
         """
 
@@ -984,9 +994,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
     def _make_graph(self) -> "StationGraph":
         subgraph_primary_node_names = []
         self_graph = MutableStationGraph()
-
-        node = InstrumentModuleNode(nodeid=self.full_name, channel=self)
-        self_graph[self.full_name] = node
+        self_graph[self.full_name] = self
         subgraphs = [self_graph]
         for submodule in self.instrument_modules.values():
             subgraph = submodule._make_graph()
