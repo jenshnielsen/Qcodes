@@ -736,7 +736,8 @@ class Station(Metadatable, DelegateAttributes):
         # todo this needs to filter only instruments
         graphs: List[StationGraph] = []
         for component in self.components.values():
-            graphs.append(component.instrument_graph)
+            if isinstance(component, Instrument):
+                graphs.append(component.instrument_graph)
         graph = StationGraph.compose(*graphs)
         graph = StationGraph.prune(graph)
         return graph
