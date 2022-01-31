@@ -246,8 +246,8 @@ class Station(Metadatable, DelegateAttributes):
             if not (isinstance(component, Parameter)
                     and component.snapshot_exclude):
                 component.snapshot(update=update_snapshot)
-        except:
-            pass
+        except Exception:
+            log.exception(f"Failed to get snapshot for {component}")
         if name is None:
             name = getattr(component, "name", f"component{len(self.components)}")
         namestr = str(name)
