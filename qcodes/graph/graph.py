@@ -283,7 +283,7 @@ class StationGraph:
             if composed[edge].status == EdgeStatus.ACTIVE:
                 source = composed[edge[0]]
                 destination = composed[edge[1]]
-                destination.add_source(source)
+                destination.activator.add_source(source)
         return composed
 
     @classmethod
