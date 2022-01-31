@@ -24,6 +24,7 @@ import numpy as np
 from typing_extensions import Protocol
 
 from qcodes.graph.graph import (
+    Activator,
     BasicEdge,
     EdgeStatus,
     EdgeType,
@@ -99,7 +100,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
 
         self.log = get_instrument_logger(self, __name__)
 
-        self._activator = InstrumentModuleActivator(port=self)
+        self._activator: Activator = InstrumentModuleActivator(port=self)
 
     def add_parameter(
         self, name: str, parameter_class: type = Parameter, **kwargs: Any
@@ -521,7 +522,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
                 p.validate(value)
 
     @property
-    def activator(self):
+    def activator(self) -> Activator:
         return self._activator
 
 
@@ -975,7 +976,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         )
 
     @property
-    def activator(self):
+    def activator(self) -> Activator:
         return self._activator
 
     @property
