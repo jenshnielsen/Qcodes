@@ -39,8 +39,20 @@ if TYPE_CHECKING:
     from qcodes.instrument.parameter import Parameter, _BaseParameter
 
 
-# The Port Protocol is a minimal interface for a InstrumentChannel.
-class Port(Protocol):
+class NodeStatus(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+class EdgeStatus(str, Enum):
+    ACTIVE_ELECTRICAL_CONNECTION = "active_electrical_connection"
+    INACTIVE_ELECTRICAL_CONNECTION = "inactive_electrical_connection"
+    PART_OF = "part_of"
+    CAPACITIVE_COUPLING = "capacitive_coupling"
+
+
+# The Node Protocol is a minimal interface for a InstrumentChannel.
+class Node(Protocol):
 
     parameters: Dict[str, _BaseParameter]
     instrument_modules: Dict[str, InstrumentModule]
@@ -58,23 +70,23 @@ class Port(Protocol):
         pass
 
     @property
-    def activator(self) -> Activator:
+    def activator(self) -> NodeActivator:
         ...
 
 
-class Activator(abc.ABC):
-    def __init__(self, *, port: Port):
-        self._port = port
+class NodeActivator(abc.ABC):
+    def __init__(self, *, node: Node):
+        self._node = node
 
     @property
     @abc.abstractmethod
     def parameters(self) -> Iterable[Parameter]:
         pass
 
-    def add_source(self, source: Port) -> None:
+    def add_source(self, source: Node) -> None:
         _LOG.info(f"Adding Source {source.full_name} to Node: {self.port.full_name}")
 
-    def remove_source(self, source: Port) -> None:
+    def remove_source(self, source: Node) -> None:
         _LOG.info(
             f"Removing Source {source.full_name} from Node: {self.port.full_name}"
         )
@@ -86,11 +98,11 @@ class Activator(abc.ABC):
         _LOG.info(f"Deactivating Node: {self.port.full_name}")
 
     @property
-    def port(self) -> Port:
-        return self._port
+    def port(self) -> Node:
+        return self._Node
 
     @abc.abstractmethod
-    def upstream_ports(self) -> Iterable[Port]:
+    def upstream_nodes(self) -> Iterable[Node]:
         # todo naming
         pass
 
@@ -100,25 +112,25 @@ class Activator(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def active(self) -> bool:
+    def status(self) -> NodeStatus:
         pass
 
 
-class EndpointActivator(Activator):
-    def __init__(self, *, port: Port, parent: Optional[Port] = None):
-        super().__init__(port=port)
+class EndpointActivator(NodeActivator):
+    def __init__(self, *, node: Node, parent: Optional[Node] = None):
+        super().__init__(node=node)
         self._parent = parent
-        self._sources: Set[Port] = set()
+        self._sources: Set[Node] = set()
 
     @property
     def parameters(self) -> Iterable[Parameter]:
         return []
 
-    def add_source(self, source: Port) -> None:
+    def add_source(self, source: Node) -> None:
         self._sources.add(source)
         super().add_source(source)
 
-    def remove_source(self, source: Port) -> None:
+    def remove_source(self, source: Node) -> None:
         self._sources.remove(source)
         super().remove_source(source)
 
@@ -128,7 +140,7 @@ class EndpointActivator(Activator):
     def deactivate(self) -> None:
         _LOG.info(f"Deactivating Node: {self.port.full_name}")
 
-    def upstream_ports(self) -> Iterable[Port]:
+    def upstream_ports(self) -> Iterable[Node]:
         return itertools.chain.from_iterable(
             source.activator.upstream_ports() for source in self._sources
         )
@@ -141,21 +153,21 @@ class EndpointActivator(Activator):
         return False
 
 
-class InstrumentModuleActivator(Activator):
+class InstrumentModuleActivator(NodeActivator):
     def __init__(
         self,
         *,
-        port: Port,
-        parent: Optional[Port] = None,
+        node: Node,
+        parent: Optional[Node] = None,
     ):
-        super().__init__(port=port)
+        super().__init__(node=node)
         self._parent = parent
 
     @property
     def parameters(self) -> Iterable[Parameter]:
-        return list(self.port.parameters.values())
+        return list(self.node.parameters.values())
 
-    def upstream_ports(self) -> Iterable[Port]:
+    def upstream_ports(self) -> Iterable[Node]:
         return [self.port]
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
@@ -166,10 +178,10 @@ class InstrumentModuleActivator(Activator):
         return False
 
 
-class ConnectorActivator(Activator):
-    def __init__(self, *, port: Port):
-        super().__init__(port=port)
-        self._sources: Set[Port] = set()
+class ConnectorActivator(NodeActivator):
+    def __init__(self, *, node: Node):
+        super().__init__(node=node)
+        self._sources: Set[Node] = set()
 
     @property
     def parameters(self) -> Iterable[Parameter]:
@@ -177,15 +189,15 @@ class ConnectorActivator(Activator):
             source.parameters for source in self._sources
         )
 
-    def add_source(self, source: Port) -> None:
+    def add_source(self, source: Node) -> None:
         super().add_source(source=source)
         self._sources.add(source)
 
-    def remove_source(self, source: Port) -> None:
+    def remove_source(self, source: Node) -> None:
         super().remove_source(source=source)
         self._sources.remove(source)
 
-    def upstream_ports(self) -> Iterable[Port]:
+    def upstream_ports(self) -> Iterable[Node]:
         return itertools.chain.from_iterable(
             source.activator.upstream_ports() for source in self._sources
         )
@@ -198,18 +210,7 @@ class ConnectorActivator(Activator):
         return False
 
 
-class EdgeType(str, Enum):
-    ELECTRICAL_CONNECTION = "electrical_connection"
-    PART_OF = "part_of"
-
-
-class EdgeStatus(str, Enum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    NOT_ACTIVATABLE = "not_activatable"
-
-
-class EdgeABC(abc.ABC):
+class EdgeActivator(abc.ABC):
     @property
     @abc.abstractmethod
     def status(self) -> EdgeStatus:
@@ -223,10 +224,6 @@ class EdgeABC(abc.ABC):
     def deactivate(self) -> None:
         pass
 
-    @property
-    @abc.abstractmethod
-    def type(self) -> EdgeType:
-        pass
 
 
 class BasicEdge(EdgeABC):
