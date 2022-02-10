@@ -59,7 +59,10 @@ class InstrumentModule(InstrumentBase):
 
     def __repr__(self) -> str:
         """Custom repr to give parent information"""
-        return f"<{type(self).__name__}: {self.name} of {type(self._parent).__name__}: {self._parent.name}>"
+        return (
+            f"<{type(self).__name__}: {self.name} of "
+            f"{type(self._parent).__name__}: {self._parent.name}>"
+        )
 
     # Pass any commands to read or write from the instrument up to the parent
     def write(self, cmd: str) -> None:
@@ -285,7 +288,10 @@ class ChannelTuple(Metadatable, Sequence[InstrumentChannel]):
         return item in self._channels
 
     def __repr__(self) -> str:
-        return f"ChannelTuple({self._parent!r}, {self._chan_type.__name__}, {self._channels!r})"
+        return (
+            f"ChannelTuple({self._parent!r}, "
+            f"{self._chan_type.__name__}, {self._channels!r})"
+        )
 
     def __add__(self: T, other: "ChannelTuple") -> T:
         """
@@ -635,7 +641,8 @@ class ChannelList(ChannelTuple, MutableSequence[InstrumentChannel]):  # type: ig
         if not isinstance(obj, self._chan_type):
             raise TypeError(
                 f"All items in a channel list must be of the same "
-                f"type. Adding {type(obj).__name__} to a list of {self._chan_type.__name__}"
+                f"type. Adding {type(obj).__name__} to a "
+                f"list of {self._chan_type.__name__}."
             )
         self._channel_mapping[obj.short_name] = obj
         self._channels.append(obj)
@@ -694,7 +701,7 @@ class ChannelList(ChannelTuple, MutableSequence[InstrumentChannel]):  # type: ig
         if not isinstance(obj, self._chan_type):
             raise TypeError(
                 f"All items in a channel list must be of the same "
-                f"type. Adding {type(obj).__name__} to a list of {self._chan_type.__name__}"
+                f"type. Adding {type(obj).__name__} to a list of {self._chan_type.__name__}."
             )
         self._channels.insert(index, obj)
         self._channel_mapping[obj.short_name] = obj
@@ -739,7 +746,10 @@ class ChannelList(ChannelTuple, MutableSequence[InstrumentChannel]):  # type: ig
         )
 
     def __repr__(self) -> str:
-        return f"ChannelList({self._parent!r}, {self._chan_type.__name__}, {self._channels!r})"
+        return (
+            f"ChannelList({self._parent!r}, "
+            f"{self._chan_type.__name__}, {self._channels!r})"
+        )
 
 
 class ChannelTupleValidator(Validator[InstrumentChannel]):
