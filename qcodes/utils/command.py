@@ -1,6 +1,6 @@
 from typing import Any, Callable, Generic, Optional, TypeVar, Union
 
-from typing_extensions import Literal
+from typing_extensions import Literal, ParamSpec
 
 from qcodes.utils.helpers import is_function
 
@@ -9,11 +9,14 @@ class NoCommandError(Exception):
     pass
 
 
+PreParsedInput = ParamSpec("PreParsedInput")
+Input = ParamSpec("Input")
+
 Output = TypeVar("Output")
 ParsedOutput = TypeVar("ParsedOutput")
 
 
-class Command(Generic[Output, ParsedOutput]):
+class Command(Generic[PreParsedInput, Input, Output, ParsedOutput]):
     """
     Create a callable command from a string or function.
 
@@ -56,9 +59,9 @@ class Command(Generic[Output, ParsedOutput]):
     def __init__(
         self,
         arg_count: int,
-        cmd: Optional[Union[str, Callable[..., Output]]] = None,
+        cmd: Optional[Union[str, Callable[Input, Output]]] = None,
         exec_str: Optional[Callable[[str], Output]] = None,
-        input_parser: Optional[Callable] = None,
+        input_parser: Optional[Callable[PreParsedInput, Any]] = None,
         output_parser: Optional[Callable[[Output], ParsedOutput]] = None,
         no_cmd_function: Optional[Callable] = None,
     ):
@@ -146,13 +149,15 @@ class Command(Generic[Output, ParsedOutput]):
     # overhead from branching or extra function calls and stack frames.
     # TODO(giulioungaretti) wihtout benchmarks this is "just like your opinion man"
 
-    def call_by_str(self, *args: Any) -> Output:
+    def call_by_str(self, *args: Input.args, **kwargs: Input.kwargs) -> Output:
         """Execute a formatted string."""
-        return self.exec_str(self.cmd_str.format(*args))
+        return self.exec_str(self.cmd_str.format(*args, **kwargs))
 
-    def call_by_str_parsed_out(self, *args: Any) -> ParsedOutput:
+    def call_by_str_parsed_out(
+        self, *args: Input.args, **kwargs: Input.kwargs
+    ) -> ParsedOutput:
         """Execute a formatted string with output parsing."""
-        return self.output_parser(self.exec_str(self.cmd_str.format(*args)))
+        return self.output_parser(self.exec_str(self.cmd_str.format(*args, **kwargs)))
 
     def call_by_str_parsed_in(self, arg: Any) -> Output:
         """Execute a formatted string with 1-arg input parsing."""
@@ -164,21 +169,27 @@ class Command(Generic[Output, ParsedOutput]):
             self.exec_str(self.cmd_str.format(self.input_parser(arg)))
         )
 
-    def call_by_str_parsed_in2(self, *args: Any) -> Output:
+    def call_by_str_parsed_in2(
+        self, *args: PreParsedInput.args, **kwargs: PreParsedInput.kwargs
+    ) -> Output:
         """Execute a formatted string with multi-arg input parsing."""
-        return self.exec_str(self.cmd_str.format(*self.input_parser(*args)))
+        return self.exec_str(self.cmd_str.format(*self.input_parser(*args, **kwargs)))
 
-    def call_by_str_parsed_in2_out(self, *args: Any) -> ParsedOutput:
+    def call_by_str_parsed_in2_out(
+        self, *args: PreParsedInput.args, **kwargs: PreParsedInput.kwargs
+    ) -> ParsedOutput:
         """Execute a formatted string with multi-arg input & output parsing."""
         return self.output_parser(
-            self.exec_str(self.cmd_str.format(*self.input_parser(*args)))
+            self.exec_str(self.cmd_str.format(*self.input_parser(*args, **kwargs)))
         )
 
     # And the same for parsing + command as a function
 
-    def call_cmd_parsed_out(self, *args: Any) -> ParsedOutput:
+    def call_cmd_parsed_out(
+        self, *args: Input.args, **kwargs: Input.kwargs
+    ) -> ParsedOutput:
         """Execute a function with output parsing."""
-        return self.output_parser(self._cmd(*args))
+        return self.output_parser(self._cmd(*args, **kwargs))
 
     def call_cmd_parsed_in(self, arg: Any) -> Output:
         """Execute a function with 1-arg input parsing."""
@@ -188,13 +199,17 @@ class Command(Generic[Output, ParsedOutput]):
         """Execute a function with 1-arg input and output parsing."""
         return self.output_parser(self._cmd(self.input_parser(arg)))
 
-    def call_cmd_parsed_in2(self, *args: Any) -> Output:
+    def call_cmd_parsed_in2(
+        self, *args: PreParsedInput.args, **kwargs: PreParsedInput.kwargs
+    ) -> Output:
         """Execute a function with multi-arg input parsing."""
-        return self._cmd(*self.input_parser(*args))
+        return self._cmd(*self.input_parser(*args, **kwargs))
 
-    def call_cmd_parsed_in2_out(self, *args: Any) -> ParsedOutput:
+    def call_cmd_parsed_in2_out(
+        self, *args: PreParsedInput.args, **kwargs: PreParsedInput.kwargs
+    ) -> ParsedOutput:
         """Execute a function with multi-arg input & output parsing."""
-        return self.output_parser(self._cmd(*self.input_parser(*args)))
+        return self.output_parser(self._cmd(*self.input_parser(*args, **kwargs)))
 
     def __call__(self, *args: Any) -> Union[Output, ParsedOutput]:
         """Invoke the command."""
