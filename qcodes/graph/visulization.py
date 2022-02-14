@@ -126,13 +126,21 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     by ipycytoscape"""
     nodes_dict = {}
     cytoscapegraph = nx.DiGraph()
+    remaining_nodes = []
     for node, node_attrs in nxgraph.nodes().items():
         module = node_attrs.get("value", None)
         parent = getattr(module, "parent", None)
         parent_name = getattr(parent, "full_name", None)
         new_node = CustomNode(node, classes="node", parent=parent_name)
         nodes_dict[node] = new_node
-        cytoscapegraph.add_node(new_node)
+        if parent is None:
+            cytoscapegraph.add_node(new_node)
+        else:
+            remaining_nodes.append(new_node)
+    # add children nodes after their parents
+    # work around for https://github.com/cytoscape/ipycytoscape/issues/302
+    for node in remaining_nodes:
+        cytoscapegraph.add_node(node)
     for edge, edgeattrs in nxgraph.edges.items():
         if not edgeattrs["value"].type == EdgeType.PART_OF:
             cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
