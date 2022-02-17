@@ -341,7 +341,7 @@ class Buffer7510(InstrumentChannel):
         n_elements = len(elements)
 
         units = tuple(elements_units[element] for element in elements)
-        processed_data = dict.fromkeys(elements)
+        processed_data = {}
         for i, (element, unit) in enumerate(zip(elements, units)):
             if unit == 'str':
                 processed_data[element] = np.array(all_data[i::n_elements])
@@ -358,11 +358,9 @@ class Buffer7510(InstrumentChannel):
             setpoint_units=((self.setpoints.unit,),) * n_elements,
             setpoint_names=((self.setpoints.label,),) * n_elements
         )
-        data._data = tuple(
-            tuple(processed_data[element]) for element in elements  # type: ignore[arg-type]
-        )
+        data._data = tuple(tuple(processed_data[element]) for element in elements)
         for i in range(len(data.names)):
-            setattr(data, data.names[i], tuple(processed_data[data.names[i]]))  # type: ignore[arg-type]
+            setattr(data, data.names[i], tuple(processed_data[data.names[i]]))
         return data
 
     def clear_buffer(self) -> None:
