@@ -325,8 +325,7 @@ class Buffer7510(InstrumentChannel):
                                 f"{self.data_end()}, "
                                 f"'{self.short_name}'")
         else:
-            elements = \
-                [self.buffer_elements[element] for element in self.elements()]
+            elements = [self.buffer_elements[element] for element in self.elements()]
             raw_data = self.ask(f":TRACe:DATA? {self.data_start()}, "
                                 f"{self.data_end()}, "
                                 f"'{self.short_name}', "
