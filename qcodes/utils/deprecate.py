@@ -1,9 +1,10 @@
 import types
 import warnings
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, List, Optional, cast
+from typing import Any, Callable, Iterator, List, Optional, TypeVar, cast
 
 import wrapt
+from typing_extensions import ParamSpec
 
 
 class QCoDeSDeprecationWarning(RuntimeWarning):
@@ -85,6 +86,35 @@ def deprecate(
             return obj
 
     return actual_decorator
+
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def simpledeprecate(
+    func: Callable[P, R],
+    reason: Optional[str] = None,
+    alternative: Optional[str] = None,
+) -> Callable[P, R]:
+    """
+    A utility function to decorate deprecated functions.
+
+    Args:
+        func: The function to deprecate.
+        reason: The reason of deprecation.
+        alternative: The alternative function or class to put in use instead of
+            the deprecated one.
+
+    """
+
+    def decorate_callable(args: P.args, kwargs: P.kwargs) -> R:
+        issue_deprecation_warning(
+            f"function <{func.__name__}>", reason, alternative, stacklevel=3
+        )
+        return func(*args, **kwargs)
+
+    return decorate_callable
 
 
 @contextmanager
