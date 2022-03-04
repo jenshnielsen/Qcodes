@@ -60,7 +60,7 @@ class InstrumentModule(InstrumentBase):
         self._parent = parent
         super().__init__(name=name, **kwargs)
 
-        self._activator = InstrumentModuleActivator(port=self, parent=parent)
+        self._activator = InstrumentModuleActivator(node=self, parent=parent)
 
     def __repr__(self) -> str:
         """Custom repr to give parent information"""

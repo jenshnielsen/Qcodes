@@ -9,7 +9,7 @@ import ipycytoscape
 import ipywidgets
 import networkx as nx
 
-from .graph import EdgeStatus, EdgeType, StationGraph
+from .graph import EdgeStatus, StationGraph
 
 DEFAULT_STYLE = [
     {
@@ -142,10 +142,10 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     for node in remaining_nodes:
         cytoscapegraph.add_node(node)
     for edge, edgeattrs in nxgraph.edges.items():
-        if not edgeattrs["value"].type == EdgeType.PART_OF:
+        if not edgeattrs["value"].activator.status == EdgeStatus.PART_OF:
             cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
             cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = str(
-                edgeattrs["value"].status
+                edgeattrs["value"].activator.status
             ).replace(".", "_")
 
     return cytoscapegraph
@@ -211,7 +211,7 @@ def _get_active_edges(graph: StationGraph) -> list:
     active_edges = [
         (str(edge[0]), str(edge[1]))
         for edge in graph.edges
-        if graph[edge].status == EdgeStatus.ACTIVE
+        if graph[edge].activator.status == EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
     ]
     return active_edges
 

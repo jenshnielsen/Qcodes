@@ -5,10 +5,10 @@ from typing import Any, Mapping, Optional, Sequence, Tuple
 from typing_extensions import NotRequired, TypedDict
 
 from qcodes.graph.graph import (
-    BasicEdge,
+    BasicEdgeActivator,
     ConnectorActivator,
+    Edge,
     EdgeStatus,
-    EdgeType,
     EndpointActivator,
     MutableStationGraph,
     StationGraph,
@@ -27,7 +27,7 @@ class ConnectorModule(InstrumentModule):
     def __init__(self, parent: InstrumentBase, name: str, **kwargs: Any) -> None:
 
         super().__init__(parent, name, **kwargs)
-        self._activator = ConnectorActivator(port=self)
+        self._activator = ConnectorActivator(node=self)
 
 
 class Connector(Instrument):
@@ -114,12 +114,8 @@ class Connector(Instrument):
             )
 
     def _add_edges_to_graph(self, node1: str, node2: str) -> None:
-        self.instrument_graph[node1, node2] = BasicEdge(
-            edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
-        )
-        self.instrument_graph[node2, node1] = BasicEdge(
-            edge_type=EdgeType.ELECTRICAL_CONNECTION, edge_status=EdgeStatus.INACTIVE
-        )
+        self.instrument_graph[node1, node2] = Edge(activator=BasicEdgeActivator())
+        self.instrument_graph[node2, node1] = Edge(activator=BasicEdgeActivator())
 
     def quell(self) -> None:
         pass
@@ -132,13 +128,13 @@ class Connector(Instrument):
 class Device(InstrumentModule):
     def __init__(self, parent: InstrumentBase, name: str, **kwargs: Any) -> None:
         super().__init__(parent, name, **kwargs)
-        self._activator = EndpointActivator(port=self, parent=parent)
+        self._activator = EndpointActivator(node=self, parent=parent)
 
 
 class Chip(Instrument):
     def __init__(self, name: str, metadata: Optional[Mapping[Any, Any]] = None) -> None:
         super().__init__(name, metadata)
-        self._activator = EndpointActivator(port=self)
+        self._activator = EndpointActivator(node=self)
 
         self.add_submodule("device1", Device(parent=self, name="device1"))
         self.add_submodule("device2", Device(parent=self, name="device2"))

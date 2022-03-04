@@ -25,7 +25,7 @@ from typing_extensions import Protocol
 
 NodeId = str
 EdgeId = Tuple[NodeId, NodeId]
-ValueType = Union["Port", "EdgeABC"]
+ValueType = Union["Node", "Edge"]
 
 
 _LOG = logging.getLogger(__name__)
@@ -77,6 +77,7 @@ class Node(Protocol):
 class NodeActivator(abc.ABC):
     def __init__(self, *, node: Node):
         self._node = node
+        self._status = NodeStatus.INACTIVE
 
     @property
     @abc.abstractmethod
@@ -84,22 +85,22 @@ class NodeActivator(abc.ABC):
         pass
 
     def add_source(self, source: Node) -> None:
-        _LOG.info(f"Adding Source {source.full_name} to Node: {self.port.full_name}")
+        _LOG.info(f"Adding Source {source.full_name} to Node: {self.node.full_name}")
 
     def remove_source(self, source: Node) -> None:
         _LOG.info(
-            f"Removing Source {source.full_name} from Node: {self.port.full_name}"
+            f"Removing Source {source.full_name} from Node: {self.node.full_name}"
         )
 
     def activate(self) -> None:
-        _LOG.info(f"Activating Node: {self.port.full_name}")
+        _LOG.info(f"Activating Node: {self.node.full_name}")
 
     def deactivate(self) -> None:
-        _LOG.info(f"Deactivating Node: {self.port.full_name}")
+        _LOG.info(f"Deactivating Node: {self.node.full_name}")
 
     @property
-    def port(self) -> Node:
-        return self._Node
+    def node(self) -> Node:
+        return self._node
 
     @abc.abstractmethod
     def upstream_nodes(self) -> Iterable[Node]:
@@ -111,9 +112,8 @@ class NodeActivator(abc.ABC):
         pass
 
     @property
-    @abc.abstractmethod
     def status(self) -> NodeStatus:
-        pass
+        return self._status
 
 
 class EndpointActivator(NodeActivator):
@@ -135,14 +135,14 @@ class EndpointActivator(NodeActivator):
         super().remove_source(source)
 
     def activate(self) -> None:
-        _LOG.info(f"Activating Node: {self.port.full_name}")
+        _LOG.info(f"Activating Node: {self.node.full_name}")
 
     def deactivate(self) -> None:
-        _LOG.info(f"Deactivating Node: {self.port.full_name}")
+        _LOG.info(f"Deactivating Node: {self.node.full_name}")
 
-    def upstream_ports(self) -> Iterable[Node]:
+    def upstream_nodes(self) -> Iterable[Node]:
         return itertools.chain.from_iterable(
-            source.activator.upstream_ports() for source in self._sources
+            source.activator.upstream_nodes() for source in self._sources
         )
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
@@ -162,20 +162,34 @@ class InstrumentModuleActivator(NodeActivator):
     ):
         super().__init__(node=node)
         self._parent = parent
+        self._status = NodeStatus.INACTIVE
 
     @property
     def parameters(self) -> Iterable[Parameter]:
         return list(self.node.parameters.values())
 
-    def upstream_ports(self) -> Iterable[Node]:
-        return [self.port]
+    def upstream_nodes(self) -> Iterable[Node]:
+        return [self.node]
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
 
-    @property
-    def active(self) -> bool:
-        return False
+    def add_source(self, source: Node) -> None:
+        super().add_source(source)
+
+    def remove_source(self, source: Node) -> None:
+        super().remove_source(source)
+
+    def activate(self) -> None:
+        self._status = NodeStatus.ACTIVE
+        super().activate()
+
+    def deactivate(self) -> None:
+        self._status = NodeStatus.INACTIVE
+        super().deactivate()
+
+    def status(self) -> NodeStatus:
+        return self._status
 
 
 class ConnectorActivator(NodeActivator):
@@ -197,17 +211,21 @@ class ConnectorActivator(NodeActivator):
         super().remove_source(source=source)
         self._sources.remove(source)
 
-    def upstream_ports(self) -> Iterable[Node]:
+    def upstream_nodes(self) -> Iterable[Node]:
         return itertools.chain.from_iterable(
-            source.activator.upstream_ports() for source in self._sources
+            source.activator.upstream_nodes() for source in self._sources
         )
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
 
+class Edge:
+    def __init__(self, activator: EdgeActivator):
+        self._activator = activator
+
     @property
-    def active(self) -> bool:
-        return False
+    def activator(self) -> EdgeActivator:
+        return self._activator
 
 
 class EdgeActivator(abc.ABC):
@@ -225,42 +243,34 @@ class EdgeActivator(abc.ABC):
         pass
 
 
-
-class BasicEdge(EdgeABC):
+class BasicEdgeActivator(EdgeActivator):
     def __init__(
-        self, *, edge_type: EdgeType, edge_status: EdgeStatus = EdgeStatus.INACTIVE
+        self, *, edge_status: EdgeStatus = EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
     ):
         self._edge_status = edge_status
-        self._edge_type = edge_type
 
     @property
     def status(self) -> EdgeStatus:
         return self._edge_status
 
     @property
-    def type(self) -> EdgeType:
-        return self._edge_type
-
-    @property
     def _can_be_activated(self) -> bool:
-        return (
-            self.status == EdgeStatus.ACTIVE or self.status == EdgeStatus.ACTIVE
-        ) and self.type == EdgeType.ELECTRICAL_CONNECTION
+        return self.status == EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
 
     def activate(self) -> None:
         if self._can_be_activated:
-            self._edge_status = EdgeStatus.ACTIVE
+            self._edge_status = EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
         else:
             raise NotImplementedError(
-                f"Cannot activate an edge of type {self.type} with status {self.status}"
+                f"Cannot activate an edge with status {self.status}"
             )
 
     def deactivate(self) -> None:
         if self._can_be_activated:
-            self._edge_status = EdgeStatus.INACTIVE
+            self._edge_status = EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
         else:
             raise NotImplementedError(
-                f"Cannot deactivate an edge of type {self.type} with status {self.status}"
+                f"Cannot deactivate an edge with status {self.status}"
             )
 
 
@@ -277,7 +287,10 @@ class StationGraph:
             )
         composed = cls(composition)
         for edge in composed.edges:
-            if composed[edge].status == EdgeStatus.ACTIVE:
+            if (
+                composed[edge].activator.status
+                == EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
+            ):
                 source = composed[edge[0]]
                 destination = composed[edge[1]]
                 destination.activator.add_source(source)
@@ -317,11 +330,11 @@ class StationGraph:
             self._graph = graph
 
     @overload
-    def __getitem__(self, identifier: NodeId) -> Port:
+    def __getitem__(self, identifier: NodeId) -> Node:
         ...
 
     @overload
-    def __getitem__(self, identifier: EdgeId) -> EdgeABC:
+    def __getitem__(self, identifier: EdgeId) -> Edge:
         ...
 
     def __getitem__(self, identifier: Union[NodeId, EdgeId]) -> Optional[ValueType]:

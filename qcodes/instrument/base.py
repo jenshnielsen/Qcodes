@@ -24,12 +24,12 @@ import numpy as np
 from typing_extensions import Protocol
 
 from qcodes.graph.graph import (
-    Activator,
-    BasicEdge,
+    BasicEdgeActivator,
+    Edge,
     EdgeStatus,
-    EdgeType,
     InstrumentModuleActivator,
     MutableStationGraph,
+    NodeActivator,
     StationGraph,
 )
 from qcodes.logger.instrument_logger import get_instrument_logger
@@ -100,7 +100,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
 
         self.log = get_instrument_logger(self, __name__)
 
-        self._activator: Activator = InstrumentModuleActivator(port=self)
+        self._activator: NodeActivator = InstrumentModuleActivator(node=self)
 
     def add_parameter(
         self, name: str, parameter_class: type = Parameter, **kwargs: Any
@@ -522,7 +522,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
                 p.validate(value)
 
     @property
-    def activator(self) -> Activator:
+    def activator(self) -> NodeActivator:
         return self._activator
 
 
@@ -976,7 +976,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         )
 
     @property
-    def activator(self) -> Activator:
+    def activator(self) -> NodeActivator:
         return self._activator
 
     @property
@@ -1005,9 +1005,8 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         graph = MutableStationGraph.compose(*subgraphs)
 
         for name in subgraph_primary_node_names:
-            graph[self.full_name, name] = BasicEdge(
-                edge_type=EdgeType.PART_OF, edge_status=EdgeStatus.NOT_ACTIVATABLE
-            )
+            activator = BasicEdgeActivator(edge_status=EdgeStatus.PART_OF)
+            graph[self.full_name, name] = Edge(activator=activator)
 
         return graph.as_station_graph()
 
