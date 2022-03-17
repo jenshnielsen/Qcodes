@@ -219,6 +219,7 @@ class ConnectorActivator(NodeActivator):
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
 
+
 class Edge:
     def __init__(self, activator: EdgeActivator):
         self._activator = activator
