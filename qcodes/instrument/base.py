@@ -990,9 +990,9 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
             # todo fallback for legacy
             return self.graph
         # todo make lazy
-        return self._make_graph()
+        return self._make_instrument_graph()
 
-    def _make_graph(self) -> "StationGraph":
+    def _make_instrument_graph(self) -> "StationGraph":
         subgraph_primary_node_names = []
         self_graph = MutableStationGraph()
         self_graph[self.full_name] = self
