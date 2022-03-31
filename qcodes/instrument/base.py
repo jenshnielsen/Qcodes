@@ -9,6 +9,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generic,
     List,
     Mapping,
     Optional,
@@ -38,8 +39,10 @@ from qcodes.utils.deprecate import QCoDeSDeprecationWarning
 
 log = logging.getLogger(__name__)
 
+ParamType = TypeVar("ParamType", bound=Type[_BaseParameter])
 
-class InstrumentBase(Metadatable, DelegateAttributes):
+
+class InstrumentBase(Metadatable, DelegateAttributes, Generic[ParamType]):
     """
     Base class for all QCodes instruments and instrument channels
 
@@ -89,9 +92,10 @@ class InstrumentBase(Metadatable, DelegateAttributes):
 
         self.log = get_instrument_logger(self, __name__)
 
+    # https: // github.com / python / mypy / issues / 3737
     def add_parameter(
-        self, name: str, parameter_class: type = Parameter, **kwargs: Any
-    ) -> None:
+        self, name: str, parameter_class: ParamType = Parameter, **kwargs: Any
+    ) -> ParamType:
         """
         Bind one Parameter to this instrument.
 
@@ -146,6 +150,7 @@ class InstrumentBase(Metadatable, DelegateAttributes):
                 QCoDeSDeprecationWarning,
             )
             self.parameters[name] = param
+        return param
 
     def add_function(self, name: str, **kwargs: Any) -> None:
         """
