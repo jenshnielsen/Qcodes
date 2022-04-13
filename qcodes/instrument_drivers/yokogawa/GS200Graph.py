@@ -1,11 +1,11 @@
 from functools import partial
-from typing import Any, Optional, Union
+from typing import Any
 
 from typing_extensions import Literal
 
-from qcodes.instrument.channel import InstrumentChannel, InstrumentModule
-from qcodes.instrument.parameter import DelegateParameter
+from qcodes.instrument.channel import InstrumentModule
 from qcodes.instrument.visa import VisaInstrument
+from qcodes.utils.helpers import create_on_off_val_mapping
 from qcodes.utils.validators import Bool, Enum, Ints, Numbers
 
 ModeType = Literal["CURR", "VOLT"]
@@ -33,50 +33,41 @@ class GS200Monitor(InstrumentModule):
     Monitor part of the GS200. This is only enabled if it is
     installed in the GS200 (it is an optional extra).
 
-    The units will be automatically updated as required.
-
-    To measure:
-    `GS200.measure.measure()`
-
     Args:
-        parent (GS200)
+        parent: Instance of GS200 to use as parent
         name: instrument name
-        present
+        mode: CURR or VOLT. Oposite of the mode set.
     """
 
-    def __init__(self, parent: "GS200", name: str) -> None:
+    def __init__(self, parent: "Source", name: str, mode: ModeType) -> None:
         super().__init__(parent, name)
 
-        # Start off with all disabled
-        self._enabled = False
-        self._output = False
+        self._unit = mode
 
-        # Set up mode cache. These will be filled in once the parent
-        # is fully initialized.
-        self._range: Union[None, float] = None
-        self._unit: Union[None, str] = None
-
-        # Set up monitoring parameters
         self.add_parameter(
             "enabled",
             label="Measurement Enabled",
             get_cmd=self.state,
-            set_cmd=lambda x: self.on() if x else self.off(),
-            val_mapping={
-                "off": 0,
-                "on": 1,
-            },
+            set_cmd=lambda x: self._enable() if x else self._disable(),
+            val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
-        # Note: Measurement will only run if source and
-        # measurement is enabled.
-        self.add_parameter(
-            "measure",
-            label="<unset>",
-            unit="V/I",
-            get_cmd=self._get_measurement,
-            snapshot_get=False,
-        )
+        if mode == "VOLT":
+            self.add_parameter(
+                "voltage",
+                label="Voltage",
+                unit="V",
+                get_cmd=self._get_measurement,
+                snapshot_get=False,
+            )
+        elif mode == "CURR":
+            self.add_parameter(
+                "current",
+                label="Current",
+                unit="I",
+                get_cmd=self._get_measurement,
+                snapshot_get=False,
+            )
 
         self.add_parameter(
             "NPLC",
@@ -124,61 +115,40 @@ class GS200Monitor(InstrumentModule):
             get_parser=float,
         )
 
-    def off(self) -> None:
+    def _disable(self) -> None:
         """Turn measurement off"""
         self.write(":SENS 0")
-        self._enabled = False
 
-    def on(self) -> None:
+    def _enable(self) -> None:
         """Turn measurement on"""
         self.write(":SENS 1")
-        self._enabled = True
 
     def state(self) -> int:
         """Check measurement state"""
         state = int(self.ask(":SENS?"))
-        self._enabled = bool(state)
         return state
 
     def _get_measurement(self) -> float:
-        if self._unit is None or self._range is None:
+        if self._range is None:
             raise GS200Exception("Measurement module not initialized.")
-        if self._parent.auto_range.get() or (self._unit == "VOLT" and self._range < 1):
+        if self.parent.auto_range.get() or (
+            self._unit == "VOLT" and self.parent.range.cache() < 1
+        ):
             # Measurements will not work with autorange, or when
             # range is <1V.
-            self._enabled = False
             raise GS200Exception(
                 "Measurements will not work when range is <1V"
                 "or when in auto range mode."
             )
-        if not self._output:
+        if not self.root_instrument.output.cache():
             raise GS200Exception("Output is off.")
-        if not self._enabled:
+        if not self.enabled.cache():
             raise GS200Exception("Measurements are disabled.")
         # If enabled and output is on, then we can perform a measurement.
         return float(self.ask(":MEAS?"))
 
-    def update_measurement_enabled(self, unit: ModeType, output_range: float) -> None:
-        """
-        Args:
-            unit
-            output_range
-        """
-        # Recheck measurement state next time we do a measurement
-        self._enabled = False
 
-        # Update units
-        self._range = output_range
-        self._unit = unit
-        if self._unit == "VOLT":
-            self.measure.label = "Source Current"
-            self.measure.unit = "I"
-        else:
-            self.measure.label = "Source Voltage"
-            self.measure.unit = "V"
-
-
-class GS200Program(InstrumentChannel):
+class GS200Program(InstrumentModule):
     """ """
 
     def __init__(self, parent: "GS200", name: str) -> None:
@@ -253,12 +223,231 @@ class GS200Program(InstrumentChannel):
         )
 
 
-class VoltageSource(InstrumentModule):
-    pass
+class Source(InstrumentModule):
+    def __init__(self, parent: "GS200", name: str):
+        super().__init__(parent, name)
+        # The instrument does autoranging by passing a flag when setting voltage/current
+        # rather than this being a specific range value. We emulate this using a manual
+        # parameter
+        self.add_parameter(
+            "auto_range",
+            label="Auto Range",
+            set_cmd=None,
+            get_cmd=None,
+            initial_cache_value=False,
+            vals=Bool(),
+        )
+
+    def _set_range(self, mode: ModeType, output_range: float) -> None:
+        """
+        Update range
+
+        Args:
+            mode: "CURR" or "VOLT"
+            output_range: Range to set. For voltage, we have the ranges [10e-3,
+                100e-3, 1e0, 10e0, 30e0]. For current, we have the ranges [1e-3,
+                10e-3, 100e-3, 200e-3]. If auto_range = False, then setting the
+                output can only happen if the set value is smaller than the
+                present range.
+        """
+        self._assert_mode(mode)
+        output_range = float(output_range)
+        self.write(f":SOUR:RANG {output_range}")
+
+    def _get_range(self, mode: ModeType) -> float:
+        """
+        Query the present range.
+
+        Args:
+            mode: "CURR" or "VOLT"
+
+        Returns:
+            range: For voltage, we have the ranges [10e-3, 100e-3, 1e0, 10e0,
+                30e0]. For current, we have the ranges [1e-3, 10e-3, 100e-3,
+                200e-3]. If auto_range = False, then setting the output can only
+                happen if the set value is smaller than the present range.
+        """
+        self._assert_mode(mode)
+        return float(self.ask(":SOUR:RANG?"))
+
+    def _get_output(self, mode: ModeType) -> float:
+        self._assert_mode(mode)
+        return float(self.ask(":SOUR:LEV?"))
+
+    def _set_output(self, mode: ModeType, output_level: float) -> None:
+        """
+        Set the output of the instrument.
+
+        Args:
+            output_level: output level in Volt or Ampere, depending
+                on the current mode.
+        """
+        self._assert_mode(mode)
+        auto_enabled = self.auto_range()
+
+        self_range = self.range()
+
+        if not auto_enabled:
+            if self_range is None:
+                raise RuntimeError(
+                    "Trying to set output but not in auto mode and range is unknown."
+                )
+        else:
+            mode = self.root_instrument.source_mode.get_latest()
+            if mode == "CURR":
+                self_range = 200e-3
+            else:
+                self_range = 30.0
+
+        # Check we are not trying to set an out of range value
+        if self_range is None or abs(output_level) > abs(self_range):
+            # Check that the range hasn't changed
+            if not auto_enabled:
+                if self_range is None:
+                    raise RuntimeError(
+                        "Trying to set output but not in"
+                        " auto mode and range is unknown."
+                    )
+                # If we are still out of range, raise a value error
+                if abs(output_level) > abs(self_range):
+                    raise ValueError(
+                        f"Desired output level not in range"
+                        f" [-{self_range:.3}, {self_range:.3}]"
+                    )
+
+        if auto_enabled:
+            auto_str = ":AUTO"
+        else:
+            auto_str = ""
+        cmd_str = f":SOUR:LEV{auto_str} {output_level:.5e}"
+        self.write(cmd_str)
+
+    def _assert_mode(self, mode: ModeType) -> None:
+        """
+        Assert that we are in the correct mode to perform an operation.
+
+        Args:
+            mode: "CURR" or "VOLT"
+        """
+        if self.root_instrument.source_mode.get_latest() != mode:
+            raise ValueError(
+                f"Cannot get/set {mode} settings "
+                f"while in {self.root_instrument.source_mode.get_latest()} mode"
+            )
+
+    def _ramp_source(
+        self, mode: ModeType, ramp_to: float, step: float, delay: float
+    ) -> None:
+        """
+        Ramp the output from the current level to the specified output
+
+        Args:
+            mode: Mode to ramp in (CURR or VOLT)
+            ramp_to: The ramp target in volts/amps
+            step: The ramp steps in volts/ampere
+            delay: The time between finishing one step and
+                starting another in seconds.
+        """
+        if mode == "CURR":
+            output_param = self.parameters["current"]
+        elif mode == "VOLT":
+            output_param = self.parameters["voltage"]
+        else:
+            raise ValueError(f"Mode must be either 'CURR' or 'VOLT' got {mode}")
+
+        saved_step = output_param.step
+        saved_inter_delay = output_param.inter_delay
+
+        output_param.step = step
+        output_param.inter_delay = delay
+        output_param(ramp_to)
+
+        # todo this should really be reset using a context
+        # manager
+        output_param.step = saved_step
+        output_param.inter_delay = saved_inter_delay
 
 
-class CurrentSource(InstrumentModule):
-    pass
+class VoltageSource(Source):
+    def __init__(self, parent: "GS200", name: str) -> None:
+        super().__init__(parent, name)
+
+        # Check if monitor is present, and if so enable measurement
+        monitor_present = "/MON" in self.root_instrument.ask("*OPT?")
+        if monitor_present:
+            measure = GS200Monitor(self, "measure", "CURR")
+            self.add_submodule("measure", measure)
+
+        self.add_parameter(
+            "voltage_range",
+            label="Voltage Source Range",
+            unit="V",
+            get_cmd=partial(self._get_range, "VOLT"),
+            set_cmd=partial(self._set_range, "VOLT"),
+            vals=Enum(10e-3, 100e-3, 1e0, 10e0, 30e0),
+        )
+
+        self.add_parameter(
+            "voltage",
+            label="Voltage",
+            unit="V",
+            set_cmd=partial(self._set_output, "VOLT"),
+            get_cmd=partial(self._get_output, "VOLT"),
+        )
+
+    def ramp_voltage(self, ramp_to: float, step: float, delay: float) -> None:
+        """
+        Ramp the voltage from the current level to the specified output.
+
+        Args:
+            ramp_to: The ramp target in Volt
+            step: The ramp steps in Volt
+            delay: The time between finishing one step and
+                starting another in seconds.
+        """
+        self._assert_mode("VOLT")
+        self._ramp_source("VOLT", ramp_to, step, delay)
+
+
+class CurrentSource(Source):
+    def __init__(self, parent: "GS200", name: str) -> None:
+        super().__init__(parent, name)
+
+        # Check if monitor is present, and if so enable measurement
+        monitor_present = "/MON" in self.root_instrument.ask("*OPT?")
+        if monitor_present:
+            measure = GS200Monitor(self, "measure", "VOLT")
+            self.add_submodule("measure", measure)
+
+        self.add_parameter(
+            "current_range",
+            label="Current Source Range",
+            unit="I",
+            get_cmd=partial(self._get_range, "CURR"),
+            set_cmd=partial(self._set_range, "CURR"),
+            vals=Enum(1e-3, 10e-3, 100e-3, 200e-3),
+        )
+
+        self.add_parameter(
+            "current",
+            label="Current",
+            unit="I",
+            set_cmd=partial(self._set_output, "CURR"),
+            get_cmd=partial(self._get_output, "CURR"),
+        )
+
+    def ramp_current(self, ramp_to: float, step: float, delay: float) -> None:
+        """
+        Ramp the current from the current level to the specified output.
+
+        Args:
+            ramp_to: The ramp target in Ampere
+            step: The ramp steps in Ampere
+            delay: The time between finishing one step and starting
+                another in seconds.
+        """
+        self._assert_mode("CURR")
+        self._ramp_source("CURR", ramp_to, step, delay)
 
 
 class GS200(VisaInstrument):
@@ -281,11 +470,8 @@ class GS200(VisaInstrument):
             "output",
             label="Output State",
             get_cmd=self.state,
-            set_cmd=lambda x: self.on() if x else self.off(),
-            val_mapping={
-                "off": 0,
-                "on": 1,
-            },
+            set_cmd=lambda x: self._enable() if x else self._disable(),
+            val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
         self.add_parameter(
@@ -300,72 +486,6 @@ class GS200(VisaInstrument):
         # default value that may have been changed before we connect to the
         # instrument (in a previous session or via the frontpanel).
         self.source_mode()
-
-        self.add_parameter(
-            "voltage_range",
-            label="Voltage Source Range",
-            unit="V",
-            get_cmd=partial(self._get_range, "VOLT"),
-            set_cmd=partial(self._set_range, "VOLT"),
-            vals=Enum(10e-3, 100e-3, 1e0, 10e0, 30e0),
-            snapshot_exclude=self.source_mode() == "CURR",
-        )
-
-        self.add_parameter(
-            "current_range",
-            label="Current Source Range",
-            unit="I",
-            get_cmd=partial(self._get_range, "CURR"),
-            set_cmd=partial(self._set_range, "CURR"),
-            vals=Enum(1e-3, 10e-3, 100e-3, 200e-3),
-            snapshot_exclude=self.source_mode() == "VOLT",
-        )
-
-        # self.add_parameter("range", parameter_class=DelegateParameter, source=None)
-
-        # The instrument does not support auto range. The parameter
-        # auto_range is introduced to add this capability with
-        # setting the initial state at False mode.
-        self.add_parameter(
-            "auto_range",
-            label="Auto Range",
-            set_cmd=self._set_auto_range,
-            get_cmd=None,
-            initial_cache_value=False,
-            vals=Bool(),
-        )
-
-        self.add_parameter(
-            "voltage",
-            label="Voltage",
-            unit="V",
-            set_cmd=partial(self._get_set_output, "VOLT"),
-            get_cmd=partial(self._get_set_output, "VOLT"),
-            snapshot_exclude=self.source_mode() == "CURR",
-        )
-
-        self.add_parameter(
-            "current",
-            label="Current",
-            unit="I",
-            set_cmd=partial(self._get_set_output, "CURR"),
-            get_cmd=partial(self._get_set_output, "CURR"),
-            snapshot_exclude=self.source_mode() == "VOLT",
-        )
-
-        self.add_parameter(
-            "output_level", parameter_class=DelegateParameter, source=None
-        )
-
-        # We need to pass the source parameter for delegate parameters
-        # (range and output_level) here according to the present
-        # source_mode.
-        if self.source_mode() == "VOLT":
-            self.range.source = self.voltage_range
-            self.output_level.source = self.voltage
-        else:
-            self.range.source = self.current_range
-            self.output_level.source = self.current
 
         self.add_parameter(
             "voltage_limit",
@@ -394,10 +514,7 @@ class GS200(VisaInstrument):
             label="Four Wire Sensing",
             get_cmd=":SENS:REM?",
             set_cmd=":SENS:REM {}",
-            val_mapping={
-                "off": 0,
-                "on": 1,
-            },
+            val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
         # Note: The guard feature can be used to remove common mode noise.
@@ -407,7 +524,7 @@ class GS200(VisaInstrument):
             label="Guard Terminal",
             get_cmd=":SENS:GUAR?",
             set_cmd=":SENS:GUAR {}",
-            val_mapping={"off": 0, "on": 1},
+            val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
         # Return measured line frequency
@@ -419,16 +536,12 @@ class GS200(VisaInstrument):
             get_parser=int,
         )
 
-        # Check if monitor is present, and if so enable measurement
-        monitor_present = "/MON" in self.ask("*OPT?")
-        if monitor_present:
-            measure = GS200Monitor(self, "measure")
-            self.add_submodule("measure", measure)
-
         # Reset function
         self.add_function("reset", call_cmd="*RST")
 
         self.add_submodule("program", GS200Program(self, "program"))
+        self.add_submodule("current", CurrentSource(self, "current"))
+        self.add_submodule("voltage", VoltageSource(self, "voltage"))
 
         self.add_parameter(
             "BNC_out",
@@ -457,191 +570,22 @@ class GS200(VisaInstrument):
 
         self.connect_message()
 
-    def on(self) -> None:
+    def _enable(self) -> None:
         """Turn output on"""
         self.write("OUTPUT 1")
-        self.measure._output = True
 
-    def off(self) -> None:
+    def _disable(self) -> None:
         """Turn output off"""
         self.write("OUTPUT 0")
-        self.measure._output = False
 
     def state(self) -> int:
         """Check state"""
         state = int(self.ask("OUTPUT?"))
-        self.measure._output = bool(state)
         return state
-
-    def ramp_voltage(self, ramp_to: float, step: float, delay: float) -> None:
-        """
-        Ramp the voltage from the current level to the specified output.
-
-        Args:
-            ramp_to: The ramp target in Volt
-            step: The ramp steps in Volt
-            delay: The time between finishing one step and
-                starting another in seconds.
-        """
-        self._assert_mode("VOLT")
-        self._ramp_source(ramp_to, step, delay)
-
-    def ramp_current(self, ramp_to: float, step: float, delay: float) -> None:
-        """
-        Ramp the current from the current level to the specified output.
-
-        Args:
-            ramp_to: The ramp target in Ampere
-            step: The ramp steps in Ampere
-            delay: The time between finishing one step and starting
-                another in seconds.
-        """
-        self._assert_mode("CURR")
-        self._ramp_source(ramp_to, step, delay)
-
-    def _ramp_source(self, ramp_to: float, step: float, delay: float) -> None:
-        """
-        Ramp the output from the current level to the specified output
-
-        Args:
-            ramp_to: The ramp target in volts/amps
-            step: The ramp steps in volts/ampere
-            delay: The time between finishing one step and
-                starting another in seconds.
-        """
-        saved_step = self.output_level.step
-        saved_inter_delay = self.output_level.inter_delay
-
-        self.output_level.step = step
-        self.output_level.inter_delay = delay
-        self.output_level(ramp_to)
-
-        self.output_level.step = saved_step
-        self.output_level.inter_delay = saved_inter_delay
-
-    def _get_set_output(
-        self, mode: ModeType, output_level: Optional[float] = None
-    ) -> Optional[float]:
-        """
-        Get or set the output level.
-
-        Args:
-            mode: "CURR" or "VOLT"
-            output_level: If missing, we assume that we are getting the
-                current level. Else we are setting it
-        """
-        self._assert_mode(mode)
-        if output_level is not None:
-            self._set_output(output_level)
-            return None
-        return float(self.ask(":SOUR:LEV?"))
-
-    def _set_output(self, output_level: float) -> None:
-        """
-        Set the output of the instrument.
-
-        Args:
-            output_level: output level in Volt or Ampere, depending
-                on the current mode.
-        """
-        auto_enabled = self.auto_range()
-
-        if not auto_enabled:
-            self_range = self.range()
-            if self_range is None:
-                raise RuntimeError(
-                    "Trying to set output but not in" " auto mode and range is unknown."
-                )
-        else:
-            mode = self.source_mode.get_latest()
-            if mode == "CURR":
-                self_range = 200e-3
-            else:
-                self_range = 30.0
-
-        # Check we are not trying to set an out of range value
-        if self.range() is None or abs(output_level) > abs(self_range):
-            # Check that the range hasn't changed
-            if not auto_enabled:
-                self_range = self.range.get_latest()
-                if self_range is None:
-                    raise RuntimeError(
-                        "Trying to set output but not in"
-                        " auto mode and range is unknown."
-                    )
-            # If we are still out of range, raise a value error
-            if abs(output_level) > abs(self_range):
-                raise ValueError(
-                    "Desired output level not in range"
-                    " [-{self_range:.3}, {self_range:.3}]".format(self_range=self_range)
-                )
-
-        if auto_enabled:
-            auto_str = ":AUTO"
-        else:
-            auto_str = ""
-        cmd_str = f":SOUR:LEV{auto_str} {output_level:.5e}"
-        self.write(cmd_str)
-
-    def _update_measurement_module(
-        self,
-        source_mode: Optional[ModeType] = None,
-        source_range: Optional[float] = None,
-    ) -> None:
-        """
-        Update validators/units as source mode/range changes.
-
-        Args:
-            source_mode: "CURR" or "VOLT"
-            source_range
-        """
-        if not self.measure.present:
-            return
-
-        if source_mode is None:
-            source_mode = self.source_mode.get_latest()
-        # Get source range if auto-range is off
-        if source_range is None and not self.auto_range():
-            source_range = self.range()
-
-        self.measure.update_measurement_enabled(source_mode, source_range)
-
-    def _set_auto_range(self, val: bool) -> None:
-        """
-        Enable/disable auto range.
-
-        Args:
-            val: auto range on or off
-        """
-        self._auto_range = val
-        # Disable measurement if auto range is on
-        if self.measure.present:
-            # Disable the measurement module if auto range is enabled,
-            # because the measurement does not work in the
-            # 10mV/100mV ranges.
-            self.measure._enabled &= not val
-
-    def _assert_mode(self, mode: ModeType) -> None:
-        """
-        Assert that we are in the correct mode to perform an operation.
-
-        Args:
-            mode: "CURR" or "VOLT"
-        """
-        if self.source_mode.get_latest() != mode:
-            raise ValueError(
-                "Cannot get/set {} settings while in {} mode".format(
-                    mode, self.source_mode.get_latest()
-                )
-            )
 
     def _set_source_mode(self, mode: ModeType) -> None:
         """
-        Set output mode and change delegate parameters' source accordingly.
-        Also, exclude/include the parameters from snapshot depending on the
-        mode. The instrument does not support 'current', 'current_range'
-        parameters in "VOLT" mode and 'voltage', 'voltage_range' parameters
-        in "CURR" mode.
+        Set output mode and TODO handle activating/deactivating relevant modules
 
         Args:
             mode: "CURR" or "VOLT"
@@ -650,58 +594,4 @@ class GS200(VisaInstrument):
         if self.output() == "on":
             raise GS200Exception("Cannot switch mode while source is on")
 
-        if mode == "VOLT":
-            self.range.source = self.voltage_range
-            self.output_level.source = self.voltage
-            self.voltage_range.snapshot_exclude = False
-            self.voltage.snapshot_exclude = False
-            self.current_range.snapshot_exclude = True
-            self.current.snapshot_exclude = True
-        else:
-            self.range.source = self.current_range
-            self.output_level.source = self.current
-            self.voltage_range.snapshot_exclude = True
-            self.voltage.snapshot_exclude = True
-            self.current_range.snapshot_exclude = False
-            self.current.snapshot_exclude = False
-
         self.write(f"SOUR:FUNC {mode}")
-        # We set the cache here since `_update_measurement_module`
-        # needs the current value which would otherwise only be set
-        # after this method exits
-        self.source_mode.cache.set(mode)
-        # Update the measurement mode
-        self._update_measurement_module(source_mode=mode)
-
-    def _set_range(self, mode: ModeType, output_range: float) -> None:
-        """
-        Update range
-
-        Args:
-            mode: "CURR" or "VOLT"
-            output_range: Range to set. For voltage, we have the ranges [10e-3,
-                100e-3, 1e0, 10e0, 30e0]. For current, we have the ranges [1e-3,
-                10e-3, 100e-3, 200e-3]. If auto_range = False, then setting the
-                output can only happen if the set value is smaller than the
-                present range.
-        """
-        self._assert_mode(mode)
-        output_range = float(output_range)
-        self._update_measurement_module(source_mode=mode, source_range=output_range)
-        self.write(f":SOUR:RANG {output_range}")
-
-    def _get_range(self, mode: ModeType) -> float:
-        """
-        Query the present range.
-
-        Args:
-            mode: "CURR" or "VOLT"
-
-        Returns:
-            range: For voltage, we have the ranges [10e-3, 100e-3, 1e0, 10e0,
-                30e0]. For current, we have the ranges [1e-3, 10e-3, 100e-3,
-                200e-3]. If auto_range = False, then setting the output can only
-                happen if the set value is smaller than the present range.
-        """
-        self._assert_mode(mode)
-        return float(self.ask(":SOUR:RANG?"))
