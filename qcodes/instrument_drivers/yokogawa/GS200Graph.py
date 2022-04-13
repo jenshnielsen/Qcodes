@@ -28,7 +28,7 @@ class GS200Exception(Exception):
     pass
 
 
-class GS200_Monitor(InstrumentChannel):
+class GS200Monitor(InstrumentModule):
     """
     Monitor part of the GS200. This is only enabled if it is
     installed in the GS200 (it is an optional extra).
@@ -44,10 +44,8 @@ class GS200_Monitor(InstrumentChannel):
         present
     """
 
-    def __init__(self, parent: "GS200", name: str, present: bool) -> None:
+    def __init__(self, parent: "GS200", name: str) -> None:
         super().__init__(parent, name)
-
-        self.present = present
 
         # Start off with all disabled
         self._enabled = False
@@ -59,73 +57,72 @@ class GS200_Monitor(InstrumentChannel):
         self._unit: Union[None, str] = None
 
         # Set up monitoring parameters
-        if present:
-            self.add_parameter(
-                "enabled",
-                label="Measurement Enabled",
-                get_cmd=self.state,
-                set_cmd=lambda x: self.on() if x else self.off(),
-                val_mapping={
-                    "off": 0,
-                    "on": 1,
-                },
-            )
+        self.add_parameter(
+            "enabled",
+            label="Measurement Enabled",
+            get_cmd=self.state,
+            set_cmd=lambda x: self.on() if x else self.off(),
+            val_mapping={
+                "off": 0,
+                "on": 1,
+            },
+        )
 
-            # Note: Measurement will only run if source and
-            # measurement is enabled.
-            self.add_parameter(
-                "measure",
-                label="<unset>",
-                unit="V/I",
-                get_cmd=self._get_measurement,
-                snapshot_get=False,
-            )
+        # Note: Measurement will only run if source and
+        # measurement is enabled.
+        self.add_parameter(
+            "measure",
+            label="<unset>",
+            unit="V/I",
+            get_cmd=self._get_measurement,
+            snapshot_get=False,
+        )
 
-            self.add_parameter(
-                "NPLC",
-                label="NPLC",
-                unit="1/LineFreq",
-                vals=Ints(1, 25),
-                set_cmd=":SENS:NPLC {}",
-                set_parser=int,
-                get_cmd=":SENS:NPLC?",
-                get_parser=float_round,
-            )
-            self.add_parameter(
-                "delay",
-                label="Measurement Delay",
-                unit="ms",
-                vals=Ints(0, 999999),
-                set_cmd=":SENS:DEL {}",
-                set_parser=int,
-                get_cmd=":SENS:DEL?",
-                get_parser=float_round,
-            )
-            self.add_parameter(
-                "trigger",
-                label="Trigger Source",
-                set_cmd=":SENS:TRIG {}",
-                get_cmd=":SENS:TRIG?",
-                val_mapping={
-                    "READY": "READ",
-                    "READ": "READ",
-                    "TIMER": "TIM",
-                    "TIM": "TIM",
-                    "COMMUNICATE": "COMM",
-                    "IMMEDIATE": "IMM",
-                    "IMM": "IMM",
-                },
-            )
-            self.add_parameter(
-                "interval",
-                label="Measurement Interval",
-                unit="s",
-                vals=Numbers(0.1, 3600),
-                set_cmd=":SENS:INT {}",
-                set_parser=float,
-                get_cmd=":SENS:INT?",
-                get_parser=float,
-            )
+        self.add_parameter(
+            "NPLC",
+            label="NPLC",
+            unit="1/LineFreq",
+            vals=Ints(1, 25),
+            set_cmd=":SENS:NPLC {}",
+            set_parser=int,
+            get_cmd=":SENS:NPLC?",
+            get_parser=float_round,
+        )
+        self.add_parameter(
+            "delay",
+            label="Measurement Delay",
+            unit="ms",
+            vals=Ints(0, 999999),
+            set_cmd=":SENS:DEL {}",
+            set_parser=int,
+            get_cmd=":SENS:DEL?",
+            get_parser=float_round,
+        )
+        self.add_parameter(
+            "trigger",
+            label="Trigger Source",
+            set_cmd=":SENS:TRIG {}",
+            get_cmd=":SENS:TRIG?",
+            val_mapping={
+                "READY": "READ",
+                "READ": "READ",
+                "TIMER": "TIM",
+                "TIM": "TIM",
+                "COMMUNICATE": "COMM",
+                "IMMEDIATE": "IMM",
+                "IMM": "IMM",
+            },
+        )
+        self.add_parameter(
+            "interval",
+            label="Measurement Interval",
+            unit="s",
+            vals=Numbers(0.1, 3600),
+            set_cmd=":SENS:INT {}",
+            set_parser=float,
+            get_cmd=":SENS:INT?",
+            get_parser=float,
+        )
 
     def off(self) -> None:
         """Turn measurement off"""
@@ -256,6 +253,14 @@ class GS200Program(InstrumentChannel):
         )
 
 
+class VoltageSource(InstrumentModule):
+    pass
+
+
+class CurrentSource(InstrumentModule):
+    pass
+
+
 class GS200(VisaInstrument):
     """
     This is the QCoDeS driver for the Yokogawa GS200 voltage and current source.
@@ -316,7 +321,7 @@ class GS200(VisaInstrument):
             snapshot_exclude=self.source_mode() == "VOLT",
         )
 
-        self.add_parameter("range", parameter_class=DelegateParameter, source=None)
+        # self.add_parameter("range", parameter_class=DelegateParameter, source=None)
 
         # The instrument does not support auto range. The parameter
         # auto_range is introduced to add this capability with
@@ -416,8 +421,9 @@ class GS200(VisaInstrument):
 
         # Check if monitor is present, and if so enable measurement
         monitor_present = "/MON" in self.ask("*OPT?")
-        measure = GS200_Monitor(self, "measure", monitor_present)
-        self.add_submodule("measure", measure)
+        if monitor_present:
+            measure = GS200Monitor(self, "measure")
+            self.add_submodule("measure", measure)
 
         # Reset function
         self.add_function("reset", call_cmd="*RST")
