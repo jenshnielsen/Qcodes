@@ -537,8 +537,8 @@ class GS200(VisaInstrument):
         self.add_function("reset", call_cmd="*RST")
 
         self.add_submodule("program", GS200Program(self, "program"))
-        self.add_submodule("current", CurrentSource(self, "current"))
-        self.add_submodule("voltage", VoltageSource(self, "voltage"))
+        self.add_submodule("current_source", CurrentSource(self, "current_source"))
+        self.add_submodule("voltage_source", VoltageSource(self, "voltage_source"))
 
         self.add_parameter(
             "BNC_out",
