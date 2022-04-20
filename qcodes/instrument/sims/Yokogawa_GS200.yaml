@@ -27,6 +27,27 @@ devices:
           r: "{}"
         setter:
           q: "OUTPUT {}"
+      level:
+        default: 0.0
+        getter:
+          q: ":SOUR:LEV?"
+          r: "{}"
+        setter:
+          q: ":SOUR:LEV {}"
+      range:
+        default: 10e-3
+        getter:
+          q: ":SOUR:RANG?"
+          r: "{}"
+        setter:
+          q: ":SOUR:RANG {}"
+        specs:
+          # since the same command is used for voltage
+          # and current ranges depending on the state
+          # this takes valid values for both
+          valid: [10e-3, 100e-3, 1e0, 10e0, 30e0,
+                  1e-3, 200e-3]
+          type: float
 
 
 
