@@ -9,6 +9,8 @@ devices:
     dialogues:
       - q: "*IDN?"
         r: "QCoDeS Yokogawa Mock,GS200,xxxxxxxx,MOCKFW"
+      - q: "*OPT?"
+        r: "/MON"
 
     properties:
       mode:
