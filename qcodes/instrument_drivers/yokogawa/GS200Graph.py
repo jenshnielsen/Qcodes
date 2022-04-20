@@ -42,8 +42,6 @@ class GS200Monitor(InstrumentModule):
     def __init__(self, parent: "Source", name: str, mode: ModeType) -> None:
         super().__init__(parent, name)
 
-        self._unit = mode
-
         self.add_parameter(
             "enabled",
             label="Measurement Enabled",
@@ -130,12 +128,13 @@ class GS200Monitor(InstrumentModule):
 
     def _get_measurement(self) -> float:
         if self.parent.auto_range.get() or (
-            self._unit == "VOLT" and self.parent.range.cache() < 1
+            self.root_instrument.source_mode.cache.get() == "VOLT"
+            and self.parent.range.cache() < 1
         ):
             # Measurements will not work with autorange, or when
             # range is <1V.
             raise GS200Exception(
-                "Measurements will not work when range is <1V"
+                "Measurements will not work when range is <1V "
                 "or when in auto range mode."
             )
         if not self.root_instrument.output.cache():
