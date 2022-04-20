@@ -129,8 +129,6 @@ class GS200Monitor(InstrumentModule):
         return state
 
     def _get_measurement(self) -> float:
-        if self._range is None:
-            raise GS200Exception("Measurement module not initialized.")
         if self.parent.auto_range.get() or (
             self._unit == "VOLT" and self.parent.range.cache() < 1
         ):
@@ -379,7 +377,7 @@ class VoltageSource(Source):
             self.add_submodule("measure", measure)
 
         self.add_parameter(
-            "voltage_range",
+            "range",
             label="Voltage Source Range",
             unit="V",
             get_cmd=partial(self._get_range, "VOLT"),
@@ -420,7 +418,7 @@ class CurrentSource(Source):
             self.add_submodule("measure", measure)
 
         self.add_parameter(
-            "current_range",
+            "range",
             label="Current Source Range",
             unit="I",
             get_cmd=partial(self._get_range, "CURR"),
