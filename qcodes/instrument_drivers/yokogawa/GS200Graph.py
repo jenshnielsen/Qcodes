@@ -583,6 +583,7 @@ class GS200(VisaInstrument):
     def _set_source_mode(self, mode: ModeType) -> None:
         """
         Set output mode and TODO handle activating/deactivating relevant modules
+        # TODO invalidate cache when switching mode
 
         Args:
             mode: "CURR" or "VOLT"
