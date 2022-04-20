@@ -48,6 +48,21 @@ devices:
           valid: [10e-3, 100e-3, 1e0, 10e0, 30e0,
                   1e-3, 200e-3]
           type: float
+      sens:
+        default: 0
+        getter:
+          q: ":SENS?"
+          r: "{}"
+        setter:
+          q: ":SENS {}"
+        specs:
+          valid: [1, 0]
+          type: int
+      meas:
+        default: 0.0
+        getter:
+          q: ":MEAS?"
+          r: "{}"
 
 
 
