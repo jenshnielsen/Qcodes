@@ -1,18 +1,87 @@
 from contextlib import contextmanager
 from functools import partial
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, Optional
 
 from typing_extensions import Literal
 
+from qcodes.graph.graph import (
+    ConnectionAttributeType,
+    Edge,
+    EdgeActivator,
+    EdgeStatus,
+    InstrumentModuleActivator,
+    Node,
+    NodeActivator,
+    NodeId,
+    NodeStatus,
+)
 from qcodes.instrument.channel import InstrumentModule
 from qcodes.instrument.visa import VisaInstrument
 from qcodes.utils.helpers import create_on_off_val_mapping
 from qcodes.utils.validators import Bool, Enum, Ints, Numbers
 
 if TYPE_CHECKING:
-    from qcodes.instrument.parameter import _BaseParameter
+    from qcodes.instrument.parameter import Parameter, _BaseParameter
 
 ModeType = Literal["CURR", "VOLT"]
+
+
+class SourceEdgeActivator(EdgeActivator):
+    def __init__(self, status_parameter, active_state: ModeType):
+        self._status_parameter = status_parameter
+        self._active_state = active_state
+
+    @property
+    def status(self) -> EdgeStatus:
+        instrument_mode = self._status_parameter.cache()
+        if instrument_mode == self._active_state:
+            return EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
+        else:
+            return EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
+
+    # todo currently this is done when activating the matching node
+    # should it change
+    def activate(self) -> None:
+        pass
+
+    def deactivate(self) -> None:
+        pass
+
+
+class SourceModuleActivator(NodeActivator):
+    def __init__(
+        self,
+        *,
+        node: Node,
+        parent: Optional[Node] = None,
+        active_state: ModeType,
+        status_parameter,
+    ):
+        super().__init__(node=node)
+        self._parent = parent
+        self._active_state = active_state
+        self._status_parameter = status_parameter
+
+    @property
+    def parameters(self) -> Iterable[Parameter]:
+        return []
+
+    def activate(self) -> None:
+        self._status_parameter()
+        super().activate()
+
+    def deactivate(self) -> None:
+        self._status = NodeStatus.INACTIVE
+        super().deactivate()
+
+    def status(self) -> NodeStatus:
+        return self._status_parameter.cache() == self._active_state
+
+    def upstream_nodes(self) -> Iterable[Node]:
+        return []
+
+    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
+        return {}
 
 
 def _float_round(val: float) -> int:
@@ -578,3 +647,6 @@ class GS200(VisaInstrument):
             raise GS200Exception("Cannot switch mode while source is on")
 
         self.write(f"SOUR:FUNC {mode}")
+
+    def _make_instrument_graph(self) -> "StationGraph":
+        pass
