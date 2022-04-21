@@ -45,8 +45,8 @@ class GS200Monitor(InstrumentModule):
         self.add_parameter(
             "enabled",
             label="Measurement Enabled",
-            get_cmd=self.state,
-            set_cmd=lambda x: self._enable() if x else self._disable(),
+            get_cmd=":SENS?",
+            set_cmd=":SENS {}",
             val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
@@ -112,19 +112,6 @@ class GS200Monitor(InstrumentModule):
             get_cmd=":SENS:INT?",
             get_parser=float,
         )
-
-    def _disable(self) -> None:
-        """Turn measurement off"""
-        self.write(":SENS 0")
-
-    def _enable(self) -> None:
-        """Turn measurement on"""
-        self.write(":SENS 1")
-
-    def state(self) -> int:
-        """Check measurement state"""
-        state = int(self.ask(":SENS?"))
-        return state
 
     def _get_measurement(self) -> float:
         if self.parent.auto_range.get() or (
@@ -466,8 +453,8 @@ class GS200(VisaInstrument):
         self.add_parameter(
             "output",
             label="Output State",
-            get_cmd=self.state,
-            set_cmd=lambda x: self._enable() if x else self._disable(),
+            get_cmd="OUTPUT?",
+            set_cmd="OUTPUT {}",
             val_mapping=create_on_off_val_mapping(on_val=1, off_val=0),
         )
 
@@ -566,19 +553,6 @@ class GS200(VisaInstrument):
         )
 
         self.connect_message()
-
-    def _enable(self) -> None:
-        """Turn output on"""
-        self.write("OUTPUT 1")
-
-    def _disable(self) -> None:
-        """Turn output off"""
-        self.write("OUTPUT 0")
-
-    def state(self) -> int:
-        """Check state"""
-        state = int(self.ask("OUTPUT?"))
-        return state
 
     def _set_source_mode(self, mode: ModeType) -> None:
         """
