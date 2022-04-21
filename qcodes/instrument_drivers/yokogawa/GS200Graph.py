@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 ModeType = Literal["CURR", "VOLT"]
 
 
-def float_round(val: float) -> int:
+def _float_round(val: float) -> int:
     """
     Rounds a floating number
 
@@ -79,7 +79,7 @@ class GS200Monitor(InstrumentModule):
             set_cmd=":SENS:NPLC {}",
             set_parser=int,
             get_cmd=":SENS:NPLC?",
-            get_parser=float_round,
+            get_parser=_float_round,
         )
         self.add_parameter(
             "delay",
@@ -89,7 +89,7 @@ class GS200Monitor(InstrumentModule):
             set_cmd=":SENS:DEL {}",
             set_parser=int,
             get_cmd=":SENS:DEL?",
-            get_parser=float_round,
+            get_parser=_float_round,
         )
         self.add_parameter(
             "trigger",
@@ -489,7 +489,7 @@ class GS200(VisaInstrument):
             vals=Ints(1, 30),
             get_cmd=":SOUR:PROT:VOLT?",
             set_cmd=":SOUR:PROT:VOLT {}",
-            get_parser=float_round,
+            get_parser=_float_round,
             set_parser=int,
         )
 
