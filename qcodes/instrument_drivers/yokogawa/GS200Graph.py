@@ -1,5 +1,6 @@
+from contextlib import contextmanager
 from functools import partial
-from typing import Any
+from typing import TYPE_CHECKING, Any, Iterator
 
 from typing_extensions import Literal
 
@@ -7,6 +8,9 @@ from qcodes.instrument.channel import InstrumentModule
 from qcodes.instrument.visa import VisaInstrument
 from qcodes.utils.helpers import create_on_off_val_mapping
 from qcodes.utils.validators import Bool, Enum, Ints, Numbers
+
+if TYPE_CHECKING:
+    from qcodes.instrument.parameter import _BaseParameter
 
 ModeType = Literal["CURR", "VOLT"]
 
@@ -332,6 +336,22 @@ class Source(InstrumentModule):
             delay: The time between finishing one step and
                 starting another in seconds.
         """
+
+        @contextmanager
+        def delay_and_step_set(
+            parameter: "_BaseParameter", temp_step: float, temp_delay: float
+        ) -> Iterator[None]:
+            saved_step = parameter.step
+            saved_inter_delay = parameter.inter_delay
+
+            try:
+                parameter.step = temp_step
+                parameter.inter_delay = temp_delay
+                yield
+            finally:
+                parameter.step = saved_step
+                parameter.inter_delay = saved_inter_delay
+
         if mode == "CURR":
             output_param = self.parameters["current"]
         elif mode == "VOLT":
@@ -339,17 +359,8 @@ class Source(InstrumentModule):
         else:
             raise ValueError(f"Mode must be either 'CURR' or 'VOLT' got {mode}")
 
-        saved_step = output_param.step
-        saved_inter_delay = output_param.inter_delay
-
-        output_param.step = step
-        output_param.inter_delay = delay
-        output_param(ramp_to)
-
-        # todo this should really be reset using a context
-        # manager
-        output_param.step = saved_step
-        output_param.inter_delay = saved_inter_delay
+        with delay_and_step_set(output_param, step, delay):
+            output_param(ramp_to)
 
 
 class VoltageSource(Source):
