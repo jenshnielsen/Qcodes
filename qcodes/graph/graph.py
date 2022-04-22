@@ -188,6 +188,7 @@ class InstrumentModuleActivator(NodeActivator):
         self._status = NodeStatus.INACTIVE
         super().deactivate()
 
+    @property
     def status(self) -> NodeStatus:
         return self._status
 

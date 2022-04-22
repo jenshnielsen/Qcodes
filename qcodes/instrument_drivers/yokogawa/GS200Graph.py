@@ -74,6 +74,7 @@ class SourceModuleActivator(NodeActivator):
         self._status = NodeStatus.INACTIVE
         super().deactivate()
 
+    @property
     def status(self) -> NodeStatus:
         return self._status_parameter.cache() == self._active_state
 
