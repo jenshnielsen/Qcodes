@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, Optional
 from typing_extensions import Literal
 
 from qcodes.graph.graph import (
+    BasicEdgeActivator,
     ConnectionAttributeType,
     Edge,
     EdgeActivator,
     EdgeStatus,
-    InstrumentModuleActivator,
+    MutableStationGraph,
     Node,
     NodeActivator,
     NodeId,
@@ -27,14 +28,14 @@ ModeType = Literal["CURR", "VOLT"]
 
 
 class SourceEdgeActivator(EdgeActivator):
-    def __init__(self, status_parameter, active_state: ModeType):
+    def __init__(self, status_parameter, active_state: Any):
         self._status_parameter = status_parameter
         self._active_state = active_state
 
     @property
     def status(self) -> EdgeStatus:
-        instrument_mode = self._status_parameter.cache()
-        if instrument_mode == self._active_state:
+        state = self._status_parameter.cache()
+        if state == self._active_state:
             return EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
         else:
             return EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
@@ -54,29 +55,34 @@ class SourceModuleActivator(NodeActivator):
         *,
         node: Node,
         parent: Optional[Node] = None,
-        active_state: ModeType,
-        status_parameter,
+        active_state: Any,
+        inactive_state: Any,
+        status_parameter: "Parameter",
     ):
         super().__init__(node=node)
         self._parent = parent
         self._active_state = active_state
+        self._inactive_state = inactive_state
         self._status_parameter = status_parameter
 
     @property
-    def parameters(self) -> Iterable[Parameter]:
+    def parameters(self) -> Iterable["Parameter"]:
         return []
 
     def activate(self) -> None:
-        self._status_parameter()
+        self._status_parameter(self._active_state)
         super().activate()
 
     def deactivate(self) -> None:
-        self._status = NodeStatus.INACTIVE
+        self._status_parameter(self._inactive_state)
         super().deactivate()
 
     @property
     def status(self) -> NodeStatus:
-        return self._status_parameter.cache() == self._active_state
+        if self._status_parameter.cache() == self._active_state:
+            return NodeStatus.ACTIVE
+        else:
+            return NodeStatus.INACTIVE
 
     def upstream_nodes(self) -> Iterable[Node]:
         return []
@@ -460,6 +466,14 @@ class VoltageSource(Source):
             get_cmd=partial(self._get_output, "VOLT"),
         )
 
+        self._activator: NodeActivator = SourceModuleActivator(
+            node=self,
+            parent=self.parent,
+            active_state="VOLT",
+            inactive_state="CURR",
+            status_parameter=self.root_instrument.source_mode,
+        )
+
     def ramp_voltage(self, ramp_to: float, step: float, delay: float) -> None:
         """
         Ramp the voltage from the current level to the specified output.
@@ -499,6 +513,14 @@ class CurrentSource(Source):
             unit="I",
             set_cmd=partial(self._set_output, "CURR"),
             get_cmd=partial(self._get_output, "CURR"),
+        )
+
+        self._activator: NodeActivator = SourceModuleActivator(
+            node=self,
+            parent=self.parent,
+            active_state="CURR",
+            inactive_state="VOLT",
+            status_parameter=self.root_instrument.source_mode,
         )
 
     def ramp_current(self, ramp_to: float, step: float, delay: float) -> None:
@@ -650,4 +672,30 @@ class GS200(VisaInstrument):
         self.write(f"SOUR:FUNC {mode}")
 
     def _make_instrument_graph(self) -> "StationGraph":
-        pass
+        subgraph_primary_node_names = []
+        self_graph = MutableStationGraph()
+        self_graph[self.full_name] = self
+        subgraphs = [self_graph]
+        for submodule in self.instrument_modules.values():
+            subgraph = submodule._make_graph()
+            subgraph_primary_node_names.append(submodule.full_name)
+            subgraphs.append(subgraph)
+
+        graph = MutableStationGraph.compose(*subgraphs)
+
+        for name in subgraph_primary_node_names:
+            print(name)
+            if "current_source" in name:
+                activator = SourceEdgeActivator(
+                    status_parameter=self.source_mode, active_state="CURR"
+                )
+            elif "voltage_source" in name:
+                activator = SourceEdgeActivator(
+                    status_parameter=self.source_mode, active_state="VOLT"
+                )
+            else:
+                activator = BasicEdgeActivator(edge_status=EdgeStatus.PART_OF)
+
+            graph[self.full_name, name] = Edge(activator=activator)
+
+        return graph.as_station_graph()
