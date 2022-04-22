@@ -1,7 +1,6 @@
 """
 Utils for visualizing StationGraphs. Note that these only work in
-Jupyter and require you to have ipycytoscape installed. This can be
-installed with ``pip install qchar[live_plotting]``
+Jupyter and require you to have ipycytoscape installed.
 """
 from typing import Optional
 
