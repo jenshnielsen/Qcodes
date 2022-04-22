@@ -22,6 +22,12 @@ DEFAULT_STYLE = [
             "background-color": "#11479e",
         },
     },
+    {
+        "selector": "node.NodeStatus_INACTIVE",
+        "css": {
+            "background-color": "red",
+        },
+    },
     {"selector": "node:parent", "css": {"background-opacity": 0.333}},
     {
         "selector": ":selected",
@@ -35,32 +41,33 @@ DEFAULT_STYLE = [
     },
     {"selector": "edge", "style": {"width": 4, "line-color": "#9dbaea"}},
     {
-        "selector": "edge.directed.EdgeStatus_ACTIVE",
+        "selector": "edge.EdgeStatus_ACTIVE_ELECTRICAL_CONNECTION",
         "style": {
-            "curve-style": "bezier",
+            "curve-style": "haystack",
             "target-arrow-shape": "triangle",
             "target-arrow-color": "#9dbaea",
+            "line-color": "green",
         },
     },
     {
-        "selector": "edge.directed.EdgeStatus_INACTIVE",
+        "selector": "edge.EdgeStatus_INACTIVE_ELECTRICAL_CONNECTION",
         "style": {
-            "curve-style": "bezier",
+            "curve-style": "haystack",
             "target-arrow-shape": "triangle",
             "target-arrow-color": "red",
             "line-color": "red",
         },
     },
     {
-        "selector": "edge.directed.EdgeStatus_NOT_ACTIVATABLE",
+        "selector": "edge.EdgeStatus_PART_OF",
         "style": {
-            "curve-style": "bezier",
+            "curve-style": "haystack",
             "target-arrow-shape": "triangle",
             "target-arrow-color": "green",
             "line-color": "green",
         },
     },
-    {"selector": "edge.multiple_edges", "style": {"curve-style": "bezier"}},
+    {"selector": "edge.multiple_edges", "style": {"curve-style": "haystack"}},
 ]
 
 
