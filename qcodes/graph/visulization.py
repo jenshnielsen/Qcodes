@@ -128,9 +128,11 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     remaining_nodes = []
     for node, node_attrs in nxgraph.nodes().items():
         module = node_attrs.get("value", None)
+        activator = getattr(module, "activator", None)
+        status = str(getattr(activator, "status", "None")).replace(".", "_")
         parent = getattr(module, "parent", None)
         parent_name = getattr(parent, "full_name", None)
-        new_node = CustomNode(node, classes="node", parent=parent_name)
+        new_node = CustomNode(node, classes=status, parent=parent_name)
         nodes_dict[node] = new_node
         if parent is None:
             cytoscapegraph.add_node(new_node)
@@ -143,10 +145,8 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     for edge, edgeattrs in nxgraph.edges.items():
         if not edgeattrs["value"].activator.status == EdgeStatus.PART_OF:
             cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
-            cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = str(
-                edgeattrs["value"].activator.status
-            ).replace(".", "_")
-
+            status = str(edgeattrs["value"].activator.status).replace(".", "_")
+            cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = status
     return cytoscapegraph
 
 
