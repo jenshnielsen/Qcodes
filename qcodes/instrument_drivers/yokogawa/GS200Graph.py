@@ -684,7 +684,6 @@ class GS200(VisaInstrument):
         graph = MutableStationGraph.compose(*subgraphs)
 
         for name in subgraph_primary_node_names:
-            print(name)
             if "current_source" in name:
                 activator = SourceEdgeActivator(
                     status_parameter=self.source_mode, active_state="CURR"
