@@ -115,6 +115,12 @@ class NodeActivator(abc.ABC):
     def status(self) -> NodeStatus:
         return self._status
 
+    def upstream_nodes_2(self, graph: StationGraph):
+        # todo rename replace graph with global
+        return graph.active_subgraph().breadth_first_nodes_from(
+            self.node.full_name, reverse=False
+        )
+
 
 class EndpointActivator(NodeActivator):
     def __init__(self, *, node: Node, parent: Optional[Node] = None):
@@ -162,7 +168,7 @@ class InstrumentModuleActivator(NodeActivator):
     ):
         super().__init__(node=node)
         self._parent = parent
-        self._status = NodeStatus.INACTIVE
+        self._status = NodeStatus.ACTIVE
 
     @property
     def parameters(self) -> Iterable[Parameter]:
@@ -398,6 +404,16 @@ class StationGraph:
         return networkx.algorithms.simple_paths.shortest_simple_paths(
             self._graph, source, destination
         )
+
+    def active_subgraph(self) -> StationGraph:
+        def filter_node(nodeid: str) -> bool:
+            return (
+                self._graph.nodes[nodeid]["value"].activator.status == NodeStatus.ACTIVE
+            )
+
+        filtered_nx_graph = nx.subgraph_view(self._graph, filter_node=filter_node)
+
+        return StationGraph(filtered_nx_graph)
 
 
 class MutableStationGraph(StationGraph):

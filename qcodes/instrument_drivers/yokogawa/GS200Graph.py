@@ -10,9 +10,9 @@ from qcodes.graph.graph import (
     Edge,
     EdgeActivator,
     EdgeStatus,
+    EndpointActivator,
     MutableStationGraph,
     Node,
-    NodeActivator,
     NodeId,
     NodeStatus,
 )
@@ -49,7 +49,7 @@ class SourceEdgeActivator(EdgeActivator):
         pass
 
 
-class SourceModuleActivator(NodeActivator):
+class SourceModuleActivator(EndpointActivator):
     def __init__(
         self,
         *,
@@ -80,12 +80,10 @@ class SourceModuleActivator(NodeActivator):
     @property
     def status(self) -> NodeStatus:
         if self._status_parameter.cache() == self._active_state:
+            # todo how do we handle reserved status
             return NodeStatus.ACTIVE
         else:
             return NodeStatus.INACTIVE
-
-    def upstream_nodes(self) -> Iterable[Node]:
-        return []
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
