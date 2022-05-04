@@ -3,6 +3,7 @@ from __future__ import annotations
 import abc
 import itertools
 import logging
+from dataclasses import dataclass
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -21,6 +22,7 @@ from typing import (
 )
 
 import networkx
+import networkx as nx
 from typing_extensions import Protocol
 
 NodeId = str
@@ -49,6 +51,12 @@ class EdgeStatus(str, Enum):
     INACTIVE_ELECTRICAL_CONNECTION = "inactive_electrical_connection"
     PART_OF = "part_of"
     CAPACITIVE_COUPLING = "capacitive_coupling"
+
+
+@dataclass
+class NodeProperties:
+    Status: NodeStatus  # Is the node currently operational?
+    Reserved: bool  #
 
 
 # The Node Protocol is a minimal interface for a InstrumentChannel.
