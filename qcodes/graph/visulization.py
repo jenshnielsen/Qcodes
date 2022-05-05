@@ -52,7 +52,7 @@ DEFAULT_STYLE = [
             "curve-style": "haystack",
             "target-arrow-shape": "triangle",
             "target-arrow-color": "#9dbaea",
-            "line-color": "green",
+            "line-color": "#9dbaea",
         },
     },
     {

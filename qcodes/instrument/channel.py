@@ -18,7 +18,13 @@ from typing import (
     overload,
 )
 
-from ..graph.graph import InstrumentModuleActivator, MutableStationGraph
+from ..graph.graph import (
+    BasicEdgeActivator,
+    Edge,
+    EdgeStatus,
+    InstrumentModuleActivator,
+    MutableStationGraph,
+)
 from ..utils.helpers import full_class
 from ..utils.metadata import Metadatable
 from ..utils.validators import Validator
@@ -96,13 +102,24 @@ class InstrumentModule(InstrumentBase):
         name_parts.append(self.short_name)
         return name_parts
 
-    def _make_graph(self) -> MutableStationGraph:
-        graph = MutableStationGraph()
-        # todo make recursive
-        # for submodule in self.submodules.values():
-        #     nodes.extend(submodule._nodes())
-        graph[self.full_name] = self
-        return graph
+    def _make_graph(self) -> "StationGraph":
+        subgraph_primary_node_names = []
+        self_graph = MutableStationGraph()
+        self_graph[self.full_name] = self
+        subgraphs = [self_graph]
+        for submodule in self.instrument_modules.values():
+            subgraph = submodule._make_graph()
+            subgraph_primary_node_names.append(submodule.full_name)
+            subgraphs.append(subgraph)
+
+        graph = MutableStationGraph.compose(*subgraphs)
+
+        for name in subgraph_primary_node_names:
+            activator = BasicEdgeActivator(edge_status=EdgeStatus.PART_OF)
+            graph[self.full_name, name] = Edge(activator=activator)
+
+        return graph.as_station_graph()
+
 
 
 class InstrumentChannel(InstrumentModule):
