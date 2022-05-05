@@ -28,7 +28,13 @@ DEFAULT_STYLE = [
             "background-color": "red",
         },
     },
-    {"selector": "node:parent", "css": {"background-opacity": 0.333}},
+    {
+        "selector": "node:parent",
+        "css": {
+            "background-opacity": 0.333,
+            "content": "",
+        },
+    },
     {
         "selector": ":selected",
         "css": {
@@ -132,28 +138,32 @@ def _create_cytoscape_compatible_graph(nxgraph: nx.DiGraph) -> nx.DiGraph:
     by ipycytoscape"""
     nodes_dict = {}
     cytoscapegraph = nx.DiGraph()
-    remaining_nodes = []
     for node, node_attrs in nxgraph.nodes().items():
         module = node_attrs.get("value", None)
         activator = getattr(module, "activator", None)
         status = str(getattr(activator, "status", "None")).replace(".", "_")
-        parent = getattr(module, "parent", None)
+        parent = getattr(module, "root_instrument", None)
         parent_name = getattr(parent, "full_name", None)
-        new_node = CustomNode(node, classes=status, parent=parent_name)
-        nodes_dict[node] = new_node
-        if parent is None:
-            cytoscapegraph.add_node(new_node)
+
+        if parent_name is not None:
+            container_node_name = f"{parent_name}_container"
+
+            if container_node_name not in nodes_dict:
+                container_node = CustomNode(container_node_name, parent=None)
+                print(f"adding {container_node}")
+                nodes_dict[container_node] = container_node
+                cytoscapegraph.add_node(container_node)
         else:
-            remaining_nodes.append(new_node)
-    # add children nodes after their parents
-    # work around for https://github.com/cytoscape/ipycytoscape/issues/302
-    for node in remaining_nodes:
-        cytoscapegraph.add_node(node)
+            container_node_name = None
+
+        new_node = CustomNode(node, classes=status, parent=container_node_name)
+        nodes_dict[node] = new_node
+        cytoscapegraph.add_node(new_node)
+
     for edge, edgeattrs in nxgraph.edges.items():
-        if not edgeattrs["value"].activator.status == EdgeStatus.PART_OF:
-            cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
-            status = str(edgeattrs["value"].activator.status).replace(".", "_")
-            cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = status
+        cytoscapegraph.add_edge(nodes_dict[edge[0]], nodes_dict[edge[1]])
+        status = str(edgeattrs["value"].activator.status).replace(".", "_")
+        cytoscapegraph[nodes_dict[edge[0]]][nodes_dict[edge[1]]]["classes"] = status
     return cytoscapegraph
 
 
