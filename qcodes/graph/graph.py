@@ -85,35 +85,19 @@ class Node(Protocol):
 class NodeActivator(abc.ABC):
     def __init__(self, *, node: Node):
         self._node = node
-        self._status = NodeStatus.INACTIVE
-
-    @property
-    @abc.abstractmethod
-    def parameters(self) -> Iterable[Parameter]:
-        pass
-
-    def add_source(self, source: Node) -> None:
-        _LOG.info(f"Adding Source {source.full_name} to Node: {self.node.full_name}")
-
-    def remove_source(self, source: Node) -> None:
-        _LOG.info(
-            f"Removing Source {source.full_name} from Node: {self.node.full_name}"
-        )
+        self._status = NodeStatus.ACTIVE
 
     def activate(self) -> None:
+        self._status = NodeStatus.ACTIVE
         _LOG.info(f"Activating Node: {self.node.full_name}")
 
     def deactivate(self) -> None:
+        self._status = NodeStatus.INACTIVE
         _LOG.info(f"Deactivating Node: {self.node.full_name}")
 
     @property
     def node(self) -> Node:
         return self._node
-
-    @abc.abstractmethod
-    def upstream_nodes(self) -> Iterable[Node]:
-        # todo naming
-        pass
 
     @abc.abstractmethod
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
@@ -123,7 +107,7 @@ class NodeActivator(abc.ABC):
     def status(self) -> NodeStatus:
         return self._status
 
-    def upstream_nodes_2(self, graph: StationGraph):
+    def upstream_nodes(self, graph: StationGraph):
         # todo rename replace graph with global
         return graph.active_subgraph().breadth_first_nodes_from(
             self.node.full_name, reverse=False
@@ -136,35 +120,8 @@ class EndpointActivator(NodeActivator):
         self._parent = parent
         self._sources: Set[Node] = set()
 
-    @property
-    def parameters(self) -> Iterable[Parameter]:
-        return []
-
-    def add_source(self, source: Node) -> None:
-        self._sources.add(source)
-        super().add_source(source)
-
-    def remove_source(self, source: Node) -> None:
-        self._sources.remove(source)
-        super().remove_source(source)
-
-    def activate(self) -> None:
-        _LOG.info(f"Activating Node: {self.node.full_name}")
-
-    def deactivate(self) -> None:
-        _LOG.info(f"Deactivating Node: {self.node.full_name}")
-
-    def upstream_nodes(self) -> Iterable[Node]:
-        return itertools.chain.from_iterable(
-            source.activator.upstream_nodes() for source in self._sources
-        )
-
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
-
-    @property
-    def active(self) -> bool:
-        return False
 
 
 class InstrumentModuleActivator(NodeActivator):
@@ -178,58 +135,14 @@ class InstrumentModuleActivator(NodeActivator):
         self._parent = parent
         self._status = NodeStatus.ACTIVE
 
-    @property
-    def parameters(self) -> Iterable[Parameter]:
-        return list(self.node.parameters.values())
-
-    def upstream_nodes(self) -> Iterable[Node]:
-        return [self.node]
-
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
-
-    def add_source(self, source: Node) -> None:
-        super().add_source(source)
-
-    def remove_source(self, source: Node) -> None:
-        super().remove_source(source)
-
-    def activate(self) -> None:
-        self._status = NodeStatus.ACTIVE
-        super().activate()
-
-    def deactivate(self) -> None:
-        self._status = NodeStatus.INACTIVE
-        super().deactivate()
-
-    @property
-    def status(self) -> NodeStatus:
-        return self._status
 
 
 class ConnectorActivator(NodeActivator):
     def __init__(self, *, node: Node):
         super().__init__(node=node)
         self._sources: Set[Node] = set()
-
-    @property
-    def parameters(self) -> Iterable[Parameter]:
-        return itertools.chain.from_iterable(
-            source.parameters for source in self._sources
-        )
-
-    def add_source(self, source: Node) -> None:
-        super().add_source(source=source)
-        self._sources.add(source)
-
-    def remove_source(self, source: Node) -> None:
-        super().remove_source(source=source)
-        self._sources.remove(source)
-
-    def upstream_nodes(self) -> Iterable[Node]:
-        return itertools.chain.from_iterable(
-            source.activator.upstream_nodes() for source in self._sources
-        )
 
     def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
         return {}
@@ -261,7 +174,7 @@ class EdgeActivator(abc.ABC):
 
 class BasicEdgeActivator(EdgeActivator):
     def __init__(
-        self, *, edge_status: EdgeStatus = EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
+        self, *, edge_status: EdgeStatus = EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
     ):
         self._edge_status = edge_status
 
@@ -290,6 +203,64 @@ class BasicEdgeActivator(EdgeActivator):
             )
 
 
+class SourceEdgeActivator(EdgeActivator):
+    def __init__(self, status_parameter, active_state: Any):
+        self._status_parameter = status_parameter
+        self._active_state = active_state
+
+    @property
+    def status(self) -> EdgeStatus:
+        state = self._status_parameter.cache()
+        if state == self._active_state:
+            return EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
+        else:
+            return EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
+
+    # todo currently this is done when activating the matching node
+    # should it change
+    def activate(self) -> None:
+        pass
+
+    def deactivate(self) -> None:
+        pass
+
+
+class SourceModuleActivator(EndpointActivator):
+    def __init__(
+        self,
+        *,
+        node: Node,
+        parent: Optional[Node] = None,
+        active_state: Any,
+        inactive_state: Any,
+        status_parameter: Parameter,
+    ):
+        super().__init__(node=node)
+        self._parent = parent
+        self._active_state = active_state
+        self._inactive_state = inactive_state
+        self._status_parameter = status_parameter
+
+    def activate(self) -> None:
+        self._status_parameter(self._active_state)
+        super().activate()
+
+    def deactivate(self) -> None:
+        self._status_parameter(self._inactive_state)
+        super().deactivate()
+
+    @property
+    def status(self) -> NodeStatus:
+        if self._status_parameter.cache() == self._active_state:
+            # todo how do we handle reserved status
+            return NodeStatus.ACTIVE
+        else:
+            return NodeStatus.INACTIVE
+
+    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
+        return {}
+
+
 T = TypeVar("T", bound="StationGraph")
 
 
@@ -302,14 +273,6 @@ class StationGraph:
                 composition, graph._graph  # pylint: disable=protected-access
             )
         composed = cls(composition)
-        for edge in composed.edges:
-            if (
-                composed[edge].activator.status
-                == EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
-            ):
-                source = composed[edge[0]]
-                destination = composed[edge[1]]
-                destination.activator.add_source(source)
         return composed
 
     @classmethod

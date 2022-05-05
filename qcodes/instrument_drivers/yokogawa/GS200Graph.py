@@ -1,20 +1,17 @@
 from contextlib import contextmanager
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, Optional
+from typing import TYPE_CHECKING, Any, Iterator
 
 from typing_extensions import Literal
 
 from qcodes.graph.graph import (
     BasicEdgeActivator,
-    ConnectionAttributeType,
     Edge,
-    EdgeActivator,
     EdgeStatus,
-    EndpointActivator,
     MutableStationGraph,
-    Node,
-    NodeId,
-    NodeStatus,
+    NodeActivator,
+    SourceEdgeActivator,
+    SourceModuleActivator,
 )
 from qcodes.instrument.channel import InstrumentModule
 from qcodes.instrument.visa import VisaInstrument
@@ -22,71 +19,10 @@ from qcodes.utils.helpers import create_on_off_val_mapping
 from qcodes.utils.validators import Bool, Enum, Ints, Numbers
 
 if TYPE_CHECKING:
-    from qcodes.instrument.parameter import Parameter, _BaseParameter
+    from qcodes.graph.graph import StationGraph
+    from qcodes.instrument.parameter import _BaseParameter
 
 ModeType = Literal["CURR", "VOLT"]
-
-
-class SourceEdgeActivator(EdgeActivator):
-    def __init__(self, status_parameter, active_state: Any):
-        self._status_parameter = status_parameter
-        self._active_state = active_state
-
-    @property
-    def status(self) -> EdgeStatus:
-        state = self._status_parameter.cache()
-        if state == self._active_state:
-            return EdgeStatus.ACTIVE_ELECTRICAL_CONNECTION
-        else:
-            return EdgeStatus.INACTIVE_ELECTRICAL_CONNECTION
-
-    # todo currently this is done when activating the matching node
-    # should it change
-    def activate(self) -> None:
-        pass
-
-    def deactivate(self) -> None:
-        pass
-
-
-class SourceModuleActivator(EndpointActivator):
-    def __init__(
-        self,
-        *,
-        node: Node,
-        parent: Optional[Node] = None,
-        active_state: Any,
-        inactive_state: Any,
-        status_parameter: "Parameter",
-    ):
-        super().__init__(node=node)
-        self._parent = parent
-        self._active_state = active_state
-        self._inactive_state = inactive_state
-        self._status_parameter = status_parameter
-
-    @property
-    def parameters(self) -> Iterable["Parameter"]:
-        return []
-
-    def activate(self) -> None:
-        self._status_parameter(self._active_state)
-        super().activate()
-
-    def deactivate(self) -> None:
-        self._status_parameter(self._inactive_state)
-        super().deactivate()
-
-    @property
-    def status(self) -> NodeStatus:
-        if self._status_parameter.cache() == self._active_state:
-            # todo how do we handle reserved status
-            return NodeStatus.ACTIVE
-        else:
-            return NodeStatus.INACTIVE
-
-    def connection_attributes(self) -> Dict[str, Dict[NodeId, ConnectionAttributeType]]:
-        return {}
 
 
 def _float_round(val: float) -> int:
