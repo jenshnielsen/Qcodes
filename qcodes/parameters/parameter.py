@@ -89,6 +89,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Hashable,
     Iterable,
     Iterator,
     List,
@@ -98,6 +99,7 @@ from typing import (
     Sized,
     Tuple,
     Type,
+    TypeVar,
     Union,
     cast,
     overload,
@@ -184,7 +186,11 @@ class _SetParamContext:
             self._parameter.set(self._original_value)
 
 
-def invert_val_mapping(val_mapping: Mapping[Any, Any]) -> Dict[Any, Any]:
+T = TypeVar("T", bound=Hashable)
+K = TypeVar("K", bound=Hashable)
+
+
+def invert_val_mapping(val_mapping: Mapping[T, K]) -> Dict[K, T]:
     """Inverts the value mapping dictionary for allowed parameter values"""
     return {v: k for k, v in val_mapping.items()}
 
