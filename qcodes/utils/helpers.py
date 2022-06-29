@@ -47,6 +47,7 @@ _tprint_times: Dict[str, float] = {}
 log = logging.getLogger(__name__)
 
 
+# only used in loops: move there
 def tprint(string: str, dt: int = 1, tag: str = 'default') -> None:
     """Print progress of a loop every ``dt`` seconds."""
     ptime = _tprint_times.get(tag, 0)
@@ -55,6 +56,8 @@ def tprint(string: str, dt: int = 1, tag: str = 'default') -> None:
         _tprint_times[tag] = time.time()
 
 
+# used in parameter classes (and test_issequence)
+# move to parameters module
 def is_sequence(obj: Any) -> bool:
     """
     Test if an object is a sequence.
@@ -66,6 +69,8 @@ def is_sequence(obj: Any) -> bool:
             not isinstance(obj, (str, bytes, io.IOBase)))
 
 
+# used in parameter classes (and test_issequenceof)
+# move to parameters module
 def is_sequence_of(obj: Any,
                    types: Optional[Union[Type[object],
                                          Tuple[Type[object], ...]]] = None,
@@ -115,6 +120,7 @@ def is_sequence_of(obj: Any,
     return True
 
 
+# used in test_is_function, actions and command
 def is_function(f: object, arg_count: int, coroutine: bool = False) -> bool:
     """
     Check and require a function that can accept the specified number of
@@ -157,11 +163,15 @@ def is_function(f: object, arg_count: int, coroutine: bool = False) -> bool:
         return False
 
 
+# used in many places leave as is
+# note it is perhaps annying that this contains
+# the original path to where something is defined
+# even when reexporting .e.g https://github.com/ni/nimi-python/issues/1433
 def full_class(obj: object) -> str:
     """The full importable path to an object's class."""
     return type(obj).__module__ + '.' + type(obj).__name__
 
-
+# used in parameters move there
 def named_repr(obj: Any) -> str:
     """Enhance the standard repr() with the object's name attribute."""
     s = '<{}.{}: {} at {}>'.format(
@@ -176,6 +186,8 @@ K = TypeVar('K', bound=Hashable)
 L = TypeVar('L', bound=Hashable)
 
 
+# used in many locations leave in utils
+# data.dataset metadata etc
 def deep_update(
         dest: MutableMapping[K, Any],
         update: Mapping[L, Any]
@@ -197,6 +209,7 @@ def deep_update(
     return dest_int
 
 
+# only used in parameters move there
 # could use numpy.arange here, but
 # a) we don't want to require that as a dep so low level
 # b) I'd like to be more flexible with the sign of step
@@ -218,6 +231,7 @@ def permissive_range(start: float, stop: float, step: SupportsAbs[float]
     return [start + i * signed_step for i in range(step_count)]
 
 
+# only used in parameters move there
 # This is very much related to the permissive_range but more
 # strict on the input, start and endpoints are always included,
 # and a sweep is only created if the step matches an integer
@@ -277,6 +291,7 @@ def make_sweep(start: float,
     return cast(List[float], output_list)
 
 
+# only used in loops move there
 def wait_secs(finish_clock: float) -> float:
     """
     Calculate the number of seconds until a given clock time.
@@ -290,6 +305,7 @@ def wait_secs(finish_clock: float) -> float:
     return delay
 
 
+# only used in tests. Move to test common
 def compare_dictionaries(dict_1: Dict[Hashable, Any],
                          dict_2: Dict[Hashable, Any],
                          dict_1_name: Optional[str] = 'd1',
@@ -357,11 +373,14 @@ def compare_dictionaries(dict_1: Dict[Hashable, Any],
     return dicts_equal, dict_differences
 
 
+# used in combined parameter and data_array.
+# just copy and remove?
 def warn_units(class_name: str, instance: object) -> None:
     logging.warning('`units` is deprecated for the `' + class_name +
                     '` class, use `unit` instead. ' + repr(instance))
 
 
+# leave in utils
 def foreground_qt_window(window: "QMainWindow") -> None:
     """
     Try as hard as possible to bring a qt window to the front. This
@@ -396,7 +415,7 @@ def foreground_qt_window(window: "QMainWindow") -> None:
     window.raise_()
     window.activateWindow()
 
-
+# leave in utils
 def add_to_spyder_UMR_excludelist(modulename: str) -> None:
     """
     Spyder tries to reload any user module. This does not work well for
