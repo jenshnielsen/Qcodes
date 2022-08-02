@@ -72,31 +72,44 @@ with it for days? Write about this on the "General" section of `GitHub Discussio
 Development
 -----------
 
-Setup
-~~~~~
+To be ready to make changes to QCoDeS you should follow the steps below:
 
--  Clone and register the package for development as described in the
-   `README <README.md#installation>`__
+-  Clone QCoDeS with git.
+-  Install QCoDeS with test dependencies.
 -  Run tests
 -  Ready to hack
+
+
+Clone QCoDeS
+~~~~~~~~~~~~
+
+You should clone QCoDeS with the `--recurse-submodules` option
+to get the submodule containing fixtures to run some of the tests.
+
+::
+
+    git clone --recurse-submodules https://github.com/QCoDeS/Qcodes.git
+
+Installing from source with test dependencies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Installing QCoDeS with the `test` extra ensures that you install
+the extra requirements needed to run the CCoDeS tests.
+
+::
+
+    pip install .[test] -c requirements.txt
 
 .. _runnningtests:
 
 Running Tests
 ~~~~~~~~~~~~~
 
-We don't want to reinvent the wheel, and thus use py.test.
-It's easy to install:
-
-::
-
-    pip install -r test_requirements.txt
-
 Then to test and view the coverage:
 
 ::
 
-    pytest --cov=qcodes --cov-report xml --cov-config=setup.cfg
+    pytest --cov=qcodes --cov-report xml --cov-config=pyproject.toml
 
 To test and see the coverage (with missing lines) of a single module:
 
@@ -114,6 +127,28 @@ You can also run single tests with something like:
 
 
 If the tests pass, you should be ready to start developing!
+
+
+Building the documentation
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We use Sphinx for documentations, makefiles are provided both for
+Windows, and \*nix, so that you can build the documentation locally.
+
+Make sure that you have the extra dependencies required to install the docs
+
+.. code:: bash
+
+    pip install .[docs] -c requirements.txt
+
+Go to the directory ``docs`` and
+
+.. code:: bash
+
+    make html
+
+This generate a webpage, index.html, in ``docs/_build/html`` with the
+rendered html.
 
 
 New code and testing

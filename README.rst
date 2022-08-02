@@ -24,7 +24,7 @@ shells and in stand-alone scripts as well. The features in
 Install
 =======
 
-In general, refer to `here <http://qcodes.github.io/Qcodes/start/index.html#installation>`__
+In general, refer to `here <http://qcodes.github.io/Qcodes/start/index.html#install\ation>`__
 for installation.
 
 
@@ -34,23 +34,6 @@ Docs
 Read it `here <http://qcodes.github.io/Qcodes>`__ .
 Documentation is updated and deployed on every successful build in master.
 
-We use sphinx for documentations, makefiles are provided both for
-Windows, and \*nix, so that you can build the documentation locally.
-
-Make sure that you have the extra dependencies required to install the docs
-
-.. code:: bash
-
-    pip install -r docs_requirements.txt
-
-Go to the directory ``docs`` and
-
-.. code:: bash
-
-    make html
-
-This generate a webpage, index.html, in ``docs/_build/html`` with the
-rendered html.
 
 Code of Conduct
 ===============
