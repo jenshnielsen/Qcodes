@@ -24,3 +24,5 @@ devices:
 resources:
   GPIB::8::INSTR:
     device: device 1
+  GPIB::8::1::INSTR:
+    device: device 1

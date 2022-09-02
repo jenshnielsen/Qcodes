@@ -30,4 +30,6 @@ devices:
 
 resources:
   GPIB::1::INSTR:
-     device: device 1
+    device: device 1
+  GPIB::1::1::INSTR:
+    device: device 1

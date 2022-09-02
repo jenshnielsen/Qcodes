@@ -75,7 +75,13 @@ devices:
 resources:
   GPIB::1::INSTR:
     device: device bad_state
+  GPIB::1::1::INSTR:
+    device: device bad_state
   GPIB::2::INSTR:
     device: device six
+  GPIB::2::1::INSTR:
+    device: device six
   GPIB::3::INSTR:
+    device: device four
+  GPIB::3::1::INSTR:
     device: device four

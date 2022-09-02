@@ -193,3 +193,5 @@ devices:
 resources:
   GPIB::1::INSTR:
     device: KeysightN9030B
+  GPIB::1::1::INSTR:
+    device: KeysightN9030B

@@ -13,3 +13,5 @@ devices:
 resources:
   GPIB::3::INSTR:
     device: device 1
+  GPIB::3::1::INSTR:
+    device: device 1

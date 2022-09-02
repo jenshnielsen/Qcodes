@@ -219,5 +219,9 @@ devices:
 resources:
   GPIB::11::INSTR:
     device: Keithley
+  GPIB::11::1::INSTR:
+    device: Keithley
   GPIB::6::INSTR:
+    device: Keithley_6_slots
+  GPIB::6::1::INSTR:
     device: Keithley_6_slots

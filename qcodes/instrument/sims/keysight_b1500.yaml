@@ -92,3 +92,5 @@ devices:
 resources:
   GPIB::1::INSTR:
     device: KeysightB1500
+  GPIB::1::1::INSTR:
+    device: KeysightB1500
