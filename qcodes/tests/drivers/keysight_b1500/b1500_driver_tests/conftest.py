@@ -23,7 +23,7 @@ def _make_b1500(request):
         path_to_yaml = sims.__file__.replace("__init__.py", "keysight_b1500.yaml")
 
         instance = KeysightB1500(
-            "SPA", address="GPIB::1::INSTR", visalib=path_to_yaml + "@sim"
+            "SPA", address="GPIB::1::1::INSTR", visalib=path_to_yaml + "@sim"
         )
 
     instance.get_status()

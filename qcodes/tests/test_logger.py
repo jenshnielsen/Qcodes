@@ -34,8 +34,8 @@ def remove_root_handlers():
     logger.logger.console_handler = None
 
 
-@pytest.fixture
-def awg5208():
+@pytest.fixture(name="awg5208")
+def _make_awg5208():
 
     import qcodes.instrument.sims as sims
     from qcodes.instrument_drivers.tektronix.AWG5208 import AWG5208
@@ -44,9 +44,7 @@ def awg5208():
 
     logger.start_logger()
 
-    inst = AWG5208('awg_sim',
-                   address='GPIB0::1::INSTR',
-                   visalib=visalib)
+    inst = AWG5208("awg_sim", address="GPIB0::1::1::INSTR", visalib=visalib)
 
     try:
         yield inst
@@ -54,8 +52,8 @@ def awg5208():
         inst.close()
 
 
-@pytest.fixture
-def model372():
+@pytest.fixture(name="model372")
+def _make_model372():
     import qcodes.instrument.sims as sims
     from qcodes.tests.drivers.test_lakeshore import Model_372_Mock
 
@@ -66,8 +64,9 @@ def model372():
     visalib = sims.__file__.replace('__init__.py',
                                     'lakeshore_model372.yaml@sim')
 
-    inst = Model_372_Mock('lakeshore_372', 'GPIB::3::INSTR',
-                          visalib=visalib, device_clear=False)
+    inst = Model_372_Mock(
+        "lakeshore_372", "GPIB::3::1::INSTR", visalib=visalib, device_clear=False
+    )
     inst.sample_heater.range_limits([0, 0.25, 0.5, 1, 2, 3, 4, 7])
     inst.warmup_heater.range_limits([0, 0.25, 0.5, 1, 2, 3, 4, 7])
     try:
@@ -76,20 +75,24 @@ def model372():
         inst.close()
 
 
-@pytest.fixture()
-def AMI430_3D():
+@pytest.fixture(name="AMI430_3D")
+def _make_AMI430_3D():
     import numpy as np
 
     import qcodes.instrument.sims as sims
     from qcodes.instrument.ip_to_visa import AMI430_VISA
     from qcodes.instrument_drivers.american_magnetics.AMI430 import AMI430_3D
-    visalib = sims.__file__.replace('__init__.py', 'AMI430.yaml@sim')
-    mag_x = AMI430_VISA('x', address='GPIB::1::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
-    mag_y = AMI430_VISA('y', address='GPIB::2::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
-    mag_z = AMI430_VISA('z', address='GPIB::3::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
+
+    visalib = sims.__file__.replace("__init__.py", "AMI430.yaml@sim")
+    mag_x = AMI430_VISA(
+        "x", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
+    mag_y = AMI430_VISA(
+        "y", address="GPIB::2::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
+    mag_z = AMI430_VISA(
+        "z", address="GPIB::3::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
     field_limit = [
         lambda x, y, z: x == 0 and y == 0 and z < 3,
         lambda x, y, z: np.linalg.norm([x, y, z]) < 2

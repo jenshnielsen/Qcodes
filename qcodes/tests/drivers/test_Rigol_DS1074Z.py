@@ -9,11 +9,12 @@ visalib = sims.__file__.replace('__init__.py', 'Rigol_DS1074Z.yaml@sim')
 
 @pytest.fixture(scope='function')
 def driver():
-    rigol = DS1074Z('rigol',
-                    address='GPIB::1::INSTR',
-                    # This matches the address in the .yaml file
-                    visalib=visalib
-                    )
+    rigol = DS1074Z(
+        "rigol",
+        address="GPIB::1::1::INSTR",
+        # This matches the address in the .yaml file
+        visalib=visalib,
+    )
 
     yield rigol
     rigol.close()

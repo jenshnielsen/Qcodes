@@ -7,9 +7,9 @@ visalib = sims.__file__.replace('__init__.py', 'Keysight_33xxx.yaml@sim')
 
 @pytest.fixture(scope='module')
 def driver():
-    kw_sim = WaveformGenerator_33XXX('kw_sim',
-                                      address='GPIB::1::INSTR',
-                                      visalib=visalib)
+    kw_sim = WaveformGenerator_33XXX(
+        "kw_sim", address="GPIB::1::1::INSTR", visalib=visalib
+    )
     yield kw_sim
 
     kw_sim.close()

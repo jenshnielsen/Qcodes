@@ -10,9 +10,9 @@ visalib = sims.__file__.replace('__init__.py', 'Keysight_34465A.yaml@sim')
 
 @pytest.fixture(scope='function')
 def driver():
-    keysight_sim = Keysight_34465A('keysight_34465A_sim',
-                                   address='GPIB::1::INSTR',
-                                   visalib=visalib)
+    keysight_sim = Keysight_34465A(
+        "keysight_34465A_sim", address="GPIB::1::1::INSTR", visalib=visalib
+    )
 
     try:
         yield keysight_sim
@@ -22,9 +22,9 @@ def driver():
 
 @pytest.fixture(scope='function')
 def driver_with_read_and_fetch_mocked(val_volt):
-    keysight_sim = Keysight_34465A('keysight_34465A_sim',
-                                   address='GPIB::1::INSTR',
-                                   visalib=visalib)
+    keysight_sim = Keysight_34465A(
+        "keysight_34465A_sim", address="GPIB::1::1::INSTR", visalib=visalib
+    )
 
     def get_ask_with_read_mock(original_ask, read_value):
         def ask_with_read_mock(cmd: str) -> str:

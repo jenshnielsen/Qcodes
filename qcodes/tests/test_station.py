@@ -285,7 +285,7 @@ instruments:
   lakeshore:
     type: qcodes.instrument_drivers.Lakeshore.Model_336.Model_336
     enable_forced_reconnect: true
-    address: GPIB::2::INSTR
+    address: GPIB::2::1::INSTR
     init:
       visalib: '{sims_path}lakeshore_model336.yaml@sim'
   mock_dac:
@@ -537,17 +537,19 @@ instruments:
     assert len(mock.parameters) == 2  # there is also IDN
 
     # test address
-    sims_path = get_qcodes_path('instrument', 'sims')
-    st = station_from_config_str(f"""
+    sims_path = get_qcodes_path("instrument", "sims")
+    st = station_from_config_str(
+        f"""
 instruments:
   lakeshore:
     type: qcodes.instrument_drivers.Lakeshore.Model_336.Model_336
     enable_forced_reconnect: true
-    address: GPIB::2::INSTR
+    address: GPIB::2::1::INSTR
     init:
       visalib: '{sims_path}lakeshore_model336.yaml@sim'
-    """)
-    st.load_instrument('lakeshore')
+    """
+    )
+    st.load_instrument("lakeshore")
 
 
 def test_name_init_kwarg(simple_mock_station):

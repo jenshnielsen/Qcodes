@@ -31,7 +31,7 @@ def s46_six():
     """
     A six channel-per-relay instrument
     """
-    driver = S46('s46_six', address='GPIB::2::INSTR', visalib=visalib)
+    driver = S46("s46_six", address="GPIB::2::1::INSTR", visalib=visalib)
 
     try:
         yield driver
@@ -44,7 +44,7 @@ def s46_four():
     """
     A four channel-per-relay instrument
     """
-    driver = S46('s46_four', address='GPIB::3::INSTR', visalib=visalib)
+    driver = S46("s46_four", address="GPIB::3::1::INSTR", visalib=visalib)
 
     try:
         yield driver
@@ -64,7 +64,7 @@ def test_runtime_error_on_bad_init(request):
         RuntimeError,
         match="The driver is initialized from an undesirable instrument state"
     ):
-        S46('s46_bad_state', address='GPIB::1::INSTR', visalib=visalib)
+        S46("s46_bad_state", address="GPIB::1::1::INSTR", visalib=visalib)
 
 
 def test_query_close_once_at_init(caplog):
@@ -72,7 +72,7 @@ def test_query_close_once_at_init(caplog):
     Test that, during initialisation, we query the closed channels only once
     """
     with caplog.at_level(logging.DEBUG):
-        inst = S46('s46_test_query_once', address='GPIB::2::INSTR', visalib=visalib)
+        inst = S46("s46_test_query_once", address="GPIB::2::1::INSTR", visalib=visalib)
         assert caplog.text.count(":CLOS?") == 1
         inst.close()
 

@@ -8,7 +8,7 @@ visalib = sims.__file__.replace('__init__.py', 'AimTTi_PL601P.yaml@sim')
 
 @pytest.fixture(scope='function')
 def driver():
-    driver = AimTTi('AimTTi', address='GPIB::1::INSTR', visalib=visalib)
+    driver = AimTTi("AimTTi", address="GPIB::1::1::INSTR", visalib=visalib)
 
     yield driver
     driver.close()

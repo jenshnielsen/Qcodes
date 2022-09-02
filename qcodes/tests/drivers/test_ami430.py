@@ -48,12 +48,15 @@ def magnet_axes_instances():
     Start three mock instruments representing current drivers for the x, y,
     and z directions.
     """
-    mag_x = AMI430_VISA('x', address='GPIB::1::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
-    mag_y = AMI430_VISA('y', address='GPIB::2::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
-    mag_z = AMI430_VISA('z', address='GPIB::3::INSTR', visalib=visalib,
-                        terminator='\n', port=1)
+    mag_x = AMI430_VISA(
+        "x", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
+    mag_y = AMI430_VISA(
+        "y", address="GPIB::2::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
+    mag_z = AMI430_VISA(
+        "z", address="GPIB::3::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
 
     yield mag_x, mag_y, mag_z
 
@@ -79,8 +82,9 @@ def _make_current_driver(magnet_axes_instances):
 
 @pytest.fixture(scope="function", name="ami430")
 def _make_ami430():
-    mag = AMI430_VISA('ami430', address='GPIB::1::INSTR', visalib=visalib,
-                      terminator='\n', port=1)
+    mag = AMI430_VISA(
+        "ami430", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n", port=1
+    )
     yield mag
     mag.close()
 

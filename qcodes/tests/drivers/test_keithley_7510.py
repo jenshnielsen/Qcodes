@@ -11,9 +11,9 @@ VISALIB = sims.__file__.replace('__init__.py', 'keithley_7510.yaml@sim')
 
 @pytest.fixture(scope="module")
 def dmm_7510_driver():
-    inst = Keithley7510('Keithley_7510_sim',
-                        address='GPIB::1::INSTR',
-                        visalib=VISALIB)
+    inst = Keithley7510(
+        "Keithley_7510_sim", address="GPIB::1::1::INSTR", visalib=VISALIB
+    )
 
     try:
         yield inst

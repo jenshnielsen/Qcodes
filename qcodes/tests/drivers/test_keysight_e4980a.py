@@ -9,9 +9,9 @@ VISALIB = sims.__file__.replace('__init__.py', 'Keysight_E4980A.yaml@sim')
 
 @pytest.fixture(name="driver")
 def _make_driver():
-    instr = E4980A.KeysightE4980A('E4980A',
-                                  address="GPIB::1::INSTR",
-                                  visalib=VISALIB)
+    instr = E4980A.KeysightE4980A(
+        "E4980A", address="GPIB::1::1::INSTR", visalib=VISALIB
+    )
     yield instr
     instr.close()
 

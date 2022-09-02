@@ -7,11 +7,13 @@ visalib = sims.__file__.replace('__init__.py', 'RSHMC804x.yaml@sim')
 
 @pytest.fixture(scope='module')
 def HMC8041():
-    hmc8041 = _RohdeSchwarzHMC804x('hmc8041',
-                                   address='GPIB::1::INSTR',
-                                   num_channels=1,
-                                   visalib=visalib,
-                                   terminator='\n')
+    hmc8041 = _RohdeSchwarzHMC804x(
+        "hmc8041",
+        address="GPIB::1::1::INSTR",
+        num_channels=1,
+        visalib=visalib,
+        terminator="\n",
+    )
     yield hmc8041
 
     hmc8041.close()
@@ -19,11 +21,13 @@ def HMC8041():
 
 @pytest.fixture(scope='module')
 def HMC8042():
-    hmc8042 = _RohdeSchwarzHMC804x('hmc8042',
-                                   address='GPIB::1::INSTR',
-                                   num_channels=2,
-                                   visalib=visalib,
-                                   terminator='\n')
+    hmc8042 = _RohdeSchwarzHMC804x(
+        "hmc8042",
+        address="GPIB::1::1::INSTR",
+        num_channels=2,
+        visalib=visalib,
+        terminator="\n",
+    )
     yield hmc8042
 
     hmc8042.close()
@@ -31,11 +35,13 @@ def HMC8042():
 
 @pytest.fixture(scope='module')
 def HMC8043():
-    hmc8043 = _RohdeSchwarzHMC804x('hmc8043',
-                                   address='GPIB::1::INSTR',
-                                   num_channels=3,
-                                   visalib=visalib,
-                                   terminator='\n')
+    hmc8043 = _RohdeSchwarzHMC804x(
+        "hmc8043",
+        address="GPIB::1::1::INSTR",
+        num_channels=3,
+        visalib=visalib,
+        terminator="\n",
+    )
     yield hmc8043
 
     hmc8043.close()

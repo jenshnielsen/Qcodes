@@ -8,9 +8,7 @@ visalib = sims.__file__.replace('__init__.py', 'Keysight_N6705B.yaml@sim')
 
 @pytest.fixture(scope='module')
 def driver():
-    driver = N6705B.N6705B('N6705B',
-                           address="GPIB::1::INSTR",
-                           visalib=visalib)
+    driver = N6705B.N6705B("N6705B", address="GPIB::1::1::INSTR", visalib=visalib)
     yield driver
     driver.close()
 

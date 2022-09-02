@@ -48,9 +48,15 @@ def magnet_axes_instances():
     Start three mock instruments representing current drivers for the x, y,
     and z directions.
     """
-    mag_x = AMIModel430("x", address="GPIB::1::INSTR", visalib=visalib, terminator="\n")
-    mag_y = AMIModel430("y", address="GPIB::2::INSTR", visalib=visalib, terminator="\n")
-    mag_z = AMIModel430("z", address="GPIB::3::INSTR", visalib=visalib, terminator="\n")
+    mag_x = AMIModel430(
+        "x", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n"
+    )
+    mag_y = AMIModel430(
+        "y", address="GPIB::2::1::INSTR", visalib=visalib, terminator="\n"
+    )
+    mag_z = AMIModel430(
+        "z", address="GPIB::3::1::INSTR", visalib=visalib, terminator="\n"
+    )
 
     yield mag_x, mag_y, mag_z
 
@@ -77,7 +83,7 @@ def _make_current_driver(magnet_axes_instances):
 @pytest.fixture(scope="function", name="ami430")
 def _make_ami430():
     mag = AMIModel430(
-        "ami430", address="GPIB::1::INSTR", visalib=visalib, terminator="\n"
+        "ami430", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n"
     )
     yield mag
     mag.close()
@@ -137,9 +143,9 @@ def test_instantiation_compat_classes(request):
     """
     request.addfinalizer(AMIModel4303D.close_all)
     request.addfinalizer(AMI430_3D.close_all)
-    mag_x = AMI430("x", address="GPIB::1::INSTR", visalib=visalib, terminator="\n")
-    mag_y = AMI430("y", address="GPIB::2::INSTR", visalib=visalib, terminator="\n")
-    mag_z = AMI430("z", address="GPIB::3::INSTR", visalib=visalib, terminator="\n")
+    mag_x = AMI430("x", address="GPIB::1::1::INSTR", visalib=visalib, terminator="\n")
+    mag_y = AMI430("y", address="GPIB::2::1::INSTR", visalib=visalib, terminator="\n")
+    mag_z = AMI430("z", address="GPIB::3::1::INSTR", visalib=visalib, terminator="\n")
 
     driver = AMI430_3D("AMI430_3D", mag_x.name, mag_y.name, mag_z.name, field_limit)
 

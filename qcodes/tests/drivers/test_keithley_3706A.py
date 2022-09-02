@@ -10,9 +10,9 @@ visalib = sims.__file__.replace('__init__.py', 'Keithley_3706A.yaml@sim')
 
 @pytest.fixture(scope='function')
 def driver():
-    driver = Keithley_3706A('Keithley_3706A',
-                            address='GPIB::11::INSTR',
-                            visalib=visalib)
+    driver = Keithley_3706A(
+        "Keithley_3706A", address="GPIB::11::1::INSTR", visalib=visalib
+    )
     yield driver
     driver.close()
 

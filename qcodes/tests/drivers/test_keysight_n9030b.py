@@ -10,7 +10,7 @@ VISALIB = sims.__file__.replace('__init__.py', 'Keysight_N9030B.yaml@sim')
 
 @pytest.fixture(name="driver")
 def _make_driver():
-    driver = N9030B('n9030B_sim', address="GPIB::1::INSTR", visalib=VISALIB)
+    driver = N9030B("n9030B_sim", address="GPIB::1::1::INSTR", visalib=VISALIB)
     yield driver
     driver.close()
 

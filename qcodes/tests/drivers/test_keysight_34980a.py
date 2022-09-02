@@ -10,9 +10,9 @@ VISALIB = sims.__file__.replace('__init__.py', 'keysight_34980A.yaml@sim')
 
 @pytest.fixture(scope="module")
 def switch_driver():
-    inst = Keysight34980A('keysight_34980A_sim',
-                          address='GPIB::1::INSTR',
-                          visalib=VISALIB)
+    inst = Keysight34980A(
+        "keysight_34980A_sim", address="GPIB::1::1::INSTR", visalib=VISALIB
+    )
 
     try:
         yield inst

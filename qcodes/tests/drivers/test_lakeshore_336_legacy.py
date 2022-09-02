@@ -201,7 +201,10 @@ class Model_336_Mock(MockVisaInstrument, Model_336):
 def lakeshore_336():
     visalib = sims.__file__.replace("__init__.py", "lakeshore_model336.yaml@sim")
     return Model_336_Mock(
-        "lakeshore_336_fixture", "GPIB::2::INSTR", visalib=visalib, device_clear=False
+        "lakeshore_336_fixture",
+        "GPIB::2::1::INSTR",
+        visalib=visalib,
+        device_clear=False,
     )
 
 

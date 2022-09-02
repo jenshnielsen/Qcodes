@@ -283,10 +283,13 @@ def instrument_fixture(scope="function", name=None):
 
 @instrument_fixture(scope='function')
 def lakeshore_372():
-    visalib = sims.__file__.replace('__init__.py',
-                                    'lakeshore_model372.yaml@sim')
-    return Model_372_Mock('lakeshore_372_fixture', 'GPIB::3::INSTR',
-                          visalib=visalib, device_clear=False)
+    visalib = sims.__file__.replace("__init__.py", "lakeshore_model372.yaml@sim")
+    return Model_372_Mock(
+        "lakeshore_372_fixture",
+        "GPIB::3::1::INSTR",
+        visalib=visalib,
+        device_clear=False,
+    )
 
 
 def test_pid_set(lakeshore_372):
