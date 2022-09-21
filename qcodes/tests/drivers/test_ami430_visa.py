@@ -1179,3 +1179,12 @@ def test_switch_heater_enabled(ami430):
     assert ami430.switch_heater.enabled() is True
     ami430.switch_heater.enabled(False)
     assert ami430.switch_heater.enabled() is False
+
+
+def test_snapshot(ami430, caplog):
+    ami430.switch_heater.enabled(False)
+    with caplog.at_level(logging.INFO):
+        ami430.snapshot(update=True)
+    # this triggers six messages. 3 warning and 3 info
+    # for the 3 paramters that cannot be snapshotted
+    assert len(caplog.records) == 0
