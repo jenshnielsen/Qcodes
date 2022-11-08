@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <link rel="icon" href="../../_static/qcodes_favicon.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qcodes.utils.magic &mdash; QCoDeS 0.14.0.dev10271 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="qcodes.instrument_drivers package" href="../generated/qcodes.instrument_drivers.html" />
+    <link rel="prev" title="qcodes.plots.qcmatplotlib" href="../plots/qcmatplotlib.html" />
+    <link href="../../_static/style.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> QCoDeS
+          </a>
+              <div class="version">
+                0.14.0.dev10271+master.g4ce76c167
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../start/index.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/15_minutes_to_QCoDeS.html">15 minutes to QCoDeS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples of using QCoDeS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../community/index.html">Community Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dataset/index.html">DataSet</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">QCoDes API documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#qcodes-api">QCoDeS API</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#legacy-api">Legacy API</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../loops.html">qcodes.loops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../actions.html">qcodes.actions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measure.html">qcodes.measure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../data/index.html">qcodes.data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../extensions/slack.html">qcodes.extensions.slack</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plots/index.html">qcodes.plots</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">qcodes.utils.magic</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../generated/qcodes.instrument_drivers.html">qcodes.instrument_drivers package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../drivers_api/index.html">Instrument Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes/index.html">Changelogs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../help.html">Get Help</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">QCoDeS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">QCoDes API documentation</a></li>
+      <li class="breadcrumb-item active">qcodes.utils.magic</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/api/utils/magic.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="module-qcodes.utils.magic">
+<span id="qcodes-utils-magic"></span><h1>qcodes.utils.magic<a class="headerlink" href="#module-qcodes.utils.magic" title="Permalink to this heading"></a></h1>
+<p><strong>Classes:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.utils.magic.QCoDeSMagic" title="qcodes.utils.magic.QCoDeSMagic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QCoDeSMagic</span></code></a>(**kwargs)</p></td>
+<td><p>Magics related to code management (loading, saving, editing, ...).</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functions:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.utils.magic.register_magic_class" title="qcodes.utils.magic.register_magic_class"><code class="xref py py-obj docutils literal notranslate"><span class="pre">register_magic_class</span></code></a>([cls, magic_commands])</p></td>
+<td><p>Registers a iPython magic class.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py class">
+<dt class="sig sig-object py" id="qcodes.utils.magic.QCoDeSMagic">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">qcodes.utils.magic.</span></span><span class="sig-name descname"><span class="pre">QCoDeSMagic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.10/library/typing.html#typing.Any" title="(in Python v3.10)"><span class="pre">Any</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/utils/magic.html#QCoDeSMagic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.utils.magic.QCoDeSMagic" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://ipython.readthedocs.io/en/stable/api/generated/IPython.core.magic.html#IPython.core.magic.Magics" title="(in IPython v8.6.0)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Magics</span></code></a></p>
+<p>Magics related to code management (loading, saving, editing, …).</p>
+<p>Setup Magic. All args and kwargs are passed to super class.</p>
+<p><strong>Methods:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.utils.magic.QCoDeSMagic.measurement" title="qcodes.utils.magic.QCoDeSMagic.measurement"><code class="xref py py-obj docutils literal notranslate"><span class="pre">measurement</span></code></a>(line[, cell])</p></td>
+<td><p>Create <code class="docutils literal notranslate"><span class="pre">qcodes.Loop</span></code> measurement mimicking Python <code class="docutils literal notranslate"><span class="pre">for</span></code> syntax via iPython magic.</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Attributes:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.utils.magic.QCoDeSMagic.magics" title="qcodes.utils.magic.QCoDeSMagic.magics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">magics</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.utils.magic.QCoDeSMagic.registered" title="qcodes.utils.magic.QCoDeSMagic.registered"><code class="xref py py-obj docutils literal notranslate"><span class="pre">registered</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.utils.magic.QCoDeSMagic.measurement">
+<span class="sig-name descname"><span class="pre">measurement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">line</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cell</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/utils/magic.html#QCoDeSMagic.measurement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.utils.magic.QCoDeSMagic.measurement" title="Permalink to this definition"></a></dt>
+<dd><p>Create <code class="docutils literal notranslate"><span class="pre">qcodes.Loop</span></code> measurement mimicking Python <code class="docutils literal notranslate"><span class="pre">for</span></code> syntax via
+iPython magic.</p>
+<p>Upon execution of a notebook cell, the code is transformed from the
+for loop structure to a QCoDeS Loop before being executed.
+Can be run by having <code class="docutils literal notranslate"><span class="pre">%%measurement</span></code> in the first line of a cell,
+followed by the measurement name (see below for an example).</p>
+<p>The for loop syntax differs slightly from a Python <code class="docutils literal notranslate"><span class="pre">for</span></code> loop,
+as it uses <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">{iterable}</span></code> instead of <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">{element}</span> <span class="pre">in</span> <span class="pre">{iterable}</span></code>.
+The reason is that <code class="docutils literal notranslate"><span class="pre">{element}</span></code> cannot be accessed (yet) in QCoDeS loops.</p>
+<p>Comments (#) are ignored in the loop.
+Any code after the loop will also be run, if separated by a blank
+line from the loop.</p>
+<p>The Loop object is by default stored in a variable named <code class="docutils literal notranslate"><span class="pre">loop</span></code>,
+and the dataset in <code class="docutils literal notranslate"><span class="pre">data</span></code>, and these can be overridden using options.
+Must be run in a Jupyter Notebook.
+Delays can be provided in a loop by adding <code class="docutils literal notranslate"><span class="pre">-d</span> <span class="pre">{delay}</span></code> after <code class="docutils literal notranslate"><span class="pre">for</span></code>.</p>
+<p>The following options can be passed along with the measurement name
+(e.g. <code class="docutils literal notranslate"><span class="pre">%%measurement</span> <span class="pre">-px</span> <span class="pre">-d</span> <span class="pre">data_name</span> <span class="pre">{measurement_name})</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span><span class="n">p</span> <span class="p">:</span> <span class="nb">print</span> <span class="n">transformed</span> <span class="n">code</span>
+<span class="o">-</span><span class="n">x</span> <span class="p">:</span> <span class="n">Do</span> <span class="ow">not</span> <span class="n">execute</span> <span class="n">code</span>
+<span class="o">-</span><span class="n">d</span> <span class="o">&lt;</span><span class="n">dataset_name</span><span class="o">&gt;</span> <span class="p">:</span> <span class="n">Use</span> <span class="n">custom</span> <span class="n">name</span> <span class="k">for</span> <span class="n">dataset</span>
+<span class="o">-</span><span class="n">l</span> <span class="o">&lt;</span><span class="n">loop_name</span><span class="o">&gt;</span> <span class="p">:</span> <span class="n">Use</span> <span class="n">custom</span> <span class="n">name</span> <span class="k">for</span> <span class="n">Loop</span>
+</pre></div>
+</div>
+<p>An example for a loop cell is as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">%%</span><span class="n">measurement</span> <span class="p">{</span><span class="o">-</span><span class="n">options</span><span class="p">}</span> <span class="p">{</span><span class="n">measurement_name</span><span class="p">}</span>
+<span class="k">for</span> <span class="p">{</span><span class="n">sweep_vals</span><span class="p">}:</span>
+    <span class="p">{</span><span class="n">measure_parameter1</span><span class="p">}</span>
+    <span class="p">{</span><span class="n">measure_parameter2</span><span class="p">}</span>
+    <span class="k">for</span> <span class="o">-</span><span class="n">d</span> <span class="mi">1</span> <span class="p">{</span><span class="n">sweep_vals2</span><span class="p">}:</span>
+        <span class="p">{</span><span class="n">measure_parameter3</span><span class="p">}</span>
+
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>which will be internally transformed to:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">qcodes</span>
+<span class="n">loop</span> <span class="o">=</span> <span class="n">qcodes</span><span class="o">.</span><span class="n">Loop</span><span class="p">({</span><span class="n">sweep_vals</span><span class="p">})</span><span class="o">.</span><span class="n">each</span><span class="p">(</span>
+    <span class="p">{</span><span class="n">measure_parameter1</span><span class="p">},</span>
+    <span class="p">{</span><span class="n">measure_parameter2</span><span class="p">},</span>
+    <span class="n">qcodes</span><span class="o">.</span><span class="n">Loop</span><span class="p">({</span><span class="n">sweep_vals2</span><span class="p">},</span> <span class="n">delay</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">each</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">measure_parameter3</span><span class="p">}))</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">get_data_set</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="p">{</span><span class="n">measurement_name</span><span class="p">})</span>
+
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>An explicit example of the line <code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">{sweep_vals}:</span></code> could be
+<code class="docutils literal notranslate"><span class="pre">for</span> <span class="pre">sweep_parameter.sweep(0,</span> <span class="pre">42,</span> <span class="pre">step=1):</span></code></p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="qcodes.utils.magic.QCoDeSMagic.magics">
+<span class="sig-name descname"><span class="pre">magics</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'cell':</span> <span class="pre">{'measurement':</span> <span class="pre">'measurement'},</span> <span class="pre">'line':</span> <span class="pre">{'measurement':</span> <span class="pre">'measurement'}}</span></em><a class="headerlink" href="#qcodes.utils.magic.QCoDeSMagic.magics" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="qcodes.utils.magic.QCoDeSMagic.registered">
+<span class="sig-name descname"><span class="pre">registered</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#qcodes.utils.magic.QCoDeSMagic.registered" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="qcodes.utils.magic.register_magic_class">
+<span class="sig-prename descclassname"><span class="pre">qcodes.utils.magic.</span></span><span class="sig-name descname"><span class="pre">register_magic_class</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cls=&lt;class</span> <span class="pre">'qcodes.utils.magic.QCoDeSMagic'&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">magic_commands=True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/utils/magic.html#register_magic_class"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.utils.magic.register_magic_class" title="Permalink to this definition"></a></dt>
+<dd><p>Registers a iPython magic class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cls</strong> – Magic class to register.</p></li>
+<li><p><strong>magic_commands</strong> (<em>List</em>) – List of magic commands within the class to
+register. If not specified, all magic commands are registered.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../plots/qcmatplotlib.html" class="btn btn-neutral float-left" title="qcodes.plots.qcmatplotlib" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../generated/qcodes.instrument_drivers.html" class="btn btn-neutral float-right" title="qcodes.instrument_drivers package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

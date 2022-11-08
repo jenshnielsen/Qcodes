@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+    <link rel="icon" href="../../_static/qcodes_favicon.png" type="image/png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>qcodes.extensions.slack &mdash; QCoDeS 0.14.0.dev10271 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@jupyter-widgets/html-manager@^1.0.1/dist/embed-amd.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="qcodes.plots" href="../plots/index.html" />
+    <link rel="prev" title="qcodes.data.location" href="../data/location.html" />
+    <link href="../../_static/style.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../../index.html" class="icon icon-home"> QCoDeS
+          </a>
+              <div class="version">
+                0.14.0.dev10271+master.g4ce76c167
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../start/index.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/15_minutes_to_QCoDeS.html">15 minutes to QCoDeS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples/index.html">Examples of using QCoDeS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../community/index.html">Community Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../dataset/index.html">DataSet</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">QCoDes API documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../index.html#qcodes-api">QCoDeS API</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html#legacy-api">Legacy API</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="../loops.html">qcodes.loops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../actions.html">qcodes.actions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../measure.html">qcodes.measure</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../data/index.html">qcodes.data</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">qcodes.extensions.slack</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../plots/index.html">qcodes.plots</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../utils/magic.html">qcodes.utils.magic</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../generated/qcodes.instrument_drivers.html">qcodes.instrument_drivers package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../drivers_api/index.html">Instrument Drivers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changes/index.html">Changelogs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../help.html">Get Help</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">QCoDeS</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">QCoDes API documentation</a></li>
+      <li class="breadcrumb-item active">qcodes.extensions.slack</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/api/extensions/slack.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="module-qcodes.extensions.slack">
+<span id="qcodes-extensions-slack"></span><h1>qcodes.extensions.slack<a class="headerlink" href="#module-qcodes.extensions.slack" title="Permalink to this heading"></a></h1>
+<p>Slack bot is used to send information about qcodes via Slack IMs.
+Some default commands are provided, and custom commands/tasks can be
+attached (see below).</p>
+<p>To setup the Slack bot, a bot first has to be created via Slack
+by clicking ‘Create New App’ on <a class="reference external" href="https://api.slack.com/apps">https://api.slack.com/apps</a>.
+Once created, the bot will have a name and unique token.
+These and other settings have to be saved in a config dict (see init( or
+Parameters) in <a class="reference internal" href="#qcodes.extensions.slack.Slack" title="qcodes.extensions.slack.Slack"><code class="xref py py-class docutils literal notranslate"><span class="pre">Slack</span></code></a>).</p>
+<p>The App containing your bot needs to have the following bot token scopes to
+perform all methods successfully:
+- channels:history
+- channels:read
+- chat:write
+- files:write
+- users:read
+These can be set after clicking OAuth &amp; Permissions in the left menubar after
+selecting your bot at https://api.slack.com/apps (or during creation).</p>
+<p>Communication with the Slack bot is performed via instant messaging.
+When an IM is sent to the Slack bot, it will be processed during the next
+<cite>update()</cite> call (provided the username is registered in the config).
+Standard commands provided to the Slack bot are:</p>
+<ul class="simple">
+<li><p>plot: Upload latest qcodes plot.</p></li>
+<li><p>msmt/measurement: Print information about latest measurement.</p></li>
+<li><p>notify finished: Send message once measurement is finished.</p></li>
+</ul>
+<p>Custom commands can be added as (cmd, func) key-value pairs to
+<cite>self.commands</cite>. When <cite>cmd</cite> is sent to the bot, <cite>func</cite> is evaluated.</p>
+<p>Custom tasks can be added as well. These are functions that are performed
+every time an update is called. The function must return a boolean that
+indicates if the task should be removed from the list of tasks.
+A custom task can be added as a (cmd, func) key-value pair  to
+<cite>self.task_commands</cite>.
+They can then be called through Slack IM via:</p>
+<p><code class="docutils literal notranslate"><span class="pre">notify/task</span> <span class="pre">{cmd}</span> <span class="pre">*args:</span></code> register task with name <cite>cmd</cite> that is
+performed every time <cite>update()</cite> is called.</p>
+<p><strong>Exceptions:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.SlackTimeoutWarning" title="qcodes.extensions.slack.SlackTimeoutWarning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SlackTimeoutWarning</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Functions:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.convert_command" title="qcodes.extensions.slack.convert_command"><code class="xref py py-obj docutils literal notranslate"><span class="pre">convert_command</span></code></a>(text)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Classes:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack" title="qcodes.extensions.slack.Slack"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Slack</span></code></a>([interval, config, auto_start])</p></td>
+<td><p>Initializes Slack bot, including auto-updating widget if in notebook and using multiprocessing.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py exception">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.SlackTimeoutWarning">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">qcodes.extensions.slack.</span></span><span class="sig-name descname"><span class="pre">SlackTimeoutWarning</span></span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#SlackTimeoutWarning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.SlackTimeoutWarning" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.10/library/exceptions.html#UserWarning" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">UserWarning</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.convert_command">
+<span class="sig-prename descclassname"><span class="pre">qcodes.extensions.slack.</span></span><span class="sig-name descname"><span class="pre">convert_command</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#convert_command"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.convert_command" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">qcodes.extensions.slack.</span></span><span class="sig-name descname"><span class="pre">Slack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">auto_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">commands</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.10/library/threading.html#threading.Thread" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Thread</span></code></a></p>
+<p>Initializes Slack bot, including auto-updating widget if in notebook
+and using multiprocessing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>interval</strong> (<a class="reference external" href="https://docs.python.org/3.10/library/functions.html#int" title="(in Python v3.10)"><em>int</em></a>) – Update interval for widget (must be over 1s).</p></li>
+<li><p><strong>config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3.10/library/stdtypes.html#dict" title="(in Python v3.10)"><em>dict</em></a><em>]</em>) – <p>Config dict
+If not given, uses qc.config[‘user’][‘slack’]
+The config dict must contain the following keys:</p>
+<ul>
+<li><p>’bot_name’: Name of the bot</p></li>
+<li><p>’bot_token’: Token from bot (obtained from slack website)</p></li>
+<li><p>’names’: Usernames to periodically check for IM messages</p></li>
+</ul>
+</p></li>
+<li><p><strong>auto_start</strong> (<a class="reference external" href="https://docs.python.org/3.10/library/functions.html#bool" title="(in Python v3.10)"><em>bool</em></a>) – Defaults to True.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Methods:</strong></p>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.start" title="qcodes.extensions.slack.Slack.start"><code class="xref py py-obj docutils literal notranslate"><span class="pre">start</span></code></a>()</p></td>
+<td><p>Start the thread's activity.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.run" title="qcodes.extensions.slack.Slack.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>()</p></td>
+<td><p>Thread event loop that periodically checks for updates.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.stop" title="qcodes.extensions.slack.Slack.stop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stop</span></code></a>()</p></td>
+<td><p>Stop checking for updates.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.exit" title="qcodes.extensions.slack.Slack.exit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">exit</span></code></a>()</p></td>
+<td><p>Exit event loop, stop Thread.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.user_from_id" title="qcodes.extensions.slack.Slack.user_from_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">user_from_id</span></code></a>(user_id)</p></td>
+<td><p>Retrieve user from user id.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.get_users" title="qcodes.extensions.slack.Slack.get_users"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_users</span></code></a>(usernames)</p></td>
+<td><p>Extracts user information for users.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.get_im_ids" title="qcodes.extensions.slack.Slack.get_im_ids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_im_ids</span></code></a>(users)</p></td>
+<td><p>Adds IM ids of users to users dict.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.get_im_messages" title="qcodes.extensions.slack.Slack.get_im_messages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_im_messages</span></code></a>(username, **kwargs)</p></td>
+<td><p>Retrieves IM messages from username.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.get_new_im_messages" title="qcodes.extensions.slack.Slack.get_new_im_messages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_new_im_messages</span></code></a>()</p></td>
+<td><p>Retrieves new IM messages for each user in self.users.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.update" title="qcodes.extensions.slack.Slack.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
+<td><p>Performs tasks, and checks for new messages.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.help_message" title="qcodes.extensions.slack.Slack.help_message"><code class="xref py py-obj docutils literal notranslate"><span class="pre">help_message</span></code></a>()</p></td>
+<td><p>Return simple help message</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.handle_messages" title="qcodes.extensions.slack.Slack.handle_messages"><code class="xref py py-obj docutils literal notranslate"><span class="pre">handle_messages</span></code></a>(messages)</p></td>
+<td><p>Performs commands depending on messages.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.add_task" title="qcodes.extensions.slack.Slack.add_task"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_task</span></code></a>(command, *args, channel, **kwargs)</p></td>
+<td><p>Add a task to self.tasks, which will be executed during each update :param command: Task command.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.upload_latest_plot" title="qcodes.extensions.slack.Slack.upload_latest_plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload_latest_plot</span></code></a>(channel, **kwargs)</p></td>
+<td><p>Uploads latest plot (if any) to slack channel.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.print_measurement_information" title="qcodes.extensions.slack.Slack.print_measurement_information"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_measurement_information</span></code></a>(channel, **kwargs)</p></td>
+<td><p>Prints information about the current measurement.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#qcodes.extensions.slack.Slack.check_msmt_finished" title="qcodes.extensions.slack.Slack.check_msmt_finished"><code class="xref py py-obj docutils literal notranslate"><span class="pre">check_msmt_finished</span></code></a>(channel, **kwargs)</p></td>
+<td><p>Checks if the latest measurement is completed.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.start"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.start" title="Permalink to this definition"></a></dt>
+<dd><p>Start the thread’s activity.</p>
+<p>It must be called at most once per thread object. It arranges for the
+object’s run() method to be invoked in a separate thread of control.</p>
+<p>This method will raise a RuntimeError if called more than once on the
+same thread object.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.run">
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.run"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.run" title="Permalink to this definition"></a></dt>
+<dd><p>Thread event loop that periodically checks for updates.
+Can be stopped via  <a class="reference internal" href="#qcodes.extensions.slack.Slack.stop" title="qcodes.extensions.slack.Slack.stop"><code class="xref py py-meth docutils literal notranslate"><span class="pre">stop()</span></code></a> , after which the Thread is stopped.
+:returns: None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.stop">
+<span class="sig-name descname"><span class="pre">stop</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.stop"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.stop" title="Permalink to this definition"></a></dt>
+<dd><p>Stop checking for updates. Can be started again via <a class="reference internal" href="#qcodes.extensions.slack.Slack.start" title="qcodes.extensions.slack.Slack.start"><code class="xref py py-meth docutils literal notranslate"><span class="pre">start()</span></code></a>.
+:returns: None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.exit">
+<span class="sig-name descname"><span class="pre">exit</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.exit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.exit" title="Permalink to this definition"></a></dt>
+<dd><p>Exit event loop, stop Thread.
+:returns: None</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.user_from_id">
+<span class="sig-name descname"><span class="pre">user_from_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">user_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.user_from_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.user_from_id" title="Permalink to this definition"></a></dt>
+<dd><p>Retrieve user from user id.
+:param user_id: Id from which to retrieve user information.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>User information.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.10/library/stdtypes.html#dict" title="(in Python v3.10)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.get_users">
+<span class="sig-name descname"><span class="pre">get_users</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">usernames</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.get_users"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.get_users" title="Permalink to this definition"></a></dt>
+<dd><p>Extracts user information for users.
+:param usernames: Slack usernames of users.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>{username: user}</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.10/library/stdtypes.html#dict" title="(in Python v3.10)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.get_im_ids">
+<span class="sig-name descname"><span class="pre">get_im_ids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">users</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.get_im_ids"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.get_im_ids" title="Permalink to this definition"></a></dt>
+<dd><p>Adds IM ids of users to users dict.
+Also adds <cite>last_ts</cite> to the latest IM message
+:param users: {username: user}
+:type users: dict</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.get_im_messages">
+<span class="sig-name descname"><span class="pre">get_im_messages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">username</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.get_im_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.get_im_messages" title="Permalink to this definition"></a></dt>
+<dd><p>Retrieves IM messages from username.
+:param username: Name of user.
+:param **kwargs: Additional kwargs for retrieving IM messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of IM messages.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.get_new_im_messages">
+<span class="sig-name descname"><span class="pre">get_new_im_messages</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.get_new_im_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.get_new_im_messages" title="Permalink to this definition"></a></dt>
+<dd><p>Retrieves new IM messages for each user in self.users.
+Updates user[‘last_ts’] to ts of newest message.
+:returns: {username: [messages list]} newer than last_ts.
+:rtype: im_messages (Dict)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.update" title="Permalink to this definition"></a></dt>
+<dd><p>Performs tasks, and checks for new messages.
+Periodically called from widget update.
+:returns: None.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.help_message">
+<span class="sig-name descname"><span class="pre">help_message</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.help_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.help_message" title="Permalink to this definition"></a></dt>
+<dd><p>Return simple help message</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.handle_messages">
+<span class="sig-name descname"><span class="pre">handle_messages</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">messages</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.handle_messages"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.handle_messages" title="Permalink to this definition"></a></dt>
+<dd><p>Performs commands depending on messages.
+This includes adding tasks to be performed during each update.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.add_task">
+<span class="sig-name descname"><span class="pre">add_task</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">command</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.add_task"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.add_task" title="Permalink to this definition"></a></dt>
+<dd><p>Add a task to self.tasks, which will be executed during each update
+:param command: Task command.
+:param *args: Additional args for command.
+:param channel: Slack channel (can also be IM channel).
+:param **kwargs: Additional kwargs for particular.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.upload_latest_plot">
+<span class="sig-name descname"><span class="pre">upload_latest_plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.upload_latest_plot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.upload_latest_plot" title="Permalink to this definition"></a></dt>
+<dd><p>Uploads latest plot (if any) to slack channel.
+The latest plot is retrieved from
+<a class="reference internal" href="../plots/base.html#qcodes.plots.base.BasePlot" title="qcodes.plots.base.BasePlot"><code class="xref py py-class docutils literal notranslate"><span class="pre">qcodes.plots.base.BasePlot</span></code></a>, which is updated
+every time a new qcodes plot is instantiated.
+:param channel: Slack channel (can also be IM channel).
+:param **kwargs: Not used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.print_measurement_information">
+<span class="sig-name descname"><span class="pre">print_measurement_information</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.print_measurement_information"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.print_measurement_information" title="Permalink to this definition"></a></dt>
+<dd><p>Prints information about the current measurement.
+Information printed is percentage complete, and dataset representation.
+Dataset is retrieved from DataSet.latest_dataset, which updates itself
+every time a new dataset is created
+:param channel: Slack channel (can also be IM channel).
+:param **kwargs: Not used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="qcodes.extensions.slack.Slack.check_msmt_finished">
+<span class="sig-name descname"><span class="pre">check_msmt_finished</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">channel</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/qcodes/extensions/slack.html#Slack.check_msmt_finished"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#qcodes.extensions.slack.Slack.check_msmt_finished" title="Permalink to this definition"></a></dt>
+<dd><p>Checks if the latest measurement is completed.
+:param channel: Slack channel (can also be IM channel).
+:param **kwargs: Not used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if measurement is finished, False otherwise.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3.10/library/functions.html#bool" title="(in Python v3.10)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../data/location.html" class="btn btn-neutral float-left" title="qcodes.data.location" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../plots/index.html" class="btn btn-neutral float-right" title="qcodes.plots" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
