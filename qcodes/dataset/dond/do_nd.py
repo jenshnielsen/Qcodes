@@ -5,7 +5,18 @@ import logging
 import time
 from contextlib import ExitStack
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Mapping, Sequence, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Mapping,
+    NoReturn,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+    overload,
+)
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -555,6 +566,63 @@ class _SweepMeasGroup:
     @property
     def parameters(self) -> tuple[ParameterBase, ...]:
         return self._parameters
+
+
+@overload
+def dond(
+    *params: AbstractSweep | TogetherSweep | ParamMeasT,
+    write_period: float | None = None,
+    measurement_name: str | Sequence[str] = "",
+    exp: Experiment | Sequence[Experiment] | None = None,
+    enter_actions: ActionsT = (),
+    exit_actions: ActionsT = (),
+    do_plot: bool | None = None,
+    show_progress: bool | None = None,
+    use_threads: bool | None = None,
+    additional_setpoints: Sequence[ParameterBase] = tuple(),
+    log_info: str | None = None,
+    break_condition: BreakConditionT | None = None,
+    dataset_dependencies: Mapping[str, Sequence[ParamMeasT]] | None = None,
+) -> AxesTupleListWithDataSet:
+    ...
+
+
+@overload
+def dond(
+    *params: AbstractSweep | TogetherSweep | Sequence[ParamMeasT],
+    write_period: float | None = None,
+    measurement_name: str | Sequence[str] = "",
+    exp: Experiment | Sequence[Experiment] | None = None,
+    enter_actions: ActionsT = (),
+    exit_actions: ActionsT = (),
+    do_plot: bool | None = None,
+    show_progress: bool | None = None,
+    use_threads: bool | None = None,
+    additional_setpoints: Sequence[ParameterBase] = tuple(),
+    log_info: str | None = None,
+    break_condition: BreakConditionT | None = None,
+    dataset_dependencies: Mapping[str, Sequence[ParamMeasT]] | None = None,
+) -> MultiAxesTupleListWithDataSet:
+    ...
+
+
+@overload
+def dond(
+    *params: AbstractSweep | TogetherSweep,
+    write_period: float | None = None,
+    measurement_name: str | Sequence[str] = "",
+    exp: Experiment | Sequence[Experiment] | None = None,
+    enter_actions: ActionsT = (),
+    exit_actions: ActionsT = (),
+    do_plot: bool | None = None,
+    show_progress: bool | None = None,
+    use_threads: bool | None = None,
+    additional_setpoints: Sequence[ParameterBase] = tuple(),
+    log_info: str | None = None,
+    break_condition: BreakConditionT | None = None,
+    dataset_dependencies: Mapping[str, Sequence[ParamMeasT]] | None = None,
+) -> NoReturn:
+    ...
 
 
 def dond(
