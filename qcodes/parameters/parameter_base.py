@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence, Sized
 from datetime import datetime
 from functools import cached_property, wraps
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from qcodes.metadatable import Metadatable
 from qcodes.utils import DelegateAttributes, full_class, qcodes_abstractmethod
@@ -83,7 +83,10 @@ def invert_val_mapping(val_mapping: Mapping[Any, Any]) -> dict[Any, Any]:
     return {v: k for k, v in val_mapping.items()}
 
 
-class ParameterBase(Metadatable):
+InstrType = TypeVar("InstrType", bound=InstrumentBase)
+
+
+class ParameterBase(Metadatable, Generic[InstrType]):
     """
     Shared behavior for all parameters. Not intended to be used
     directly, normally you should use ``Parameter``, ``ArrayParameter``,
@@ -178,7 +181,7 @@ class ParameterBase(Metadatable):
     def __init__(
         self,
         name: str,
-        instrument: InstrumentBase | None,
+        instrument: InstrType | None,
         snapshot_get: bool = True,
         metadata: Mapping[Any, Any] | None = None,
         step: float | None = None,
@@ -833,7 +836,7 @@ class ParameterBase(Metadatable):
         return "_".join(self.name_parts)
 
     @property
-    def instrument(self) -> InstrumentBase | None:
+    def instrument(self) -> InstrType | None:
         """
         Return the first instrument that this parameter is bound to.
         E.g if this is bound to a channel it will return the channel

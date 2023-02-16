@@ -8,7 +8,7 @@ import os
 from typing import TYPE_CHECKING, Any, Callable, Literal
 
 from .command import Command
-from .parameter_base import ParamDataType, ParameterBase, ParamRawDataType
+from .parameter_base import InstrType, ParamDataType, ParameterBase, ParamRawDataType
 from .sweep_values import SweepFixedValues
 
 if TYPE_CHECKING:
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-class Parameter(ParameterBase):
+class Parameter(ParameterBase[InstrType]):
     """
     A parameter represents a single degree of freedom. Most often,
     this is the standard parameter for Instruments, though it can also be
@@ -167,7 +167,7 @@ class Parameter(ParameterBase):
     def __init__(
         self,
         name: str,
-        instrument: InstrumentBase | None = None,
+        instrument: InstrType | None = None,
         label: str | None = None,
         unit: str | None = None,
         get_cmd: str | Callable[..., Any] | Literal[False] | None = None,
