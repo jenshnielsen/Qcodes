@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from qcodes.metadatable import Metadatable
@@ -17,7 +19,7 @@ class HasSnapshot(Metadatable):
         return {'fruit': 'kiwi'}
 
 
-DATASETLEFT = {
+DATASETLEFT: dict[str, dict[str, dict[str, Any]]] = {
     "station": {
         "parameters": {
             "apple": {
@@ -41,7 +43,7 @@ DATASETLEFT = {
         }
     }
 }
-DATASETRIGHT = {
+DATASETRIGHT: dict[str, dict[str, dict[str, Any]]] = {
     "station": {
         "parameters": {
             "apple": {
@@ -140,7 +142,7 @@ def test_station_diff() -> None:
         }
 
 
-def test_instrument_diff():
+def test_instrument_diff() -> None:
     left = DATASETLEFT["station"]["instruments"]["another"]
     right = DATASETRIGHT["station"]["instruments"]["another"]
 
