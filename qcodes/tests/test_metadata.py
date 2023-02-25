@@ -1,22 +1,26 @@
-from typing import Any
+from typing import Any, Optional, Sequence
 
 import pytest
 
 from qcodes.metadatable import Metadatable
+from qcodes.metadatable.metadatable_base import Snapshot
 from qcodes.utils import diff_param_values
 
 
 class HasSnapshotBase(Metadatable):
-    def snapshot_base(self, update=False,
-                      params_to_skip_update=None):
-        return {'cheese': 'gruyere'}
+    def snapshot_base(
+        self,
+        update: Optional[bool] = False,
+        params_to_skip_update: Optional[Sequence[str]] = None,
+    ) -> Snapshot:
+        return {"cheese": "gruyere"}
 
 
 class HasSnapshot(Metadatable):
     # Users shouldn't do this... but we'll test its behavior
     # for completeness
-    def snapshot(self, update=False):
-        return {'fruit': 'kiwi'}
+    def snapshot(self, update: Optional[bool] = False) -> Snapshot:
+        return {"fruit": "kiwi"}
 
 
 DATASETLEFT: dict[str, dict[str, dict[str, Any]]] = {

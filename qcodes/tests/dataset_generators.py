@@ -1,14 +1,20 @@
 import numpy as np
 
+from qcodes.dataset.data_set import DataSet
 from qcodes.dataset.descriptions.dependencies import InterDependencies_
 from qcodes.dataset.descriptions.param_spec import ParamSpecBase
 
 
-def dataset_with_outliers_generator(ds, data_offset=5, low_outlier=-3,
-                 high_outlier=1, background_noise=True):
-    x = ParamSpecBase('x', 'numeric', label='Flux', unit='e^2/hbar')
-    t = ParamSpecBase('t', 'numeric', label='Time', unit='s')
-    z = ParamSpecBase('z', 'numeric', label='Majorana number', unit='Anyon')
+def dataset_with_outliers_generator(
+    ds: DataSet,
+    data_offset: int = 5,
+    low_outlier: int = -3,
+    high_outlier: int = 1,
+    background_noise: bool = True,
+) -> DataSet:
+    x = ParamSpecBase("x", "numeric", label="Flux", unit="e^2/hbar")
+    t = ParamSpecBase("t", "numeric", label="Time", unit="s")
+    z = ParamSpecBase("z", "numeric", label="Majorana number", unit="Anyon")
 
     idps = InterDependencies_(dependencies={z: (x, t)})
     ds.set_interdependencies(idps)
