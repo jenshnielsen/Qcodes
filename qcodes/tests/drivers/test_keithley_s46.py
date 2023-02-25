@@ -1,4 +1,5 @@
 import logging
+from typing import Iterator
 
 import pytest
 
@@ -23,7 +24,7 @@ def test_aliases_dict() -> None:
 
 
 @pytest.fixture(scope='module')
-def s46_six():
+def s46_six() -> Iterator[S46]:
     """
     A six channel-per-relay instrument
     """
@@ -38,7 +39,7 @@ def s46_six():
 
 
 @pytest.fixture(scope='module')
-def s46_four():
+def s46_four() -> Iterator[S46]:
     """
     A four channel-per-relay instrument
     """
