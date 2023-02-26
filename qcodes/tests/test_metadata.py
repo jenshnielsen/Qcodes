@@ -19,7 +19,7 @@ class HasSnapshotBase(Metadatable):
 class HasSnapshot(Metadatable):
     # Users shouldn't do this... but we'll test its behavior
     # for completeness
-    def snapshot(self, update: Optional[bool] = False) -> Snapshot:
+    def snapshot(self, update: Optional[bool] = False) -> Snapshot:  # type: ignore[misc]
         return {"fruit": "kiwi"}
 
 
