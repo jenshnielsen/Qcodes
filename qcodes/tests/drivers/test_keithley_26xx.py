@@ -1,16 +1,18 @@
 from collections import Counter
+from typing import Iterator
 
 import numpy as np
 import pytest
 
 from qcodes.instrument_drivers.Keithley import (
+    Keithley2600Channel,
     Keithley2600MeasurementStatus,
     Keithley2614B,
 )
 
 
 @pytest.fixture(scope="function", name="driver")
-def _make_driver():
+def _make_driver() -> Iterator[Keithley2614B]:
     driver = Keithley2614B(
         "Keithley_2600", address="GPIB::1::INSTR", pyvisa_sim_file="Keithley_2600.yaml"
     )
@@ -20,7 +22,7 @@ def _make_driver():
 
 
 @pytest.fixture(scope="function", name="smus")
-def _make_smus(driver):
+def _make_smus(driver: Keithley2614B) -> Iterator[tuple[Keithley2600Channel, ...]]:
     smu_names = {'smua', 'smub'}
     assert smu_names == set(list(driver.submodules.keys()))
 
@@ -28,14 +30,14 @@ def _make_smus(driver):
                 for smu_name in smu_names)
 
 
-def test_idn(driver) -> None:
+def test_idn(driver: Keithley2614B) -> None:
     assert {'firmware': '3.0.0',
             'model': '2601B',
             'serial': '1398687',
             'vendor': 'Keithley Instruments Inc.'} == driver.IDN()
 
 
-def test_smu_channels_and_their_parameters(driver) -> None:
+def test_smu_channels_and_their_parameters(driver: Keithley2614B) -> None:
     assert {'smua', 'smub'} == set(list(driver.submodules.keys()))
 
     for smu_name in {'smua', 'smub'}:
@@ -141,7 +143,9 @@ def test_smu_channels_and_their_parameters(driver) -> None:
         assert smu.time_axis == smu.timetrace.setpoints[0]
 
 
-def test_setting_source_voltage_range_disables_autorange(smus) -> None:
+def test_setting_source_voltage_range_disables_autorange(
+    smus: tuple[Keithley2600Channel, Keithley2600Channel]
+) -> None:
     for smu in smus:
         smu.source_autorange_v_enabled(True)
         assert smu.source_autorange_v_enabled() is True
@@ -150,7 +154,9 @@ def test_setting_source_voltage_range_disables_autorange(smus) -> None:
         assert smu.source_autorange_v_enabled() is False
 
 
-def test_setting_measure_voltage_range_disables_autorange(smus) -> None:
+def test_setting_measure_voltage_range_disables_autorange(
+    smus: tuple[Keithley2600Channel, Keithley2600Channel]
+) -> None:
     for smu in smus:
         smu.measure_autorange_v_enabled(True)
         assert smu.measure_autorange_v_enabled() is True
@@ -159,7 +165,9 @@ def test_setting_measure_voltage_range_disables_autorange(smus) -> None:
         assert smu.measure_autorange_v_enabled() is False
 
 
-def test_setting_source_current_range_disables_autorange(smus) -> None:
+def test_setting_source_current_range_disables_autorange(
+    smus: tuple[Keithley2600Channel, Keithley2600Channel]
+) -> None:
     for smu in smus:
         smu.source_autorange_i_enabled(True)
         assert smu.source_autorange_i_enabled() is True
@@ -168,7 +176,9 @@ def test_setting_source_current_range_disables_autorange(smus) -> None:
         assert smu.source_autorange_i_enabled() is False
 
 
-def test_setting_measure_current_range_disables_autorange(smus) -> None:
+def test_setting_measure_current_range_disables_autorange(
+    smus: tuple[Keithley2600Channel, Keithley2600Channel]
+) -> None:
     for smu in smus:
         smu.measure_autorange_i_enabled(True)
         assert smu.measure_autorange_i_enabled() is True
