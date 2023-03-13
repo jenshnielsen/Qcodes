@@ -4,13 +4,18 @@ Tests for `qcodes.utils.logger`.
 import logging
 import os
 from copy import copy
+from typing import Iterator, Tuple
 
+import numpy as np
 import pytest
 
 import qcodes as qc
 import qcodes.logger as logger
 from qcodes.instrument import Instrument
+from qcodes.instrument_drivers.american_magnetics import AMIModel430, AMIModel4303D
+from qcodes.instrument_drivers.tektronix import TektronixAWG5208
 from qcodes.logger.log_analysis import capture_dataframe
+from qcodes.tests.drivers.test_lakeshore import Model_372_Mock
 
 TEST_LOG_MESSAGE = 'test log message'
 
@@ -18,7 +23,7 @@ NUM_PYTEST_LOGGERS = 2
 
 
 @pytest.fixture
-def remove_root_handlers():
+def remove_root_handlers() -> None:
     root_logger = logging.getLogger()
     handlers = copy(root_logger.handlers)
     for handler in handlers:
@@ -28,13 +33,11 @@ def remove_root_handlers():
     logger.logger.console_handler = None
 
 
-@pytest.fixture
-def awg5208():
-    from qcodes.instrument_drivers.tektronix.AWG5208 import AWG5208
-
+@pytest.fixture(name="awg5208")
+def _make_awg5208() -> Iterator[TektronixAWG5208]:
     logger.start_logger()
 
-    inst = AWG5208(
+    inst = TektronixAWG5208(
         "awg_sim", address="GPIB0::1::INSTR", pyvisa_sim_file="Tektronix_AWG5208.yaml"
     )
 
@@ -44,9 +47,8 @@ def awg5208():
         inst.close()
 
 
-@pytest.fixture
-def model372():
-    from qcodes.tests.drivers.test_lakeshore import Model_372_Mock
+@pytest.fixture(name="model372")
+def _make_model372() -> Iterator[Model_372_Mock]:
 
     logger.logger.LOGGING_SEPARATOR = " - "
 
@@ -66,28 +68,25 @@ def model372():
         inst.close()
 
 
-@pytest.fixture()
-def AMI430_3D():
-    import numpy as np
-
-    from qcodes.instrument.ip_to_visa import AMI430_VISA
-    from qcodes.instrument_drivers.american_magnetics.AMI430 import AMI430_3D
-
-    mag_x = AMI430_VISA(
+@pytest.fixture(name="ami430_3d")
+def _make_ami430_3d() -> (
+    Iterator[Tuple[AMIModel4303D, AMIModel430, AMIModel430, AMIModel430]]
+):
+    mag_x = AMIModel430(
         "x",
         address="GPIB::1::INSTR",
         pyvisa_sim_file="AMI430.yaml",
         terminator="\n",
         port=1,
     )
-    mag_y = AMI430_VISA(
+    mag_y = AMIModel430(
         "y",
         address="GPIB::2::INSTR",
         pyvisa_sim_file="AMI430.yaml",
         terminator="\n",
         port=1,
     )
-    mag_z = AMI430_VISA(
+    mag_z = AMIModel430(
         "z",
         address="GPIB::3::INSTR",
         pyvisa_sim_file="AMI430.yaml",
@@ -98,7 +97,7 @@ def AMI430_3D():
         lambda x, y, z: x == 0 and y == 0 and z < 3,
         lambda x, y, z: np.linalg.norm([x, y, z]) < 2
     ]
-    driver = AMI430_3D("AMI430_3D", mag_x, mag_y, mag_z, field_limit)
+    driver = AMIModel4303D("AMI430_3D", mag_x, mag_y, mag_z, field_limit)
     try:
         yield driver, mag_x, mag_y, mag_z
     finally:
@@ -171,9 +170,10 @@ def test_handler_level() -> None:
 
 
 @pytest.mark.usefixtures("remove_root_handlers")
-def test_filter_instrument(AMI430_3D) -> None:
-
-    driver, mag_x, mag_y, mag_z = AMI430_3D
+def test_filter_instrument(
+    ami430_3d: Tuple[AMIModel4303D, AMIModel430, AMIModel430, AMIModel430]
+) -> None:
+    driver, mag_x, mag_y, mag_z = ami430_3d
 
     logger.start_logger()
 
@@ -210,9 +210,10 @@ def test_filter_instrument(AMI430_3D) -> None:
 
 
 @pytest.mark.usefixtures("remove_root_handlers")
-def test_filter_without_started_logger_raises(AMI430_3D) -> None:
-
-    driver, mag_x, mag_y, mag_z = AMI430_3D
+def test_filter_without_started_logger_raises(
+    ami430_3d: Tuple[AMIModel4303D, AMIModel430, AMIModel430, AMIModel430]
+) -> None:
+    driver, mag_x, mag_y, mag_z = ami430_3d
 
     # filter one instrument
     driver.cartesian((0, 0, 0))
@@ -232,7 +233,7 @@ def test_capture_dataframe() -> None:
 
 
 @pytest.mark.usefixtures("remove_root_handlers")
-def test_channels(model372) -> None:
+def test_channels(model372: Model_372_Mock) -> None:
     """
     Test that messages logged in a channel are propagated to the
     main instrument.
@@ -268,7 +269,7 @@ def test_channels(model372) -> None:
 
 
 @pytest.mark.usefixtures("remove_root_handlers")
-def test_channels_nomessages(model372) -> None:
+def test_channels_nomessages(model372: Model_372_Mock) -> None:
     """
     Test that messages logged in a channel are not propagated to
     any instrument.
