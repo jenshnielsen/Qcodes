@@ -1,6 +1,6 @@
 from typing import Union
 
-from ._Keithley_2600 import Keithley2600MeasurementStatus
+from ._Keithley_2600 import Keithley2600Channel, Keithley2600MeasurementStatus
 from .Keithley_2000 import Keithley2000
 from .Keithley_2400 import Keithley2400
 from .Keithley_2450 import (
@@ -61,6 +61,7 @@ __all__ = [
     "Keithley2450Sense",
     "Keithley2450Source",
     "Keithley2600MeasurementStatus",
+    "Keithley2600Channel",
     "Keithley26xx",
     "Keithley2601B",
     "Keithley2602A",
