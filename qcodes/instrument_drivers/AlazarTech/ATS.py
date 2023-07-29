@@ -8,6 +8,7 @@ import warnings
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from typing import Any, Generic, TypeVar, Union, cast
+from weakref import finalize
 
 import numpy as np
 
@@ -759,6 +760,7 @@ class Buffer:
                         (size_bytes // bytes_per_sample)).from_address(self.addr)
         self.buffer = np.ctypeslib.as_array(ctypes_array)
         self.ctypes_buffer = ctypes_array
+        finalize(self, _clean_buffer, self)
 
     def free_mem(self) -> None:
         """
@@ -782,6 +784,15 @@ class Buffer:
             logger.warning(
                 'Buffer prevented memory leak; Memory released to Windows.\n'
                 'Memory should have been released before buffer was deleted.')
+
+
+def _clean_buffer(buffer: Buffer) -> None:
+    """
+    Only intended to be called from weakref.finalizer
+    """
+    if buffer._allocated:
+        buffer.free_mem()
+        logger.info("Alazar ATS Buffer memory freed.")
 
 
 class AcquisitionInterface(Generic[OutputType]):
