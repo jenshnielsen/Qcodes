@@ -6,6 +6,7 @@ import time
 import weakref
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from weakref import finalize
 
 from qcodes.utils import strip_attrs
 from qcodes.validators import Anything
@@ -67,6 +68,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         super().__init__(name=name, metadata=metadata, label=label)
 
         self.add_parameter("IDN", get_cmd=self.get_idn, vals=Anything())
+        finalize(self, _close_instrument, self)
 
     def get_idn(self) -> dict[str, str | None]:
         """
@@ -480,3 +482,15 @@ def find_or_create_instrument(
             instrument.connect_message()  # prints the message
 
     return instrument
+
+
+def _close_instrument(instrument: Instrument) -> None:
+    """
+    This is only intended to be called from a weakref.finalize
+    To close the instrument normally you should call instrument.close
+    not this function.
+    """
+    log.info(
+        f"closing instrument {instrument} as there are no more active references to it."
+    )
+    instrument.close()
