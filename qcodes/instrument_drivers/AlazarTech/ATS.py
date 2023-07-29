@@ -772,19 +772,6 @@ class Buffer:
             ctypes.windll.kernel32.VirtualFree(
                 ctypes.c_void_p(self.addr), 0, MEM_RELEASE)
 
-    def __del__(self) -> None:
-        """
-        If python garbage collects this object, __del__ should be called and it
-        is the last chance to uncommit the memory to prevent a memory leak.
-        This method is not very reliable so users should not rely on this
-        functionality
-        """
-        if self._allocated:
-            self.free_mem()
-            logger.warning(
-                'Buffer prevented memory leak; Memory released to Windows.\n'
-                'Memory should have been released before buffer was deleted.')
-
 
 def _clean_buffer(buffer: Buffer) -> None:
     """
