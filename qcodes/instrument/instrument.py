@@ -143,13 +143,6 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         """Simplified repr giving just the class and name."""
         return f"<{type(self).__name__}: {self.name}>"
 
-    def __del__(self) -> None:
-        """Close the instrument and remove its instance record."""
-        try:
-            self.close()
-        except BaseException:
-            pass
-
     def close(self) -> None:
         """
         Irreversibly stop this instrument and free its resources.
