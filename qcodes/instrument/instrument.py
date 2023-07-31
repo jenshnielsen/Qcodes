@@ -208,7 +208,7 @@ class Instrument(InstrumentBase, metaclass=InstrumentMeta):
         # making sure its name is unique
         existing_instr = cls._all_instruments.get(name)
         if existing_instr:
-            raise KeyError(f"Another instrument has the name: {name}")
+            raise KeyError(f"Another instrument {existing_instr} has the name: {name}")
 
         cls._all_instruments[name] = instance
 

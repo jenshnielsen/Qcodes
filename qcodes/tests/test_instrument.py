@@ -72,8 +72,11 @@ def test_validate_function(testdummy: DummyInstrument) -> None:
 
 
 def test_check_instances(testdummy: DummyInstrument) -> None:
-    with pytest.raises(KeyError, match='Another instrument has the name: testdummy'):
-        DummyInstrument(name='testdummy', gates=['dac1', 'dac2', 'dac3'])
+    with pytest.raises(
+        KeyError,
+        match="Another instrument <DummyInstrument: testdummy> has the name: testdummy",
+    ):
+        DummyInstrument(name="testdummy", gates=["dac1", "dac2", "dac3"])
 
     assert Instrument.instances() == []
     assert DummyInstrument.instances() == [testdummy]
