@@ -1057,16 +1057,23 @@ def _parametrization_kwargs() -> PDict:
     kwargs: PDict = {"argvalues": [], "ids": []}
 
     for type_constructor, type_name in zip(
-        ((int, float)
-         + numpy_concrete_ints
-         + numpy_non_concrete_ints_instantiable
-         + numpy_concrete_floats
-         + numpy_non_concrete_floats_instantiable),
-        (['int', 'float']
-         + [str(t) for t in numpy_concrete_ints]
-         + [str(t) for t in numpy_non_concrete_ints_instantiable]
-         + [str(t) for t in numpy_concrete_floats]
-         + [str(t) for t in numpy_non_concrete_floats_instantiable])
+        (
+            (
+                int,
+                float,
+                *numpy_concrete_ints,
+                *numpy_non_concrete_ints_instantiable,
+                *numpy_concrete_floats,
+                *numpy_non_concrete_floats_instantiable,
+            )
+        ),
+        (
+            ["int", "float"]
+            + [str(t) for t in numpy_concrete_ints]
+            + [str(t) for t in numpy_non_concrete_ints_instantiable]
+            + [str(t) for t in numpy_concrete_floats]
+            + [str(t) for t in numpy_non_concrete_floats_instantiable]
+        ),
     ):
         kwargs['argvalues'].append(type_constructor(2.2))
         kwargs['ids'].append(type_name)

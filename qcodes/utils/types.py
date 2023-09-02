@@ -82,7 +82,7 @@ numpy_complex: tuple[type[complex_type_union], ...] = (
 All numpy complex types
 """
 
-concrete_complex_types = numpy_concrete_complex + (complex,)
+concrete_complex_types = (*numpy_concrete_complex, complex)
 complex_types = (
         numpy_concrete_complex +
         numpy_non_concrete_complex_instantiable +

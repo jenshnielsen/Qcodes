@@ -150,8 +150,8 @@ def test_do1d_verify_shape(
     )
     expected_shapes = {}
     for i, name in enumerate(multiparam.full_names):
-        expected_shapes[name] = (num_points,) + tuple(multiparam.shapes[i])
-    expected_shapes["arrayparam"] = (num_points,) + tuple(arrayparam.shape)
+        expected_shapes[name] = (num_points, *tuple(multiparam.shapes[i]))
+    expected_shapes["arrayparam"] = (num_points, *tuple(arrayparam.shape))
     expected_shapes["simple_parameter"] = (num_points,)
     expected_shapes["simple_complex_parameter"] = (num_points,)
     expected_shapes[paramwsetpoints.full_name] = (num_points, n_points_pws)

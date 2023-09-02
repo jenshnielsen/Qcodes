@@ -578,9 +578,9 @@ class KeysightN9030B(VisaInstrument):
         modes: tuple[str, ...] = ()
         for i, mode in enumerate(av_modes):
             if i == 0:
-                modes = modes + (mode.split(" ")[0],)
+                modes = (*modes, mode.split(" ")[0])
             else:
-                modes = modes + (mode.split(" ")[1],)
+                modes = (*modes, mode.split(" ")[1])
         return modes
 
     def _available_meas(self) -> tuple[str, ...]:
@@ -592,9 +592,9 @@ class KeysightN9030B(VisaInstrument):
         measurements: tuple[str, ...] = ()
         for i, meas in enumerate(av_meas):
             if i == 0:
-                measurements = measurements + (meas,)
+                measurements = (*measurements, meas)
             else:
-                measurements = measurements + (meas[1:],)
+                measurements = (*measurements, meas[1:])
         return measurements
 
     def _enable_cont_meas(self, val: str) -> None:

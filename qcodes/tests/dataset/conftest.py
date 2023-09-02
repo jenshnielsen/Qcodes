@@ -129,7 +129,7 @@ def _make_scalar_dataset(dataset):
         f"param_{n_params}", "numeric", label=f"param_{n_params}", unit="Ohm"
     )
 
-    all_params = params_indep + [param_dep]
+    all_params = [*params_indep, param_dep]
 
     idps = InterDependencies_(dependencies={param_dep: tuple(params_indep)})
 
@@ -161,7 +161,7 @@ def _make_scalar_datasets_parameterized(dataset, request: FixtureRequest):
                               label=f'param_{n_params}',
                               unit='Ohm')
 
-    all_params = params_indep + [param_dep]
+    all_params = [*params_indep, param_dep]
 
     idps = InterDependencies_(dependencies={param_dep: tuple(params_indep)})
 

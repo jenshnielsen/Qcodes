@@ -77,14 +77,14 @@ VERSIONS = tuple(range(LATEST_VERSION + 1))
 LATEST_VERSION_ARG = -1
 
 
-@pytest.mark.parametrize('ver', VERSIONS + (LATEST_VERSION_ARG,))
+@pytest.mark.parametrize("ver", (*VERSIONS, LATEST_VERSION_ARG))
 def test_connect_upgrades_user_version(ver) -> None:
     expected_version = ver if ver != LATEST_VERSION_ARG else LATEST_VERSION
     conn = connect(':memory:', version=ver)
     assert expected_version == get_user_version(conn)
 
 
-@pytest.mark.parametrize('version', VERSIONS + (LATEST_VERSION_ARG,))
+@pytest.mark.parametrize("version", (*VERSIONS, LATEST_VERSION_ARG))
 def test_tables_exist(empty_temp_db, version) -> None:
     conn = connect(
         qc.config["core"]["db_location"], qc.config["core"]["db_debug"], version=version
