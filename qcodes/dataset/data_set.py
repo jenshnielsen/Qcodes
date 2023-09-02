@@ -789,7 +789,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a list of empty arrays is returned.
+        of the :class:`.DataSet` - then a list of empty arrays is returned.
 
         Args:
             *params: string parameter names, QCoDeS Parameter objects, and
@@ -840,7 +840,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a dict of empty :py:class:`pandas.DataFrame` s is
+        of the :class:`.DataSet` - then a dict of empty :py:class:`pandas.DataFrame` s is
         returned.
 
         Args:
@@ -894,7 +894,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a dict of empty :py:class:`pandas.DataFrame` s is
+        of the :class:`.DataSet` - then a dict of empty :py:class:`pandas.DataFrame` s is
         returned.
 
         Args:
@@ -936,7 +936,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a dict of empty :py:class:`pandas.DataFrame` s is
+        of the :class:`.DataSet` - then a dict of empty :py:class:`pandas.DataFrame` s is
         returned.
 
         Args:
@@ -983,7 +983,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a dict of empty :py:class:`xr.DataArray` s is
+        of the :class:`.DataSet` - then a dict of empty :py:class:`xr.DataArray` s is
         returned.
 
         The dependent parameters of the Dataset are normally used as coordinates of the
@@ -1035,7 +1035,7 @@ class DataSet(BaseDataSet):
         If provided, the start and end arguments select a range of results
         by result count (index). If the range is empty - that is, if the end is
         less than or equal to the start, or if start is after the current end
-        of the :class:`.DataSet` – then a empty :py:class:`xr.Dataset` s is
+        of the :class:`.DataSet` - then a empty :py:class:`xr.Dataset` s is
         returned.
 
         The dependent parameters of the Dataset are normally used as coordinates of the

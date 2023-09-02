@@ -593,20 +593,22 @@ class _Keysight_344xxA(KeysightErrorQueueMixin, VisaInstrument):
                            val_mapping={'ON': 1, 'OFF': 0},
                            vals=vals.Enum('ON', 'OFF'))
 
-        self.add_parameter('autozero',
-                           label='Autozero',
-                           set_cmd='SENSe:VOLTage:DC:ZERO:AUTO {}',
-                           get_cmd='SENSe:VOLTage:DC:ZERO:AUTO?',
-                           val_mapping={'ON': 1, 'OFF': 0, 'ONCE': 'ONCE'},
-                           vals=vals.Enum('ON', 'OFF', 'ONCE'),
-                           docstring=textwrap.dedent("""\
+        self.add_parameter(
+            "autozero",
+            label="Autozero",
+            set_cmd="SENSe:VOLTage:DC:ZERO:AUTO {}",
+            get_cmd="SENSe:VOLTage:DC:ZERO:AUTO?",
+            val_mapping={"ON": 1, "OFF": 0, "ONCE": "ONCE"},
+            vals=vals.Enum("ON", "OFF", "ONCE"),
+            docstring=textwrap.dedent(
+                """\
             Disables or enables the autozero mode for DC voltage and ratio
             measurements.
 
             ON:   the DMM internally measures the offset following each
                   measurement. It then subtracts that measurement from the
                   preceding reading. This prevents offset voltages present on
-                  the DMM’s input circuitry from affecting measurement
+                  the DMM's input circuitry from affecting measurement
                   accuracy.
             OFF:  the instrument uses the last measured zero measurement and
                   subtracts it from each measurement. It takes a new zero
@@ -619,7 +621,9 @@ class _Keysight_344xxA(KeysightErrorQueueMixin, VisaInstrument):
                   integration time is less than 1 PLC, the zero measurement
                   is taken at 1 PLC to optimize noise rejection. Subsequent
                   measurements are taken at the specified fast (< 1 PLC)
-                  integration time."""))
+                  integration time."""
+            ),
+        )
 
         ####################################
         # Aperture parameters

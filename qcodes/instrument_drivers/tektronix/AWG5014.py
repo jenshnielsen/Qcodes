@@ -194,14 +194,15 @@ class TektronixAWG5014(VisaInstrument):
                            get_parser=int)
 
         # sequence parameter(s)
-        self.add_parameter('sequence_length',
-                           label='Sequence length',
-                           get_cmd='SEQuence:LENGth?',
-                           set_cmd='SEQuence:LENGth ' + '{}',
-                           get_parser=int,
-                           vals=vals.Ints(0, 8000),
-                           docstring=(
-                               """
+        self.add_parameter(
+            "sequence_length",
+            label="Sequence length",
+            get_cmd="SEQuence:LENGth?",
+            set_cmd="SEQuence:LENGth " + "{}",
+            get_parser=int,
+            vals=vals.Ints(0, 8000),
+            docstring=(
+                """
                                This command sets the sequence length.
                                Use this command to create an
                                uninitialized sequence. You can also
@@ -211,15 +212,16 @@ class TektronixAWG5014(VisaInstrument):
                                action cannot be undone so exercise
                                necessary caution. Also note that
                                passing a value less than the
-                               sequence’s current length will cause
+                               sequence's current length will cause
                                some sequence elements to be deleted at
                                the end of the sequence. For example if
                                self.get_sq_length returns 200 and you
                                subsequently set sequence_length to 21,
                                all sequence elements except the first
                                20 will be deleted.
-                               """)
-                           )
+                               """
+            ),
+        )
 
         self.add_parameter('sequence_pos',
                            label='Sequence position',
@@ -539,7 +541,7 @@ class TektronixAWG5014(VisaInstrument):
                 Note: this function expects only root level directories.
 
         Returns:
-            A comma-seperated string of the folder contents.
+            A comma-separated string of the folder contents.
         """
 
         dircheck = '%s, DIR' % folder
@@ -593,7 +595,7 @@ class TektronixAWG5014(VisaInstrument):
     def set_sqel_event_target_index(self, element_no: int, index: int) -> None:
         """
         This command sets the target index for
-        the sequencer’s event jump operation. Note that this will take
+        the sequencer's event jump operation. Note that this will take
         effect only when the event jump target type is set to
         INDEX.
 
