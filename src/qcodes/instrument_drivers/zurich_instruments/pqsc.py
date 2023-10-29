@@ -5,7 +5,7 @@
 
 
 try:
-    from zhinst.qcodes import PQSC  # type: ignore[import-not-found]
+    from zhinst.qcodes import PQSC
 except ImportError:
     raise ImportError(
         """

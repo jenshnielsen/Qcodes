@@ -5,7 +5,7 @@
 
 
 try:
-    from zhinst.qcodes import SHFQA  # type: ignore[import-not-found]
+    from zhinst.qcodes import SHFQA
 except ImportError:
     raise ImportError(
         """

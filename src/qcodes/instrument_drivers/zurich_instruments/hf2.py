@@ -5,7 +5,7 @@
 
 
 try:
-    from zhinst.qcodes import HF2  # type: ignore[import-not-found]
+    from zhinst.qcodes import HF2
 except ImportError:
     raise ImportError(
         """
