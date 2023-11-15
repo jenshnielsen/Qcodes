@@ -15,7 +15,7 @@ from threading import Thread
 from typing import TYPE_CHECKING, Any
 
 import numpy
-from tqdm.auto import trange
+from tqdm.auto import tqdm
 
 import qcodes
 from qcodes.dataset.data_set_protocol import (
@@ -1460,6 +1460,26 @@ class DataSet(BaseDataSet):
 
     def _export_as_netcdf(self, path: Path, file_name: str) -> Path:
         """Export data as netcdf to a given path with file prefix"""
+
+        def generate_steps(num_rows, max_num_steps) -> list[tuple[int, int]]:
+            if max_num_steps >= num_rows:
+                return [(i + 1, i + 1) for i in range(max_num_steps)]
+
+            step_size, remainder = divmod(num_rows, max_num_steps)
+            limits = [
+                (i * step_size + 1, (i + 1) * step_size) for i in range(max_num_steps)
+            ]
+
+            if remainder > 0:
+                limits.append(
+                    (
+                        (step_size) * max_num_steps + 1,
+                        (step_size) * max_num_steps + remainder,
+                    )
+                )
+
+            return limits
+
         import xarray as xr
 
         file_path = path / file_name
@@ -1490,12 +1510,16 @@ class DataSet(BaseDataSet):
                         "temp_dir": temp_dir,
                     },
                 )
-                num_files = len(self)
+                num_rows = len(self)
+                steps = generate_steps(num_rows, 100)
+                num_files = len(steps)
                 num_digits = len(str(num_files))
                 file_name_template = f"ds_{{:0{num_digits}d}}.nc"
-                for i in trange(num_files, desc="Writing individual files"):
+                for i, (start, stop) in tqdm(
+                    enumerate(steps), total=num_files, desc="Writing individual files"
+                ):
                     xarray_to_h5netcdf_with_complex_numbers(
-                        self.to_xarray_dataset(start=i + 1, end=i + 1),
+                        self.to_xarray_dataset(start=start, end=stop),
                         temp_path / file_name_template.format(i),
                     )
                 files = tuple(temp_path.glob("*.nc"))
