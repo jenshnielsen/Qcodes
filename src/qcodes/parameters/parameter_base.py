@@ -9,7 +9,9 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property, wraps
 from types import TracebackType
-from typing import TYPE_CHECKING, Any, ClassVar, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
+
+from typing_extensions import TypeVar
 
 from qcodes.metadatable import Metadatable, MetadatableWithName
 from qcodes.utils import DelegateAttributes, full_class, qcodes_abstractmethod
@@ -20,6 +22,7 @@ from .named_repr import named_repr
 from .permissive_range import permissive_range
 
 # for now the type the parameter may contain is not restricted at all
+NewParamDataType = TypeVar("NewParamDataType", default=Any)
 ParamDataType = Any
 ParamRawDataType = Any
 
@@ -84,7 +87,7 @@ def invert_val_mapping(val_mapping: Mapping[Any, Any]) -> dict[Any, Any]:
     return {v: k for k, v in val_mapping.items()}
 
 
-class ParameterBase(MetadatableWithName):
+class ParameterBase(MetadatableWithName, Generic[NewParamDataType]):
     """
     Shared behavior for all parameters. Not intended to be used
     directly, normally you should use ``Parameter``, ``ArrayParameter``,
@@ -251,7 +254,7 @@ class ParameterBase(MetadatableWithName):
         self.get_latest: GetLatest
         self.get_latest = GetLatest(self)
 
-        self.get: Callable[..., ParamDataType]
+        self.get: Callable[..., NewParamDataType]
         implements_get_raw = hasattr(self, "get_raw") and not getattr(
             self.get_raw, "__qcodes_is_abstract_method__", False
         )
@@ -449,14 +452,14 @@ class ParameterBase(MetadatableWithName):
         return named_repr(self)
 
     @overload
-    def __call__(self) -> ParamDataType:
+    def __call__(self) -> NewParamDataType:
         pass
 
     @overload
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def __call__(self, *args: Any, **kwargs: Any) -> ParamDataType | None:
+    def __call__(self, *args: Any, **kwargs: Any) -> NewParamDataType | None:
         if len(args) == 0 and len(kwargs) == 0:
             if self.gettable:
                 return self.get()
@@ -556,7 +559,7 @@ class ParameterBase(MetadatableWithName):
         """
         return self._snapshot_value
 
-    def _from_value_to_raw_value(self, value: ParamDataType) -> ParamRawDataType:
+    def _from_value_to_raw_value(self, value: NewParamDataType) -> ParamRawDataType:
         raw_value: ParamRawDataType
 
         if self.val_mapping is not None:
@@ -594,8 +597,8 @@ class ParameterBase(MetadatableWithName):
 
         return raw_value
 
-    def _from_raw_value_to_value(self, raw_value: ParamRawDataType) -> ParamDataType:
-        value: ParamDataType
+    def _from_raw_value_to_value(self, raw_value: ParamRawDataType) -> NewParamDataType:
+        value: NewParamDataType
 
         if self.get_parser is not None:
             value = self.get_parser(raw_value)
@@ -647,9 +650,9 @@ class ParameterBase(MetadatableWithName):
 
     def _wrap_get(
         self,
-    ) -> Callable[..., ParamDataType]:
+    ) -> Callable[..., NewParamDataType]:
         @wraps(self.get_raw)
-        def get_wrapper(*args: Any, **kwargs: Any) -> ParamDataType:
+        def get_wrapper(*args: Any, **kwargs: Any) -> NewParamDataType:
             if not self.gettable:
                 raise TypeError("Trying to get a parameter that is not gettable.")
             if self.abstract:
@@ -679,7 +682,7 @@ class ParameterBase(MetadatableWithName):
         self,
     ) -> Callable[..., None]:
         @wraps(self.set_raw)
-        def set_wrapper(value: ParamDataType, **kwargs: Any) -> None:
+        def set_wrapper(value: NewParamDataType, **kwargs: Any) -> None:
             try:
                 if not self.settable:
                     raise TypeError("Trying to set a parameter that is not settable.")
@@ -788,7 +791,7 @@ class ParameterBase(MetadatableWithName):
             context = self.name
         return "Parameter: " + context
 
-    def validate(self, value: ParamDataType) -> None:
+    def validate(self, value: NewParamDataType) -> None:
         """
         Validate the value supplied.
 
@@ -960,7 +963,7 @@ class ParameterBase(MetadatableWithName):
             return None
 
     def set_to(
-        self, value: ParamDataType, allow_changes: bool = False
+        self, value: NewParamDataType, allow_changes: bool = False
     ) -> _SetParamContext:
         """
         Use a context manager to temporarily set a parameter to a value. By
@@ -1095,7 +1098,7 @@ class GetLatest(DelegateAttributes):
     delegate_attr_objects: ClassVar[list[str]] = ["parameter"]
     omit_delegate_attrs: ClassVar[list[str]] = ["set"]
 
-    def get(self) -> ParamDataType:
+    def get(self) -> NewParamDataType:
         """
         Return latest value if time since get was less than
         `max_val_age`, otherwise perform `get()` and
@@ -1122,7 +1125,7 @@ class GetLatest(DelegateAttributes):
         """
         return self.cache._raw_value
 
-    def __call__(self) -> ParamDataType:
+    def __call__(self) -> NewParamDataType:
         """
         Same as ``get()``
 
