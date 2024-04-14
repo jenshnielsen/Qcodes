@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import collections.abc
+import inspect
 import logging
 import warnings
 from collections.abc import Callable, Mapping, Sequence
@@ -102,8 +103,8 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
 
     def add_parameter(
         self,
-        name: str,
-        parameter_class: type[TParameter] | None = None,
+        name: str | None,
+        parameter_class: type[TParameter] = Parameter,
         **kwargs: Any,
     ) -> TParameter:
         """
@@ -119,6 +120,9 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
             name: How the parameter will be stored within
                 :attr:`.parameters` and also how you address it using the
                 shortcut methods: ``instrument.set(param_name, value)`` etc.
+                If Name is ommitted the name will be looked up from the name
+                of the attribute that the parameter is assigned to. This requires
+                that the output of `add_paramater` is assigned to an attribute.
 
             parameter_class: You can construct the parameter
                 out of any class. Default :class:`.parameters.Parameter`.
@@ -134,6 +138,28 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
                 unit of the new parameter is inconsistent with the existing
                 one.
         """
+        if name is None:
+            # IF we were ever to go this way the code would need to be much more robust
+            current_frame = inspect.currentframe()
+            assert (
+                current_frame is not None
+            ), "Cannot detect the current frame and cannot fine name"
+            previous_frame = current_frame.f_back
+            assert (
+                previous_frame is not None
+            ), "Cannot detect the previous frame and cannot fine name"
+            fi = inspect.getframeinfo(previous_frame)
+            cc = fi.code_context
+            assert cc is not None, "Code context is None"
+            assignment = cc[0].split("=")[0]
+            if ":" in assignment:
+                # remove type info
+                assignment = assignment.split(":")[0]
+            assignment = assignment.lstrip().rstrip().split(".")
+            assert assignment[0] == "self"
+            assert len(assignment) == 2
+            name = assignment[1]
+
         if parameter_class is None:
             parameter_class = cast(type[TParameter], Parameter)
 

@@ -181,9 +181,8 @@ class DummyAttrInstrument(DummyBase):
         """
         super().__init__(name, **kwargs)
 
-        self.ch1 = Parameter(
-            "ch1",
-            instrument=self,
+        self.ch1 = self.add_parameter(
+            name=None,
             initial_value=0,
             label="Gate ch1",
             unit="V",
