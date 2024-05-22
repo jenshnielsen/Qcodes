@@ -11,10 +11,11 @@ import pyvisa
 import pyvisa.constants as vi_const
 import pyvisa.resources
 from pyvisa.errors import InvalidSession
+from typing_extensions import deprecated
 
 import qcodes.validators as vals
 from qcodes.logger import get_instrument_logger
-from qcodes.utils import DelayedKeyboardInterrupt
+from qcodes.utils import DelayedKeyboardInterrupt, QCoDeSDeprecationWarning
 
 from .instrument import Instrument
 from .instrument_base import InstrumentBase, InstrumentBaseKWArgs
@@ -190,22 +191,46 @@ class VisaInstrument(Instrument):
         finalize(self, _close_visa_handle, visa_handle, str(self.name))
 
         self.visabackend: str = visabackend
+        """Can be replaced by getting the type of self.visa_handle.visalib"""
         self.visa_handle: pyvisa.resources.MessageBasedResource = visa_handle
         """
         The VISA resource used by this instrument.
         """
-        self.resource_manager = resource_manager
-        """
-        The VISA resource manager used by this instrument.
-        """
-        self.visalib: str | None = visalib
-        self._address = address
+        self._visalib = visalib
 
         if device_clear:
             self.device_clear()
 
         self.set_terminator(terminator)
         self.timeout.set(timeout)
+
+    @deprecated(
+        "Use self.visa_handle.visalib.resource_manager as an alternative.",
+        category=QCoDeSDeprecationWarning,
+    )
+    @property
+    def resource_manager(self) -> pyvisa.ResourceManager | None:
+        """
+        The VISA resource manager used by this instrument.
+        """
+        return self.visa_handle.visalib.resource_manager
+
+    @deprecated(
+        "Use self.visa_handle.visalib.library_path for library path and "
+        "inspect type of self.visa_handle.visalib for backend.",
+        category=QCoDeSDeprecationWarning,
+    )
+    @property
+    def visalib(self) -> str | None:
+        return self._visalib
+
+    @deprecated(
+        "Rather than setting the Visa lib directly replace self.visa_handle with a new handle using the correct type",
+        category=QCoDeSDeprecationWarning,
+    )
+    @visalib.setter
+    def visalib(self, visalib: str) -> None:
+        self._visalib = visalib
 
     def _connect_and_handle_error(
         self, address: str, visalib: str | None
@@ -254,16 +279,13 @@ class VisaInstrument(Instrument):
         Args:
             address: The visa resource name to use to connect. The address
                 should be the actual address and just that. If you wish to
-                change the backend for VISA, use the self.visalib attribute
-                (and then call this function).
+                change the backend for VISA replace self.visa_handle directly.
         """
         resource, visabackend, resource_manager = self._open_resource(
-            address, self.visalib
+            address, self._visalib
         )
         self.visa_handle = resource
-        self._address = address
         self.visabackend = visabackend
-        self.resource_manager = resource_manager
 
     def device_clear(self) -> None:
         """Clear the buffers of the device"""
@@ -274,7 +296,7 @@ class VisaInstrument(Instrument):
         # SCPI commands.
 
         # Simulated instruments do not support a handle clear
-        if self.visabackend == 'sim':
+        if self.visa_handle.visalib.__class__.__name__ == "SimVisaLibrary":
             return
 
         flush_operation = (
@@ -329,14 +351,15 @@ class VisaInstrument(Instrument):
         ):
             # The pyvisa-sim visalib has a session attribute but the resource manager is not generic in the
             # visalib type so we cannot get it in a type safe way
-            known_sessions = getattr(self.resource_manager.visalib, "sessions", ())
-
+            known_sessions = (self.visa_handle.visalib, "sessions", ())
+            this_session = None
             try:
-                this_session = self.resource_manager.session
+                if self.visa_handle.visalib.resource_manager is not None:
+                    this_session = self.visa_handle.visalib.resource_manager.session
             except InvalidSession:
+                pass
                 # this may be triggered when the resource has already been closed
                 # in that case there is nothing that we can do.
-                this_session = None
 
             session_found = this_session is not None and this_session in known_sessions
 
@@ -348,7 +371,7 @@ class VisaInstrument(Instrument):
                 # https://github.com/QCoDeS/Qcodes/issues/5356 and
                 # https://github.com/pyvisa/pyvisa-sim/issues/82
                 try:
-                    self.resource_manager.visalib._init()
+                    self.visa_handle.visalib._init()
                 except AttributeError:
                     warnings.warn(
                         "The installed version of pyvisa-sim does not have an `_init` method "
@@ -413,7 +436,7 @@ class VisaInstrument(Instrument):
         snap = super().snapshot_base(update=update,
                                      params_to_skip_update=params_to_skip_update)
 
-        snap["address"] = self._address
+        snap["address"] = self.visa_handle.resource_name
         snap["terminator"] = self.visa_handle.read_termination
         snap["read_terminator"] = self.visa_handle.read_termination
         snap["write_terminator"] = self.visa_handle.write_termination
