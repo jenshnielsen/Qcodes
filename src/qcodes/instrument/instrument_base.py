@@ -28,6 +28,7 @@ from qcodes.utils import QCoDeSDeprecationWarning
 log = logging.getLogger(__name__)
 
 TParameter = TypeVar("TParameter", bound=ParameterBase, default=Parameter)
+TModuleChannel = TypeVar("TModuleChannel", bound="InstrumentModule | ChannelTuple")
 
 
 class InstrumentBaseKWArgs(TypedDict):
@@ -262,9 +263,7 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
         func = Function(name=name, instrument=self, **kwargs)
         self.functions[name] = func
 
-    def add_submodule(
-        self, name: str, submodule: InstrumentModule | ChannelTuple
-    ) -> None:
+    def add_submodule(self, name: str, submodule: TModuleChannel) -> TModuleChannel:
         """
         Bind one submodule to this instrument.
 
@@ -283,6 +282,9 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
                 ``instrument.submodules`` and also how it can be
                 addressed.
             submodule: The submodule to be stored.
+
+        Returns:
+            The added submodule
 
         Raises:
             KeyError: If this instrument already contains a submodule with this
@@ -304,6 +306,7 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
             self._channel_lists[name] = submodule
         else:
             self.instrument_modules[name] = submodule
+        return submodule
 
     def get_component(self, full_name: str) -> MetadatableWithName:
         """
