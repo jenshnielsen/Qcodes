@@ -45,7 +45,7 @@ def test_do1d_plot(_param_set, _param, plot, plot_config) -> None:
 
     output = do1d(_param_set, start, stop, num_points, 0, _param, do_plot=plot)
     assert len(output[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(output[1][0], matplotlib.axes.Axes)
     else:
         assert output[1][0] is None

@@ -391,7 +391,7 @@ def test_dond_0d_with_real_parameter(period, plot, plot_config) -> None:
 
     output = dond(arrayparam, write_period=period, do_plot=plot)
     assert len(output[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(output[1][0], matplotlib.axes.Axes)
     else:
         assert output[1][0] is None
@@ -562,7 +562,7 @@ def test_dond_1d_plot(_param_set, _param, plot, plot_config) -> None:
 
     output = dond(sweep, _param, do_plot=plot)
     assert len(output[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(output[1][0], matplotlib.axes.Axes)
     else:
         assert output[1][0] is None
@@ -782,7 +782,7 @@ def test_dond_2d_plot(_param_set, _param_set_2, _param, plot, plot_config) -> No
     output = dond(sweep_1, sweep_2, _param, do_plot=plot)
 
     assert len(output[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(output[1][0], matplotlib.axes.Axes)
     else:
         assert output[1][0] is None
@@ -920,7 +920,7 @@ def test_dond_2d_multiple_datasets_plot(
     assert len(axes[0]) == 1
     assert isinstance(axes[1], tuple)
     assert len(axes[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(axes[0][0], matplotlib.axes.Axes)
         assert isinstance(axes[1][0], matplotlib.axes.Axes)
     else:

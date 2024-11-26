@@ -88,7 +88,7 @@ def test_do2d_plot(_param_set, _param_set_2, _param, plot, plot_config) -> None:
     )
 
     assert len(output[1]) == 1
-    if plot is True or plot is None and plot_config is True:
+    if plot is True or (plot is None and plot_config is True):
         assert isinstance(output[1][0], matplotlib.axes.Axes)
     else:
         assert output[1][0] is None
