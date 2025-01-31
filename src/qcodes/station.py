@@ -17,6 +17,7 @@ from contextlib import suppress
 from copy import copy, deepcopy
 from functools import partial
 from io import StringIO
+from pathlib import Path
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -53,7 +54,6 @@ from qcodes.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
-    from pathlib import Path
     from types import ModuleType
 
 log = logging.getLogger(__name__)
@@ -68,9 +68,10 @@ PARAMETER_ATTRIBUTES = [
     "offset",
 ]
 
-SCHEMA_TEMPLATE_PATH = os.path.join(
-    get_qcodes_path("dist", "schemas"), "station-template.schema.json"
+SCHEMA_TEMPLATE_PATH = (
+    Path(get_qcodes_path("dist", "schemas")) / "station-template.schema.json"
 )
+
 SCHEMA_PATH = get_qcodes_user_path("schemas", "station.schema.json")
 STATION_YAML_EXT = "*.station.yaml"
 
@@ -85,6 +86,11 @@ def get_config_default_folder() -> str | None:
 
 def get_config_default_file() -> str | None:
     return qcodes.config["station"]["default_file"]
+
+
+def get_config_default_path() -> Path | None:
+    file = get_config_default_file()
+    return Path(file) if file is not None else None
 
 
 def get_config_use_monitor() -> str | None:
@@ -146,7 +152,7 @@ class Station(Metadatable, DelegateAttributes):
     def __init__(
         self,
         *components: MetadatableWithName,
-        config_file: str | Sequence[str] | None = None,
+        config_file: str | Sequence[str] | Path | Sequence[Path] | None = None,
         use_monitor: bool | None = None,
         default: bool = True,
         update_snapshot: bool = True,
@@ -173,15 +179,25 @@ class Station(Metadatable, DelegateAttributes):
         self._monitor_parameters: list[Parameter] = []
 
         if config_file is None:
-            self.config_file = []
+            self._config_files = []
         elif isinstance(config_file, str):
-            self.config_file = [
-                config_file,
+            self._config_files = [
+                Path(config_file),
             ]
+        elif isinstance(config_file, Path):
+            self._config_files = [config_file]
         else:
-            self.config_file = list(config_file)
+            self._config_files = [Path(f) for f in config_file]
 
-        self.load_config_files(*self.config_file)
+        self.load_config_files(*self._config_files)
+
+    @property
+    def config_files(self) -> list[Path]:
+        return self._config_files
+
+    @property
+    def config_file(self) -> list[str]:
+        return [str(f) for f in self._config_files]
 
     def snapshot_base(
         self,
@@ -374,24 +390,24 @@ class Station(Metadatable, DelegateAttributes):
                 self.close_and_remove_instrument(c)
 
     @staticmethod
-    def _get_config_file_path(filename: str | None = None) -> str | None:
+    def _get_config_file_path(filename: Path | None = None) -> Path | None:
         """
         Methods to get complete path of a provided file. If not able to find
         path then returns None.
         """
-        filename = filename or get_config_default_file()
+        filename = filename or get_config_default_path()
         if filename is None:
             return None
         search_list = [filename]
-        if not os.path.isabs(filename) and get_config_default_folder() is not None:
+        if not filename.is_absolute() and get_config_default_folder() is not None:
             config_folder = cast(str, get_config_default_folder())
-            search_list += [os.path.join(config_folder, filename)]
+            search_list += [config_folder / filename]
         for p in search_list:
-            if os.path.isfile(p):
+            if p.is_file():
                 return p
         return None
 
-    def load_config_file(self, filename: str | None = None) -> None:
+    def load_config_file(self, filename: str | Path | None = None) -> None:
         """
         Loads a configuration from a YAML file. If `filename` is not specified
         the default file name from the qcodes configuration will be used.
@@ -404,7 +420,9 @@ class Station(Metadatable, DelegateAttributes):
         updated.
         """
 
-        path = self._get_config_file_path(filename)
+        path = self._get_config_file_path(
+            Path(filename) if filename is not None else None
+        )
 
         if path is None:
             if filename is not None:
@@ -422,7 +440,7 @@ class Station(Metadatable, DelegateAttributes):
         with open(path) as f:
             self.load_config(f)
 
-    def load_config_files(self, *filenames: str) -> None:
+    def load_config_files(self, *filenames: Path) -> None:
         """
         Loads configuration from multiple YAML files after merging them
         into one. If `filenames` are not specified the default file name from

@@ -791,8 +791,7 @@ invalid_keyword:
 
 def test_config_validation_comprehensive_config() -> None:
     Station(
-        config_file=os.path.join(
-            get_qcodes_path(), "dist", "tests", "station", "example.station.yaml"
+        config_file=Path(get_qcodes_path()) / "dist" / "tests" / "station" / "example.station.yaml"
         )
     )
 

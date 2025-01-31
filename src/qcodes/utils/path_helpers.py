@@ -25,6 +25,7 @@ def get_qcodes_user_path(*file_parts: str) -> str:
         path to the user qcodes directory
 
     """
-    path = os.environ.get(QCODES_USER_PATH_ENV, os.path.join(Path.home(), ".qcodes"))
+    path = Path(os.environ.get(QCODES_USER_PATH_ENV, Path.home() / ".qcodes"))
+    path.dir
     os.makedirs(os.path.dirname(path), exist_ok=True)
     return os.path.join(path, *file_parts)
