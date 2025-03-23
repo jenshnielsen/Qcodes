@@ -103,10 +103,17 @@ benchmarking/env/
 benchmarking/html/
 benchmarking/results/
 
-# Ignore .db files that are generated for some tests
+# Ignore .db files that are generated for some tests and examples
 qcodes/tests/dataset/fixtures/db_files/*
 qcodes/tests/output
 qcodes/tests/*.db
+qcodes/tests/*.db
+docs/examples/*.db
+docs/examples/*/*.db
+*.db-wal
+*.db-shm
+
+uv.lock
 
 # Do not ignore pyright npm version file
 !.github/package.json
