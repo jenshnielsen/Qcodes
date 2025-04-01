@@ -1123,6 +1123,10 @@ class ParameterBase(MetadatableWithName):
     def abstract(self) -> bool | None:
         return self._abstract
 
+    @property
+    def deptree(self) -> list[ParameterBase]:
+        return [self]
+
 
 class GetLatest(DelegateAttributes):
     """

@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from datetime import datetime
 
+    from qcodes.parameters.parameter_base import ParameterBase
     from qcodes.validators.validators import Validator
 
     from .parameter_base import ParamDataType, ParamRawDataType
@@ -331,3 +332,12 @@ class DelegateParameter(Parameter):
         )
 
         return tuple(self._vals) + source_validators
+
+    @property
+    def deptree(self) -> list[ParameterBase]:
+        base_dep_tree = super().deptree
+        if self.source is not None:
+            base_dep_tree.extend(self.source.deptree)
+            return base_dep_tree
+        else:
+            return base_dep_tree

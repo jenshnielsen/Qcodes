@@ -327,8 +327,8 @@ known-first-party = ["qcodes"]
 
 # TID253 these imports are fine at module level
 # in tests and examples
-# tests is not a package so don't require __init__.py files
-"docs/*" = ["TID253"]
+# tests and docs are not packages so don't require __init__.py files
+"docs/*" = ["TID253", "INP"]
 "tests/*" = ["TID253", "INP"]
 
 [tool.ruff.lint.flake8-tidy-imports]
