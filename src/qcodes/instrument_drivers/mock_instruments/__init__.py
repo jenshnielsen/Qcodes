@@ -327,7 +327,7 @@ class DummyInstrumentWithMeasurement(DummyBase):
     ):
         super().__init__(name=name, **kwargs)
         self._setter_instr = setter_instr
-        self.add_parameter(
+        self.v1 = self.add_parameter(
             "v1",
             parameter_class=DmmExponentialParameter,
             initial_value=0,
@@ -337,7 +337,7 @@ class DummyInstrumentWithMeasurement(DummyBase):
             get_cmd=None,
             set_cmd=None,
         )
-        self.add_parameter(
+        self.v2 = self.add_parameter(
             "v2",
             parameter_class=DmmGaussParameter,
             initial_value=0,
