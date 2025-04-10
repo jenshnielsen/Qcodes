@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
+    from qcodes.instrument.channel import ChannelTuple
+
 log = logging.getLogger(__name__)
 
 
@@ -619,7 +621,9 @@ class DummyChannelInstrument(DummyBase):
             channel = DummyChannel(self, chan_name, chan_id)
             channels.append(channel)
             self.add_submodule(chan_id, channel)
-        self.add_submodule("channels", channels.to_channel_tuple())
+        self.channels: ChannelTuple[DummyChannel] = self.add_submodule(
+            "channels", channels.to_channel_tuple()
+        )
 
 
 class DummyChannelOnlyInstrument(DummyBase):
@@ -638,7 +642,9 @@ class DummyChannelOnlyInstrument(DummyBase):
         for chan_name, chan_id in zip(channel_names, channel_ids):
             channel = DummyChannel(self, chan_name, chan_id)
             channels.append(channel)
-        self.add_submodule("channels", channels.to_channel_tuple())
+        self.channels: ChannelTuple[DummyChannel] = self.add_submodule(
+            "channels", channels.to_channel_tuple()
+        )
 
 
 class MultiGetter(MultiParameter):
@@ -1325,7 +1331,9 @@ class MockDAC(DummyBase):
             channel = MockDACChannel(parent=self, name=chan_name, num=num)
             channels.append(channel)
             self.add_submodule(chan_name, channel)
-        self.add_submodule("channels", channels.to_channel_tuple())
+        self.channels: ChannelTuple[MockDACChannel] = self.add_submodule(
+            "channels", channels.to_channel_tuple()
+        )
 
 
 class MockCustomChannel(InstrumentChannel):
@@ -1367,7 +1375,7 @@ class MockCustomChannel(InstrumentChannel):
 
         if current_valid_range is None:
             current_valid_range = []
-        super().add_parameter(
+        self.current_valid_range: Parameter = self.add_parameter(
             name="current_valid_range",
             label=f"{name} valid voltage range",
             initial_value=current_valid_range,
@@ -1375,6 +1383,7 @@ class MockCustomChannel(InstrumentChannel):
             get_cmd=None,
             set_cmd=None,
         )
+        """Parameter current_valid_range"""
 
         self.voltage: Parameter = self.add_parameter(
             "voltage",
