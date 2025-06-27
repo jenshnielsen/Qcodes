@@ -1,0 +1,47 @@
+trigger:
+  branches:
+    exclude:
+      - '*'
+  tags:
+    include:
+      - 'v*'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+       versionSpec: '3.12'
+    displayName: 'Use Python 3.12'
+
+  - script: |
+      python -m pip install --upgrade pip setuptools build
+    displayName: 'Install dependencies'
+
+  - script: |
+      python -m build
+    displayName: 'Build Python package'
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Pipeline.Workspace)/s/dist'
+      artifact: 'python-build-outputs'
+      publishLocation: 'pipeline'
+    displayName: 'Publish Build Artifacts'
+
+  - task: EsrpRelease@9
+    displayName: Sign and publish package to PyPi
+    inputs:
+      connectedservicename: 'PME ESRP Azure Connection'
+      usemanagedidentity: true
+      keyvaultname: 'quantum-esrp-kv'
+      signcertname: ESRPCert
+      clientid: '832c049d-cd07-4c1c-bfa5-c07250d190cb'
+      contenttype: PyPi
+      domaintenantid: '975f013f-7f24-47e8-a7d3-abc4752bf346'
+      folderlocation: '$(System.DefaultWorkingDirectory)/s/dist'
+      waitforreleasecompletion: true
+      owners: 'jenielse@microsoft.com'
+      approvers: 'miastafe@microsoft.com'
+      mainpublisher: ESRPRELPACMAN # Should be your main publisher value, provided at the time of ESRP Release onboarding. Please reachout to esrprelpm@microsoft.com if you don't know this.
