@@ -29,9 +29,10 @@ if TYPE_CHECKING:
 class MeasurementEvent:
     """Represents a single measurement event (set or get operation)"""
 
-    parameter: ParameterBase
-    action: str  # 'set' or 'get'
+    parameter: ParameterBase | None
+    action: str  # 'set', 'get', or 'calibrate'
     value: Any = None  # Value to set (None for get operations)
+    callback: Callable[[dict[str, Any]], None] | None = None  # For calibrate actions
 
 
 @dataclass
@@ -46,6 +47,14 @@ class SweepSpecification:
     def get_values(self) -> np.ndarray:
         """Generate the sweep values"""
         return np.linspace(self.start, self.stop, self.steps)
+
+
+@dataclass
+class CalibrationCallback:
+    """Specification for a calibration callback that sets derived parameter values"""
+
+    callback: Callable[[dict[str, Any]], None]
+    description: str = ""
 
 
 class MeasurementBuilder(ABC):
@@ -87,6 +96,7 @@ class Sweep(MeasurementBuilder):
         self._inner_sweeps: list[SweepSpecification] = []
         self._parallel_sweeps: list[SweepSpecification] = []
         self._measurements: list[ParameterBase] = []
+        self._calibration_callbacks: list[CalibrationCallback] = []
         self._in_parallel_mode = False
 
     def sweep(
@@ -127,6 +137,32 @@ class Sweep(MeasurementBuilder):
         self._in_parallel_mode = True
         return self
 
+    def calibrate(
+        self, callback: Callable[[dict[str, Any]], None], description: str = ""
+    ) -> Sweep:
+        """
+        Add a calibration callback that sets derived parameter values
+
+        The callback function receives a dictionary with current parameter values
+        and can set other parameters based on those values.
+
+        Args:
+            callback: Function that takes dict of parameter_name -> value and sets derived parameters
+            description: Optional description of what the calibration does
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            def my_callback(values):
+                p4.set(values['p1'] * 5 + values['p2'] * 0.1)
+
+            Sweep(p1, 0, 1, 10).sweep(p2, 0, 2, 5).calibrate(my_callback).measure(p3)
+
+        """
+        self._calibration_callbacks.append(CalibrationCallback(callback, description))
+        return self
+
     def measure(self, *parameters: ParameterBase) -> MeasurementExecutor:
         """
         Add measurement parameters and finalize the measurement definition
@@ -155,18 +191,23 @@ class Sweep(MeasurementBuilder):
         # Initialize result storage based on the events
         for event_list in events:
             for event in event_list:
-                if event.parameter.name not in results:
+                if event.parameter is not None and event.parameter.name not in results:
                     results[event.parameter.name] = []
 
         # Execute each step
+        current_values = {}  # Track current parameter values for calibration
         for step_events in events:
             for event in step_events:
-                if event.action == "set":
+                if event.action == "set" and event.parameter is not None:
                     event.parameter.set(event.value)
+                    current_values[event.parameter.name] = event.value
                     results[event.parameter.name].append(event.value)
-                elif event.action == "get":
+                elif event.action == "get" and event.parameter is not None:
                     value = event.parameter.get()
                     results[event.parameter.name].append(value)
+                elif event.action == "calibrate" and event.callback is not None:
+                    # Execute calibration callback with current parameter values
+                    event.callback(current_values.copy())
 
         return results
 
@@ -213,6 +254,16 @@ class Sweep(MeasurementBuilder):
                         )
                     )
 
+                # Add calibration events
+                for calibration in self._calibration_callbacks:
+                    step_events.append(
+                        MeasurementEvent(
+                            parameter=None,
+                            action="calibrate",
+                            callback=calibration.callback,
+                        )
+                    )
+
                 # Add measurement events
                 for param in self._measurements:
                     step_events.append(MeasurementEvent(parameter=param, action="get"))
@@ -255,6 +306,16 @@ class Sweep(MeasurementBuilder):
                     )
                 )
 
+                # Add calibration events
+                for calibration in self._calibration_callbacks:
+                    step_events.append(
+                        MeasurementEvent(
+                            parameter=None,
+                            action="calibrate",
+                            callback=calibration.callback,
+                        )
+                    )
+
                 # Add measurement events
                 for param in self._measurements:
                     step_events.append(MeasurementEvent(parameter=param, action="get"))
@@ -278,8 +339,18 @@ class Sweep(MeasurementBuilder):
 
         """
         if depth >= len(sweeps):
-            # Base case: generate measurement events
+            # Base case: generate calibration and measurement events
             events = []
+            # Add calibration events before measurements
+            for calibration in self._calibration_callbacks:
+                events.append(
+                    MeasurementEvent(
+                        parameter=None,
+                        action="calibrate",
+                        callback=calibration.callback,
+                    )
+                )
+            # Add measurement events
             for param in self._measurements:
                 events.append(MeasurementEvent(parameter=param, action="get"))
             return [events] if events else [[]]
@@ -319,6 +390,7 @@ class ParallelSweep(MeasurementBuilder):
         """
         self._sweeps = sweeps
         self._measurements: list[ParameterBase] = []
+        self._calibration_callbacks: list[CalibrationCallback] = []
 
         # Validate that all sweeps have the same number of steps
         if sweeps:
@@ -327,6 +399,23 @@ class ParallelSweep(MeasurementBuilder):
                 raise ValueError(
                     "All parallel sweeps must have the same number of steps"
                 )
+
+    def calibrate(
+        self, callback: Callable[[dict[str, Any]], None], description: str = ""
+    ) -> ParallelSweep:
+        """
+        Add a calibration callback that sets derived parameter values
+
+        Args:
+            callback: Function that takes dict of parameter_name -> value and sets derived parameters
+            description: Optional description of what the calibration does
+
+        Returns:
+            Self for method chaining
+
+        """
+        self._calibration_callbacks.append(CalibrationCallback(callback, description))
+        return self
 
     def measure(self, *parameters: ParameterBase) -> MeasurementExecutor:
         """
@@ -366,6 +455,16 @@ class ParallelSweep(MeasurementBuilder):
                     )
                 )
 
+            # Add calibration events
+            for calibration in self._calibration_callbacks:
+                step_events.append(
+                    MeasurementEvent(
+                        parameter=None,
+                        action="calibrate",
+                        callback=calibration.callback,
+                    )
+                )
+
             # Add measurements
             for param in self._measurements:
                 step_events.append(MeasurementEvent(parameter=param, action="get"))
@@ -386,14 +485,19 @@ class ParallelSweep(MeasurementBuilder):
             results[param.name] = []
 
         # Execute events
+        current_values = {}  # Track current parameter values for calibration
         for step_events in events:
             for event in step_events:
-                if event.action == "set":
+                if event.action == "set" and event.parameter is not None:
                     event.parameter.set(event.value)
+                    current_values[event.parameter.name] = event.value
                     results[event.parameter.name].append(event.value)
-                elif event.action == "get":
+                elif event.action == "get" and event.parameter is not None:
                     value = event.parameter.get()
                     results[event.parameter.name].append(value)
+                elif event.action == "calibrate" and event.callback is not None:
+                    # Execute calibration callback with current parameter values
+                    event.callback(current_values.copy())
 
         return results
 
@@ -437,18 +541,23 @@ class MeasurementExecutor:
         # Initialize result storage based on the events
         for event_list in events:
             for event in event_list:
-                if event.parameter.name not in results:
+                if event.parameter is not None and event.parameter.name not in results:
                     results[event.parameter.name] = []
 
         # Execute each step
+        current_values = {}  # Track current parameter values for calibration
         for step_events in events:
             for event in step_events:
-                if event.action == "set":
+                if event.action == "set" and event.parameter is not None:
                     event.parameter.set(event.value)
+                    current_values[event.parameter.name] = event.value
                     results[event.parameter.name].append(event.value)
-                elif event.action == "get":
+                elif event.action == "get" and event.parameter is not None:
                     value = event.parameter.get()
                     results[event.parameter.name].append(value)
+                elif event.action == "calibrate" and event.callback is not None:
+                    # Execute calibration callback with current parameter values
+                    event.callback(current_values.copy())
 
         return results
 
