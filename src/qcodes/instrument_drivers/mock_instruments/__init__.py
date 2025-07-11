@@ -59,6 +59,7 @@ class MockParabola(DummyBase):
 
     def __init__(self, name: str, **kwargs: Unpack[InstrumentBaseKWArgs]):
         super().__init__(name, **kwargs)
+        self._rng = np.random.default_rng()
 
         # Instrument parameters
         for parname in ["x", "y", "z"]:
@@ -93,7 +94,7 @@ class MockParabola(DummyBase):
             self.x.get() ** 2
             + self.y.get() ** 2
             + self.z.get() ** 2
-            + self.noise.get() * np.random.rand(1)
+            + self.noise.get() * self._rng.random(1)
         )
 
     def _measure_skewed_parabola(self) -> float:
@@ -102,7 +103,7 @@ class MockParabola(DummyBase):
         """
         return (self.x.get() ** 2 + self.y.get() ** 2 + self.z.get() ** 2) * (
             1 + abs(self.y.get() - self.x.get())
-        ) + self.noise.get() * np.random.rand(1)
+        ) + self.noise.get() * self._rng.random(1)
 
 
 class MockMetaParabola(InstrumentBase):
@@ -271,9 +272,10 @@ class DmmExponentialParameter(Parameter):
         """
         Yields a*exp(-b*x) where x is put in
         """
+        rng = np.random.default_rng()
         x = 0.0
         while True:
-            x = yield a * np.exp(-b * x) + 0.02 * a * np.random.randn()
+            x = yield a * np.exp(-b * x) + 0.02 * a * rng.standard_normal()
 
 
 class DmmGaussParameter(Parameter):
@@ -314,8 +316,9 @@ class DmmGaussParameter(Parameter):
 
         x = 0.0
         y = 0.0
+        rng = np.random.default_rng()
         while True:
-            noise = np.random.randn() * self.noise
+            noise = rng.standard_normal() * self.noise
             (x, y) = yield float(gauss_2d(x, y) + noise)
 
 
@@ -365,6 +368,7 @@ class DummyChannel(InstrumentChannel):
         super().__init__(parent, name, **kwargs)
 
         self._channel = channel
+        self._rng = np.random.default_rng()
 
         # Add the various channel parameters
         self.add_parameter(
@@ -911,7 +915,7 @@ class DummyParameterWithSetpoints1D(ParameterWithSetpoints):
     def get_raw(self) -> ParamRawDataType:
         assert isinstance(self.instrument, DummyChannel)
         npoints = self.instrument.dummy_n_points()
-        return np.random.rand(npoints)
+        return self.instrument._rng.random(npoints)
 
 
 class DummyParameterWithSetpoints2D(ParameterWithSetpoints):
@@ -924,7 +928,7 @@ class DummyParameterWithSetpoints2D(ParameterWithSetpoints):
         assert isinstance(self.instrument, DummyChannel)
         npoints = self.instrument.dummy_n_points()
         npoints_2 = self.instrument.dummy_n_points_2()
-        return np.random.rand(npoints, npoints_2)
+        return self.instrument._rng.random((npoints, npoints_2))
 
 
 class DummyParameterWithSetpointsComplex(ParameterWithSetpoints):
@@ -936,7 +940,9 @@ class DummyParameterWithSetpointsComplex(ParameterWithSetpoints):
     def get_raw(self) -> ParamRawDataType:
         assert isinstance(self.instrument, DummyChannel)
         npoints = self.instrument.dummy_n_points()
-        return np.random.rand(npoints) + 1j * np.random.rand(npoints)
+        return self.instrument._rng.random(npoints) + 1j * self.instrument._rng.random(
+            npoints
+        )
 
 
 def setpoint_generator(

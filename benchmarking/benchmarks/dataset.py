@@ -93,10 +93,11 @@ class Adding5Params:
 
         # Enter Runner and create DataSaver
         self.datasaver = self.runner.__enter__()
+        self._rng = np.random.default_rng()
 
         # Create values for parameters
         for _ in range(len(self.parameters)):
-            self.values.append(np.random.rand(bench_param["n_values"]))
+            self.values.append(self._rng.random(bench_param["n_values"]))
 
     def teardown(self, bench_param):
         # Exit runner context manager
