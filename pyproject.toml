@@ -246,7 +246,7 @@ extend-include = ["*.ipynb"]
 # tests and docs are not packages so it's
 # fine that init is missing and we therefor
 # mark them as namespace packages
-namespace-packages = ["tests", "docs"]
+namespace-packages = ["tests", "docs", "examples"]
 
 [tool.ruff.lint]
 
