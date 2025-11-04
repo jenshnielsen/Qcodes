@@ -137,9 +137,6 @@ class InterDependencies_:  # noqa: PLW1641
     def _validate_no_chained_dependencies(self, interdeps: ParamSpecTree) -> None:
         for node, in_degree in self._dependency_subgraph.in_degree:
             out_degree = self._dependency_subgraph.out_degree(node)
-            assert isinstance(out_degree, int), (
-                "The out_degree method with arguments should have returned an int"
-            )
             if in_degree > 0 and out_degree > 0:
                 depends_on_nodes = list(self._dependency_subgraph.successors(node))
                 depended_on_nodes = list(self._dependency_subgraph.predecessors(node))
@@ -155,6 +152,8 @@ class InterDependencies_:  # noqa: PLW1641
             for edge in self.graph.edges
             if self.graph.edges[edge]["interdep_type"] == "depends_on"
         ]
+        # the type annotations does not currently encode that edge_subgraph of a DiGraph
+        # is a DiGraph
         return cast("nx.DiGraph[str]", self.graph.edge_subgraph(depends_on_edges))
 
     @property
@@ -164,6 +163,8 @@ class InterDependencies_:  # noqa: PLW1641
             for edge in self.graph.edges
             if self.graph.edges[edge]["interdep_type"] == "inferred_from"
         ]
+        # the type annotations does not currently encode that edge_subgraph of a DiGraph
+        # is a DiGraph
         return cast("nx.DiGraph[str]", self.graph.edge_subgraph(inferred_from_edges))
 
     def extend(
@@ -195,6 +196,7 @@ class InterDependencies_:  # noqa: PLW1641
         return {key: tuple(val) for key, val in paramspec_tree_list.items()}
 
     def _node_to_paramspec(self, node_id: str) -> ParamSpecBase:
+        # the types of values is not specified but we know it to be ParamSpecBase
         return cast("ParamSpecBase", self.graph.nodes[node_id]["value"])
 
     def _paramspec_predecessors_by_type(
@@ -349,9 +351,6 @@ class InterDependencies_:  # noqa: PLW1641
         to this instance, but has the given parameter removed.
         """
         paramspec_in_degree = self.graph.in_degree(paramspec.name)
-        assert isinstance(paramspec_in_degree, int), (
-            "The in_degree method with arguments should have returned an int"
-        )
         if paramspec_in_degree > 0:
             raise ValueError(
                 f"Cannot remove {paramspec.name}, other parameters depend on or are inferred from it"
