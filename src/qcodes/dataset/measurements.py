@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
-from opentelemetry import trace
+from opentelemetry import metrics, trace
 
 import qcodes as qc
 import qcodes.validators as vals
@@ -66,6 +66,17 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 TRACER = trace.get_tracer(__name__)
+METER = metrics.get_meter(__name__)
+ADD_RESULT_DURATION = METER.create_counter(
+    "qcodes.dataset.measurement.add_result_duration",
+    unit="s",
+    description="Time spent in DataSaver.add_result",
+)
+RUN_DURATION = METER.create_counter(
+    "qcodes.dataset.measurement.run_duration",
+    unit="s",
+    description="Total time spent in Runner context",
+)
 
 ActionType = tuple[Callable[..., Any], Sequence[Any]]
 SubscriberType = tuple[
@@ -98,6 +109,7 @@ class DataSaver:
     ) -> None:
         self._span = span
         self._dataset = dataset
+        self._add_result_time = 0.0
         if (
             DataSaver.default_callback is not None
             and "run_tables_subscription_callback" in DataSaver.default_callback
@@ -207,6 +219,7 @@ class DataSaver:
                 its type.
 
         """
+        start_time = perf_counter()
 
         parameter_results: list[ParameterResultType] = [
             self._coerce_result_tuple_to_parameter_result_type(result_tuple)
@@ -277,6 +290,7 @@ class DataSaver:
         if perf_counter() - self._last_save_time > self.write_period:
             self.flush_data_to_database()
             self._last_save_time = perf_counter()
+        self._add_result_time += perf_counter() - start_time
 
     def _unpack_arrayparameter(
         self, partial_result: ResType
@@ -610,6 +624,7 @@ class Runner:
         self._span = TRACER.start_span(
             "qcodes.dataset.Measurement.run", context=context
         )
+        self._start_time = perf_counter()
         with ExitStack() as stack:
             stack.enter_context(trace.use_span(self._span, end_on_exit=True))
 
@@ -731,6 +746,10 @@ class Runner:
         exception_value: BaseException | None,
         traceback: TracebackType | None,
     ) -> None:
+        total_time = perf_counter() - self._start_time
+        add_result_time = self.datasaver._add_result_time
+        ADD_RESULT_DURATION.add(add_result_time)
+        RUN_DURATION.add(total_time)
         with DelayedKeyboardInterrupt(
             context={"reason": "qcodes measurement exit", "qcodes_guid": self.ds.guid}
         ):
