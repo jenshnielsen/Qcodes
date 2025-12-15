@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from typing_extensions import Unpack
 
 
-class Keysight344xxATrigger(InstrumentChannel):
+class Keysight344xxATrigger(InstrumentChannel["Keysight344xxA"]):
     """Implements triggering parameters and methods of Keysight 344xxA."""
 
     def __init__(
@@ -425,7 +425,7 @@ for every measurement (not multiple ranges, just one range up or
 down per measurement)."""
 
 
-class Keysight344xxADisplay(InstrumentChannel):
+class Keysight344xxADisplay(InstrumentChannel["Keysight344xxA"]):
     """Implements interaction with the display of Keysight 344xxA."""
 
     def __init__(
@@ -494,7 +494,7 @@ achieved by calling `display.clear`."""
         self.text.get()  # also update the parameter value
 
 
-class TimeTrace(ParameterWithSetpoints):
+class TimeTrace(ParameterWithSetpoints[Any, "Keysight344xxA"]):
     """
     A parameter class that holds the data for a time trace type measurement,
     i.e. a measurement of N voltage or current values measured at fixed time

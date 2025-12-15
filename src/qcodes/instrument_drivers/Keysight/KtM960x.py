@@ -1,6 +1,6 @@
 import ctypes
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import qcodes.validators as vals
 from qcodes.instrument import Instrument, InstrumentBaseKWArgs
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from typing_extensions import Unpack
 
 
-class Measure(MultiParameter):
+class Measure(MultiParameter[Any, "KeysightM960x"]):
     def __init__(self, name: str, instrument: "KeysightM960x") -> None:
         super().__init__(
             name=name,

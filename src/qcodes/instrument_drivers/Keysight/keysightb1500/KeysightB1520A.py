@@ -1151,7 +1151,9 @@ Alias for backwards compatiblitly
 """
 
 
-class KeysightB1500CVSweepMeasurement(MultiParameter, StatusMixin):
+class KeysightB1500CVSweepMeasurement(
+    MultiParameter[Any, "KeysightB1520A"], StatusMixin
+):
     """
     CV sweep measurement outputs a list of primary (capacitance) and secondary
     parameter (disipation).

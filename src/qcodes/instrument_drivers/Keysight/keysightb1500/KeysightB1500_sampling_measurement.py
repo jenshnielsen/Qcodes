@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     )
 
 
-class SamplingMeasurement(ParameterWithSetpoints):
+class SamplingMeasurement(ParameterWithSetpoints[Any, "KeysightB1517A"]):
     """
     Performs sampling measurement using semiconductor
     parameter analyzer B1500A.

@@ -481,7 +481,7 @@ class KeysightB1500(VisaInstrument):
         )
 
 
-class IVSweepMeasurement(MultiParameter, StatusMixin):
+class IVSweepMeasurement(MultiParameter[Any, "KeysightB1517A"], StatusMixin):
     """
     IV sweep measurement outputs a list of measured current parameters
     as a result of voltage sweep.
