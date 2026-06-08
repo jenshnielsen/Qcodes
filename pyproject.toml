@@ -47,6 +47,7 @@ dependencies = [
     "opentelemetry-api>=1.17.0",
     "pillow>=10.2.0",
     "dask>=2022.1.0", # we are making use of xarray features that requires dask implicitly
+    "zarr>=3.2.1",
 ]
 
 dynamic = ["version"]
