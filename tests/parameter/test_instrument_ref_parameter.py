@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="instrument_a")
-def _make_instrument_a() -> "Generator[DummyInstrument, None, None]":
+def _make_instrument_a() -> "Generator[DummyInstrument]":
     a = DummyInstrument("dummy_holder")
     try:
         yield a
@@ -19,7 +19,7 @@ def _make_instrument_a() -> "Generator[DummyInstrument, None, None]":
 
 
 @pytest.fixture(name="instrument_d")
-def _make_instrument_d() -> "Generator[DummyInstrument, None, None]":
+def _make_instrument_d() -> "Generator[DummyInstrument]":
     d = DummyInstrument("dummy")
     try:
         yield d

@@ -1,7 +1,6 @@
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, final, overload
-
-from typing_extensions import deprecated
+from warnings import deprecated
 
 from qcodes.utils import deep_update
 

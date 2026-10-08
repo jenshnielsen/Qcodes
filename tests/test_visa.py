@@ -126,7 +126,7 @@ args3 = ["I'm out of fingers", "asking 'STAT?' to <MockVisa: Joe>", "getting Joe
 
 
 @pytest.fixture(name="mock_visa")
-def _make_mock_visa() -> "Generator[MockVisa, None, None]":
+def _make_mock_visa() -> "Generator[MockVisa]":
     mv = MockVisa("Joe", "none_address")
     try:
         yield mv

@@ -46,7 +46,7 @@ class AtomicConnection(sqlite3.Connection):
 
 
 @contextmanager
-def atomic(conn: AtomicConnection) -> Generator[AtomicConnection, None, None]:
+def atomic(conn: AtomicConnection) -> Generator[AtomicConnection]:
     """
     Guard a series of transactions as atomic.
 

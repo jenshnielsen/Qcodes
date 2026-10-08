@@ -184,7 +184,7 @@ def checked_getattr_indexed(
 @contextmanager
 def attribute_set_to(
     object_: object, attribute_name: str, new_value: Any
-) -> "Generator[None, None, None]":
+) -> "Generator[None]":
     """
     This context manager allows to change a given attribute of a given object
     to a new value, and the original value is reverted upon exit of the context

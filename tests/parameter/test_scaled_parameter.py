@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="instrument")
-def _make_instrument() -> "Generator[DummyInstrument, None, None]":
+def _make_instrument() -> "Generator[DummyInstrument]":
     instrument = DummyInstrument("dummy")
     try:
         target_name = "target_parameter"

@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="not_an_sr830")
-def _make_not_an_sr830() -> "Generator[DummyInstrument, None, None]":
+def _make_not_an_sr830() -> "Generator[DummyInstrument]":
     instrument = DummyInstrument("not_an_sr830", gates=[])
     try:
         yield instrument

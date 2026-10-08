@@ -62,9 +62,7 @@ fixturepath = Path(tests.dataset.__file__).parent / "fixtures"
 
 
 @contextmanager
-def location_and_station_set_to(
-    location: int, work_station: int
-) -> "Generator[None, None, None]":
+def location_and_station_set_to(location: int, work_station: int) -> "Generator[None]":
     cfg = qc.config.current_config
     if cfg is None:
         raise RuntimeError("Expected config to be not None.")

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import collections.abc
 import logging
-import sys
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -57,18 +56,11 @@ class InstrumentLoggerAdapter(logging.LoggerAdapter):
         """
         # forward the merge_extra bool to the parent class if 3.13
         # otherwise assign it manually
-        if sys.version_info >= (3, 13):
-            super().__init__(
-                logger,
-                extra,
-                merge_extra=merge_extra,
-            )
-        else:
-            super().__init__(
-                logger,
-                extra,
-            )
-            self.merge_extra = merge_extra
+        super().__init__(
+            logger,
+            extra,
+            merge_extra=merge_extra,
+        )
 
     def process(
         self, msg: str, kwargs: MutableMapping[str, Any]
@@ -157,7 +149,7 @@ def filter_instrument(
     instrument: InstrumentBase | Sequence[InstrumentBase],
     handler: logging.Handler | Sequence[logging.Handler] | None = None,
     level: LevelType | None = None,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """
     Context manager that adds a filter that only enables the log messages of
     the supplied instruments to pass.

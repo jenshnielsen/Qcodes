@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="dummyinst")
-def _make_dummy_inst() -> "Generator[DummyInstrument, None, None]":
+def _make_dummy_inst() -> "Generator[DummyInstrument]":
     inst = DummyInstrument("dummy_holder")
     try:
         yield inst

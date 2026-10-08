@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def dummy_channel_instrument() -> "Generator[DummyChannelInstrument, None, None]":
+def dummy_channel_instrument() -> "Generator[DummyChannelInstrument]":
     instrument = DummyChannelInstrument(name="testdummy")
     try:
         yield instrument

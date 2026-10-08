@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="b1500")
-def _make_b1500(request: FixtureRequest) -> "Generator[KeysightB1500, None, None]":
+def _make_b1500(request: FixtureRequest) -> "Generator[KeysightB1500]":
     request.addfinalizer(KeysightB1500.close_all)
 
     try:
@@ -34,7 +34,7 @@ def _make_b1500(request: FixtureRequest) -> "Generator[KeysightB1500, None, None
 
 
 @pytest.fixture(name="mainframe")
-def _make_mainframe() -> "Generator[MagicMock, None, None]":
+def _make_mainframe() -> "Generator[MagicMock]":
     PropertyMock()
     mainframe = MagicMock()
     name_parts = PropertyMock(return_value=["mainframe"])

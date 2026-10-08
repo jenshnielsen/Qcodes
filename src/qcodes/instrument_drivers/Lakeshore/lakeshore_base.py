@@ -1,9 +1,8 @@
 import time
 from bisect import bisect
-from typing import TYPE_CHECKING, Any, ClassVar, Generic
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import numpy as np
-from typing_extensions import TypeVar
 
 from qcodes import validators as vals
 from qcodes.instrument import (
@@ -741,16 +740,9 @@ class LakeshoreBaseSensorChannel(InstrumentChannel):
         return terms_in_number
 
 
-# Cannot convert to PEP 695: uses default= and covariant= which require PEP 696 (Python 3.13+).
-ChanType_co = TypeVar(
-    "ChanType_co",
-    bound=LakeshoreBaseSensorChannel,
-    default=LakeshoreBaseSensorChannel,
-    covariant=True,
-)
-
-
-class LakeshoreBase(VisaInstrument, Generic[ChanType_co]):
+class LakeshoreBase[ChanType: LakeshoreBaseSensorChannel = LakeshoreBaseSensorChannel](
+    VisaInstrument
+):
     """
     This base class has been written to be that base for the Lakeshore 336
     and 372. There are probably other lakeshore modes that can use the
@@ -782,7 +774,7 @@ class LakeshoreBase(VisaInstrument, Generic[ChanType_co]):
         self,
         name: str,
         address: str,
-        channel_class: type[ChanType_co],
+        channel_class: type[ChanType],
         print_connect_message: bool = True,
         **kwargs: "Unpack[VisaInstrumentKWArgs]",
     ) -> None:
@@ -799,7 +791,7 @@ class LakeshoreBase(VisaInstrument, Generic[ChanType_co]):
             channel = channel_class(self, channel_name, command)
             channels.append(channel)
             self.add_submodule(channel_name, channel)
-        self.channels: ChannelTuple[ChanType_co] = self.add_submodule(
+        self.channels: ChannelTuple[ChanType] = self.add_submodule(
             "channels", channels.to_channel_tuple()
         )
         """A ChannelTuple of sensor channels on the Lakeshore instrument."""

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="image_colorbar")
-def _make_image_colorbar() -> Generator[Colorbar, None, None]:
+def _make_image_colorbar() -> Generator[Colorbar]:
     """A colorbar whose mappable is an ``AxesImage`` rather than a ``QuadMesh``."""
     fig, ax = plt.subplots()
     image = ax.imshow(np.arange(4).reshape(2, 2))

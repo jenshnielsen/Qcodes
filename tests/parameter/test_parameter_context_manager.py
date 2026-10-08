@@ -80,7 +80,7 @@ class DummyTrackingInstrument(DummyInstrument):
 
 
 @pytest.fixture(name="instrument")
-def _make_instrument() -> "Generator[DummyTrackingInstrument, None, None]":
+def _make_instrument() -> "Generator[DummyTrackingInstrument]":
     instrument = DummyTrackingInstrument("dummy_holder")
     try:
         yield instrument

@@ -56,7 +56,7 @@ def logger_is_descendant(logger_: logging.Logger, ancestor: logging.Logger) -> b
 
 
 @pytest.fixture(autouse=True)
-def cleanup_started_logger() -> "Generator[None, None, None]":
+def cleanup_started_logger() -> "Generator[None]":
     # cleanup state left by a test calling start_logger
     root_logger = logging.getLogger()
     existing_handlers = copy(root_logger.handlers)
@@ -71,7 +71,7 @@ def cleanup_started_logger() -> "Generator[None, None, None]":
 
 
 @pytest.fixture
-def awg5208(caplog: LogCaptureFixture) -> "Generator[TektronixAWG5208, None, None]":
+def awg5208(caplog: LogCaptureFixture) -> "Generator[TektronixAWG5208]":
     with caplog.at_level(logging.INFO):
         inst = TektronixAWG5208(
             "awg_sim",
@@ -86,7 +86,7 @@ def awg5208(caplog: LogCaptureFixture) -> "Generator[TektronixAWG5208, None, Non
 
 
 @pytest.fixture
-def model372() -> "Generator[LakeshoreModel372Mock, None, None]":
+def model372() -> "Generator[LakeshoreModel372Mock]":
     inst = LakeshoreModel372Mock(
         "lakeshore_372",
         "GPIB::3::INSTR",
@@ -103,7 +103,7 @@ def model372() -> "Generator[LakeshoreModel372Mock, None, None]":
 
 @pytest.fixture()
 def AMI430_3D() -> (
-    "Generator[tuple[AMIModel4303D, AMIModel430, AMIModel430, AMIModel430], None, None]"
+    "Generator[tuple[AMIModel4303D, AMIModel430, AMIModel430, AMIModel430]]"
 ):
     mag_x = AMIModel430(
         "x",
@@ -410,7 +410,7 @@ class ScopedIPToVisa(IPToVisa):
 
 
 @pytest.fixture(name="restore_shared_logger_levels", autouse=True)
-def _restore_shared_logger_levels() -> "Generator[None, None, None]":
+def _restore_shared_logger_levels() -> "Generator[None]":
     """
     Restore levels of the shared and test-scoped loggers.
 

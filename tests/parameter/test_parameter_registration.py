@@ -35,7 +35,7 @@ class BrokenParameter2(Parameter):
 
 
 @pytest.fixture(name="dummy_attr_instr")
-def _make_dummy_attr_instr() -> "Generator[DummyAttrInstrument, None, None]":
+def _make_dummy_attr_instr() -> "Generator[DummyAttrInstrument]":
     dummy_attr_instr = DummyAttrInstrument("dummy_attr_instr")
     yield dummy_attr_instr
     dummy_attr_instr.close()

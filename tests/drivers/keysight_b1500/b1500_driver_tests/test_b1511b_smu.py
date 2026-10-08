@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="smu")
-def _make_smu(mainframe: "MagicMock") -> "Generator[KeysightB1511B, None, None]":
+def _make_smu(mainframe: "MagicMock") -> "Generator[KeysightB1511B]":
     slot_nr = 1
     smu = KeysightB1511B(parent=mainframe, name="B1511B", slot_nr=slot_nr)
     yield smu

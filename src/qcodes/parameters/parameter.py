@@ -6,16 +6,14 @@ from __future__ import annotations
 import logging
 import os
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Generic, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from typing_extensions import TypedDict
 
 from .command import Command
 from .parameter_base import (
-    InstrumentTypeVar_co,
     ParameterBase,
     ParameterBaseKWArgs,
-    ParameterDataTypeVar,
     ParamRawDataType,
 )
 from .sweep_values import SweepFixedValues
@@ -24,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping
     from typing import NotRequired, Unpack
 
+    from qcodes.instrument import InstrumentBase
     from qcodes.logger.instrument_logger import InstrumentLoggerAdapter
     from qcodes.parameters import ParamSpecBase
     from qcodes.validators import Validator
@@ -32,11 +31,11 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-class ParameterKWArgs(
+class ParameterKWArgs[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: InstrumentBase | None = InstrumentBase | None,
+](
     TypedDict,
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar, InstrumentTypeVar_co],  # noqa: UP046
 ):
     """
     This TypedDict defines the type of the kwargs that can be passed to
@@ -198,11 +197,11 @@ class ParameterKWArgs(
     """
 
 
-class Parameter(
+class Parameter[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: InstrumentBase | None = InstrumentBase | None,
+](
     ParameterBase[ParameterDataTypeVar, InstrumentTypeVar_co],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar, InstrumentTypeVar_co],  # noqa: UP046
 ):
     """
     A parameter represents a single degree of freedom. Most often,

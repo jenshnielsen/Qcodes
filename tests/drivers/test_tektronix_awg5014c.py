@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def awg() -> Generator[TektronixAWG5014, None, None]:
+def awg() -> Generator[TektronixAWG5014]:
     awg_sim = TektronixAWG5014(
         "awg_sim",
         address="GPIB0::1::INSTR",

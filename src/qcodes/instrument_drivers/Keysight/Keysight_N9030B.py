@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Generic, Literal, Self
+from typing import TYPE_CHECKING, Any, Literal, Self
 
 import numpy as np
 import numpy.typing as npt
-from typing_extensions import TypeVar
 
 from qcodes.instrument import (
     InstrumentBaseKWArgs,
@@ -18,33 +17,26 @@ from qcodes.parameters import (
     ParamRawDataType,
     create_on_off_val_mapping,
 )
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 from qcodes.validators import Arrays, Bool, Enum, Ints, Numbers
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Unpack
 
-# Cannot convert to PEP 695: uses default= which requires PEP 696 (Python 3.13+).
-_T = TypeVar(
-    "_T",
-    bound="KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode",
-    default="KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode",
-)
 
-
-class FrequencyAxis(
+class FrequencyAxis[
+    T: "KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode" = "KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode"
+](
     Parameter[
         npt.NDArray[np.float64],
-        _T,
+        T,
     ],
-    Generic[_T],
 ):
     def __init__(
         self,
-        start: Parameter[float, _T],
-        stop: Parameter[float, _T],
-        npts: Parameter[int, _T],
+        start: Parameter[float, T],
+        stop: Parameter[float, T],
+        npts: Parameter[int, T],
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -62,11 +54,11 @@ class FrequencyAxis(
         return np.linspace(start_val, stop_val, npts_val)
 
 
-class Trace(
-    ParameterWithSetpoints[ParameterDataTypeVar, _T],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar, _T],  # noqa: UP046
+class Trace[
+    ParameterDataTypeVar = Any,
+    T: "KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode" = "KeysightN9030BSpectrumAnalyzerMode | KeysightN9030BPhaseNoiseMode",
+](
+    ParameterWithSetpoints[ParameterDataTypeVar, T],
 ):
     def __init__(
         self,

@@ -1,6 +1,6 @@
 import ctypes
 from functools import partial
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING
 
 import qcodes.validators as vals
 from qcodes.instrument import Instrument, InstrumentBaseKWArgs
@@ -10,19 +10,15 @@ from qcodes.parameters import (
     ParamRawDataType,
     create_on_off_val_mapping,
 )
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 
 from . import KtM960xDefs
 
 if TYPE_CHECKING:
-    from typing import Unpack
+    from typing import Any, Unpack
 
 
-class Measure(
+class Measure[ParameterDataTypeVar = Any](
     MultiParameter[ParameterDataTypeVar, "KeysightM960x"],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     def __init__(self, name: str, instrument: "KeysightM960x") -> None:
         super().__init__(

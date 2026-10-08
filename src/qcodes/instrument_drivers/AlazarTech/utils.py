@@ -5,21 +5,17 @@ improve the code structure (which is more the purpose of the
 :mod:`.AlazarTech.helpers` module).
 """
 
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 
 from qcodes.parameters import Parameter, ParamRawDataType
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 
 if TYPE_CHECKING:
     # ruff does not detect that this is used as a generic parameter below
     from .ATS import AlazarTechATS  # noqa: F401
 
 
-class TraceParameter(
+class TraceParameter[ParameterDataTypeVar = Any](
     Parameter[ParameterDataTypeVar, "AlazarTechATS"],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     """
     A parameter that keeps track of if its value has been synced to

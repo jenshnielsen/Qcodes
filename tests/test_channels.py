@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function", name="dci")
-def _make_dci() -> Generator[DummyChannelInstrument, None, None]:
+def _make_dci() -> Generator[DummyChannelInstrument]:
     dci = DummyChannelInstrument(name="dci")
     try:
         yield dci
@@ -49,7 +49,7 @@ class DCIWithList(Instrument):
 
 
 @pytest.fixture(scope="function", name="dci_with_list")
-def _make_dci_with_list() -> Generator[DCIWithList, None, None]:
+def _make_dci_with_list() -> Generator[DCIWithList]:
     dci = DCIWithList(name="dciwl")
 
     try:
@@ -59,7 +59,7 @@ def _make_dci_with_list() -> Generator[DCIWithList, None, None]:
 
 
 @pytest.fixture(scope="function", name="empty_instrument")
-def _make_empty_instrument() -> Generator[Instrument, None, None]:
+def _make_empty_instrument() -> Generator[Instrument]:
     instr = Instrument(name="dci")
 
     try:

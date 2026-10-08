@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="cryo_instrument", scope="function")
-def fixture_cryo_instrument() -> "Generator[CryomagneticsModel4G,None,None]":
+def fixture_cryo_instrument() -> "Generator[CryomagneticsModel4G]":
     """
     Fixture to create and yield a CryomagneticsModel4G object and close it after testing.
     """

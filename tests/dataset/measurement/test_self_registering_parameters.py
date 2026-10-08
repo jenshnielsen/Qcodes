@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def control_parameters() -> (
-    "Generator[tuple[ManualParameter, ManualParameter, ManualParameter], None, None]"
+    "Generator[tuple[ManualParameter, ManualParameter, ManualParameter]]"
 ):
     comp1 = ManualParameter("comp1")
     comp2 = ManualParameter("comp2")
@@ -26,7 +26,7 @@ def control_parameters() -> (
 
 @pytest.fixture
 def dependent_parameters() -> (
-    "Generator[tuple[ManualParameter, ManualParameter, ManualParameter], None, None]"
+    "Generator[tuple[ManualParameter, ManualParameter, ManualParameter]]"
 ):
     indep1 = ManualParameter("indep1")
     indep2 = ManualParameter("indep2")

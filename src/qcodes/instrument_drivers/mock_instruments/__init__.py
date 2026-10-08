@@ -280,7 +280,7 @@ class DmmExponentialParameter(Parameter):
         mylogger.debug("Getting raw value of parameter: %s as %s", self.full_name, val)
         return val
 
-    def _exponential_decay(self, a: float, b: float) -> Generator[float, float, None]:
+    def _exponential_decay(self, a: float, b: float) -> Generator[float, float]:
         """
         Yields a*exp(-b*x) where x is put in
         """
@@ -315,7 +315,7 @@ class DmmGaussParameter(Parameter):
         mylogger.debug("Getting raw value of parameter: %s as %s", self.full_name, val)
         return val
 
-    def _gauss_model(self) -> Generator[float, tuple[float, float], None]:
+    def _gauss_model(self) -> Generator[float, tuple[float, float]]:
         """
         Returns a generator sampling a gaussian. The gaussian is
         normalised such that its maximal value is simply 1
@@ -1163,7 +1163,7 @@ class MockField(DummyBase):
         dfield = self.ramp_rate() * _time / 60.0
         return self._start_field + self._sign * dfield
 
-    def _field_ramp(self) -> Generator[float, float, None]:
+    def _field_ramp(self) -> Generator[float, float]:
         """
         Yields field for a given point in time
         """

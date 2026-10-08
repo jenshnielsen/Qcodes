@@ -1,6 +1,6 @@
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Generic, Literal, NotRequired, Unpack, overload
+from typing import TYPE_CHECKING, Any, Literal, NotRequired, Unpack, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -9,7 +9,6 @@ from typing_extensions import TypedDict
 import qcodes.validators as vals
 from qcodes.instrument import InstrumentBaseKWArgs, InstrumentChannel
 from qcodes.parameters import Group, GroupParameter, Parameter, ParamRawDataType
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 
 from . import constants
 from .constants import (
@@ -697,11 +696,8 @@ class KeysightB1500IVSweeper(InstrumentChannel["KeysightB1517A"]):
         return out_dict
 
 
-class _ParameterWithStatus(
+class _ParameterWithStatus[ParameterDataTypeVar = Any](
     Parameter[ParameterDataTypeVar, "KeysightB1517A"],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
@@ -727,11 +723,8 @@ class _ParameterWithStatus(
         return snapshot
 
 
-class _SpotMeasurementVoltageParameter(
+class _SpotMeasurementVoltageParameter[ParameterDataTypeVar = Any](
     _ParameterWithStatus[ParameterDataTypeVar],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     def set_raw(self, value: ParamRawDataType) -> None:
         smu = self.instrument
@@ -773,11 +766,8 @@ class _SpotMeasurementVoltageParameter(
         return parsed["value"]
 
 
-class _SpotMeasurementCurrentParameter(
+class _SpotMeasurementCurrentParameter[ParameterDataTypeVar = Any](
     _ParameterWithStatus[ParameterDataTypeVar],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     def set_raw(self, value: ParamRawDataType) -> None:
         smu = self.instrument

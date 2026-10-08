@@ -23,7 +23,7 @@ THREAD_SLEEP = 0.01
 
 
 @pytest.fixture(autouse=True)  # type: ignore[misc]
-def _reset_callback() -> "Generator[None, None, None]":
+def _reset_callback() -> "Generator[None]":
     """Reset the callback after each test"""
     yield
     ParameterBase.global_on_set_callback = None

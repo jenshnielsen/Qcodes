@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def tektronix_dpo() -> "Generator[TektronixDPO7000xx, None, None]":
+def tektronix_dpo() -> "Generator[TektronixDPO7000xx]":
     """
     A six channel-per-relay instrument
     """

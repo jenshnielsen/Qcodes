@@ -7,7 +7,7 @@ MSO70000/C/DX Series Digital Oscilloscopes
 import textwrap
 import time
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
 import numpy.typing as npt
@@ -26,7 +26,6 @@ from qcodes.parameters import (
     ParameterWithSetpoints,
     create_on_off_val_mapping,
 )
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 from qcodes.validators import Arrays, Enum, Numbers
 
 if TYPE_CHECKING:
@@ -943,11 +942,8 @@ class TektronixDPOTrigger(InstrumentChannel):
         self.write(f"TRIGger:{self._identifier}:TYPE {value}")
 
 
-class TektronixDPOMeasurementParameter(
+class TektronixDPOMeasurementParameter[ParameterDataTypeVar = Any](
     Parameter[ParameterDataTypeVar, "TektronixDPOMeasurement"],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     """
     A measurement parameter does not only return the instantaneous value

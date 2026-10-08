@@ -352,7 +352,7 @@ def conditionally_start_all_logging() -> None:
 @contextmanager
 def handler_level(
     level: LevelType, handler: "logging.Handler | Sequence[logging.Handler]"
-) -> "Generator[None, None, None]":
+) -> "Generator[None]":
     """
     Context manager to temporarily change the level of handlers.
 
@@ -378,7 +378,7 @@ def handler_level(
 
 
 @contextmanager
-def console_level(level: LevelType) -> "Generator[None, None, None]":
+def console_level(level: LevelType) -> "Generator[None]":
     """
     Context manager to temporarily change the level of the qcodes console
     handler.

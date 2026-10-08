@@ -46,9 +46,7 @@ LOG_NAME = "qcodes.instrument.instrument_base"
 
 
 @pytest.fixture(scope="function")
-def magnet_axes_instances() -> Generator[
-    tuple[AMIModel430, AMIModel430, AMIModel430], None, None
-]:
+def magnet_axes_instances() -> Generator[tuple[AMIModel430, AMIModel430, AMIModel430]]:
     """
     Start three mock instruments representing current drivers for the x, y,
     and z directions.
@@ -73,7 +71,7 @@ def magnet_axes_instances() -> Generator[
 @pytest.fixture(name="current_driver", scope="function")
 def _make_current_driver(
     magnet_axes_instances: tuple[AMIModel430, AMIModel430, AMIModel430],
-) -> Generator[AMIModel4303D, None, None]:
+) -> Generator[AMIModel4303D]:
     """
     Instantiate AMI430_3D instrument with the three mock instruments
     representing current drivers for the x, y, and z directions.
@@ -88,7 +86,7 @@ def _make_current_driver(
 
 
 @pytest.fixture(scope="function", name="ami430")
-def _make_ami430() -> Generator[AMIModel430, None, None]:
+def _make_ami430() -> Generator[AMIModel430]:
     mag = AMIModel430(
         "ami430",
         address="GPIB::1::INSTR",

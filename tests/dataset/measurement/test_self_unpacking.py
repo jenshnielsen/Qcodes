@@ -52,7 +52,7 @@ class ControllingParameter(Parameter):
 
 @pytest.fixture
 def controlling_parameters() -> (
-    "Generator[tuple[ControllingParameter, ManualParameter, ManualParameter], None, None]"
+    "Generator[tuple[ControllingParameter, ManualParameter, ManualParameter]]"
 ):
     comp1 = ManualParameter("comp1")
     comp2 = ManualParameter("comp2")

@@ -156,7 +156,7 @@ def time_difference(
 @contextmanager
 def capture_dataframe(
     level: LevelType = logging.DEBUG, logger: logging.Logger | None = None
-) -> Generator[tuple[logging.StreamHandler, Callable[[], pd.DataFrame]], None, None]:
+) -> Generator[tuple[logging.StreamHandler, Callable[[], pd.DataFrame]]]:
     """
     Context manager to capture the logs in a :class:`pd.DataFrame`
 

@@ -120,7 +120,7 @@ def _register_actions(
 
 
 @contextmanager
-def catch_interrupts() -> Generator[Callable[[], MeasInterruptT | None], None, None]:
+def catch_interrupts() -> Generator[Callable[[], MeasInterruptT | None]]:
     interrupt_exception: MeasInterruptT | None = None
     interrupt_raised = False
 

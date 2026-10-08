@@ -2,20 +2,20 @@ from __future__ import annotations
 
 import os
 from collections.abc import Iterator, Sequence
-from typing import TYPE_CHECKING, Any, Generic
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from .parameter_base import (
-    InstrumentTypeVar_co,
     ParameterBase,
     ParameterBaseKWArgs,
-    ParameterDataTypeVar,
 )
 from .sequence_helpers import is_sequence_of
 
 if TYPE_CHECKING:
     from typing import Unpack
+
+    from qcodes.instrument import InstrumentBase
 
 try:
     from qcodes_loop.data.data_array import DataArray
@@ -55,11 +55,11 @@ def _is_nested_sequence_or_none(
     return True
 
 
-class MultiParameter(
+class MultiParameter[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: InstrumentBase | None = InstrumentBase | None,
+](
     ParameterBase[ParameterDataTypeVar, InstrumentTypeVar_co],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar, InstrumentTypeVar_co],  # noqa: UP046
 ):
     """
     A gettable parameter that returns multiple values with separate names,

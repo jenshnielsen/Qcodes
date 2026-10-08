@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Generic
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -10,28 +10,27 @@ from qcodes.parameters.parameter import (
     ParameterKWArgs,
 )
 from qcodes.parameters.parameter_base import (
-    InstrumentTypeVar_co,
     ParameterBase,
-    ParameterDataTypeVar,
     ParameterSet,
 )
 from qcodes.validators import Arrays
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-    from typing import Unpack
+    from typing import Any, Unpack
 
     from qcodes.dataset.data_set_protocol import ValuesType
+    from qcodes.instrument import InstrumentBase
     from qcodes.parameters.parameter_base import ParamDataType
 
 LOG = logging.getLogger(__name__)
 
 
-class ParameterWithSetpoints(
+class ParameterWithSetpoints[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: InstrumentBase | None = InstrumentBase | None,
+](
     Parameter[ParameterDataTypeVar, InstrumentTypeVar_co],
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar, InstrumentTypeVar_co],  # noqa: UP046
 ):
     """
     A parameter that has associated setpoints. The setpoints is nothing

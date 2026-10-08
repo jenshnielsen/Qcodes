@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="cmu")
-def _make_cmu(mainframe: MagicMock) -> "Generator[KeysightB1520A, None, None]":
+def _make_cmu(mainframe: MagicMock) -> "Generator[KeysightB1520A]":
     slot_nr = 3
     cmu = KeysightB1520A(parent=mainframe, name="B1520A", slot_nr=slot_nr)
     # GroupParameter with initial values write at the init so reset the mock

@@ -211,7 +211,7 @@ class DummyInstrument(Instrument):
 
 
 @pytest.fixture(scope="function")
-def dummy_instrument() -> "Generator[DummyInstrument, None, None]":
+def dummy_instrument() -> "Generator[DummyInstrument]":
     instrument = DummyInstrument("instrument")
     yield instrument
     instrument.close()

@@ -52,7 +52,7 @@ def cache_is_valid(request: pytest.FixtureRequest) -> bool:
 
 
 @pytest.fixture(name="dummy_instrument")
-def _make_dummy_instrument() -> Generator[DummyChannelInstrument, None, None]:
+def _make_dummy_instrument() -> Generator[DummyChannelInstrument]:
     instr = DummyChannelInstrument("dummy")
     yield instr
     instr.close()

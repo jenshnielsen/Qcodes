@@ -6,9 +6,10 @@ import collections.abc
 import logging
 import warnings
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, overload
+from warnings import deprecated
 
 import numpy as np
-from typing_extensions import TypedDict, TypeVar, deprecated
+from typing_extensions import TypedDict
 
 from qcodes.logger import get_instrument_logger
 from qcodes.metadatable import (
@@ -30,10 +31,6 @@ if TYPE_CHECKING:
 from qcodes.utils import QCoDeSDeprecationWarning
 
 log = logging.getLogger(__name__)
-
-TSubmodule = TypeVar(
-    "TSubmodule", bound="InstrumentModule | ChannelTuple", default="InstrumentModule"
-)
 
 LoggerScope = Literal["shared", "instrument"]
 """
@@ -402,7 +399,9 @@ class InstrumentBase(MetadatableWithName, DelegateAttributes):
         func = Function(name=name, instrument=self, **kwargs)
         self.functions[name] = func
 
-    def add_submodule(self, name: str, submodule: TSubmodule) -> TSubmodule:
+    def add_submodule[T: InstrumentModule | ChannelTuple = InstrumentModule](
+        self, name: str, submodule: T
+    ) -> T:
         """
         Bind one submodule to this instrument.
 

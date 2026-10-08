@@ -22,12 +22,12 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="numeric_val")
-def _make_numeric_val() -> Generator[int, None, None]:
+def _make_numeric_val() -> Generator[int]:
     yield 1
 
 
 @pytest.fixture(name="simple_param")
-def _make_simple_param(numeric_val: int) -> Generator[Parameter, None, None]:
+def _make_simple_param(numeric_val: int) -> Generator[Parameter]:
     yield Parameter(
         "testparam",
         set_cmd=None,
@@ -58,7 +58,7 @@ class ObservableParam(Parameter):
 @pytest.fixture(params=[True, False])
 def make_observable_parameter(
     request: pytest.FixtureRequest,
-) -> Generator[Callable[..., ObservableParam], None, None]:
+) -> Generator[Callable[..., ObservableParam]]:
     def make_parameter(
         *args: Any, override_getset: bool = True, **kwargs: Any
     ) -> ObservableParam:

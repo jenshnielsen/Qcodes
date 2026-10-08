@@ -1,11 +1,10 @@
 import re
 import textwrap
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Generic, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 from qcodes.instrument import VisaInstrument, VisaInstrumentKWArgs
 from qcodes.parameters import MultiParameter, Parameter, create_on_off_val_mapping
-from qcodes.parameters.parameter_base import ParameterDataTypeVar
 
 from . import constants
 from .KeysightB1500_module import (
@@ -496,12 +495,9 @@ class KeysightB1500(VisaInstrument):
         )
 
 
-class IVSweepMeasurement(
+class IVSweepMeasurement[ParameterDataTypeVar = Any](
     MultiParameter[ParameterDataTypeVar, KeysightB1500],
     StatusMixin,
-    # Generic can be replaced with PEP 695 type params once Python 3.12
-    # support is dropped (TypeVars use default= which requires PEP 696)
-    Generic[ParameterDataTypeVar],  # noqa: UP046
 ):
     """
     IV sweep measurement outputs a list of measured current parameters

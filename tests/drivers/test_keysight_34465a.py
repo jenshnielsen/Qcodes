@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def driver() -> "Generator[Keysight34465A, None, None]":
+def driver() -> "Generator[Keysight34465A]":
     keysight_sim = Keysight34465A(
         "keysight_34465A_sim",
         address="GPIB::1::INSTR",
@@ -28,7 +28,7 @@ def driver() -> "Generator[Keysight34465A, None, None]":
 @pytest.fixture(scope="function")
 def driver_with_read_and_fetch_mocked(
     val_volt,
-) -> "Generator[Keysight34465A, None, None]":
+) -> "Generator[Keysight34465A]":
     keysight_sim = Keysight34465A(
         "keysight_34465A_sim",
         address="GPIB::1::INSTR",

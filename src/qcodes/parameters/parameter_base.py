@@ -9,10 +9,10 @@ from collections.abc import Iterator, MutableSet
 from contextlib import contextmanager
 from datetime import datetime
 from functools import cached_property, wraps
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, overload
+from typing import TYPE_CHECKING, Any, ClassVar, overload
 
 import numpy as np
-from typing_extensions import TypedDict, TypeVar
+from typing_extensions import TypedDict
 
 from qcodes.metadatable import (
     Metadatable,
@@ -55,20 +55,7 @@ if TYPE_CHECKING:
     from qcodes.dataset.data_set_protocol import ValuesType
     from qcodes.instrument import InstrumentBase
     from qcodes.logger.instrument_logger import InstrumentLoggerAdapter
-# Cannot convert to PEP 695: uses default= which requires PEP 696 (Python 3.13+).
-ParameterDataTypeVar = TypeVar("ParameterDataTypeVar", default=Any)
-# Cannot convert to PEP 695: uses default= and covariant= which require PEP 696 (Python 3.13+).
-# InstrumentTypeVar_co is a covariant type variable representing the instrument
-# type associated with the parameter. It needs to be covariant to allow passing
-# a Parameter bound to None or a specific instrument where the default is used in the type hint.
-# Otherwise we see errors such as
-# Type parameter "InstrumentType@ParameterBase" is invariant, but "None" is not the same as "InstrumentBase | None"
-InstrumentTypeVar_co = TypeVar(
-    "InstrumentTypeVar_co",
-    bound="InstrumentBase | None",
-    default="InstrumentBase | None",
-    covariant=True,
-)
+
 
 LOG = logging.getLogger(__name__)
 
@@ -137,9 +124,10 @@ def invert_val_mapping(val_mapping: Mapping[Any, Any]) -> dict[Any, Any]:
     return {v: k for k, v in val_mapping.items()}
 
 
-class ParameterBaseKWArgs(
-    TypedDict, Generic[ParameterDataTypeVar, InstrumentTypeVar_co]
-):
+class ParameterBaseKWArgs[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: "InstrumentBase | None" = "InstrumentBase | None",
+](TypedDict):
     """
     This TypedDict defines the type of the kwargs that can be passed to
     the ``ParameterBase`` class.
@@ -371,9 +359,10 @@ def _unscale_value(value: Any, scale: float | Iterable[float]) -> Any:
             raise
 
 
-class ParameterBase(
-    MetadatableWithName, Generic[ParameterDataTypeVar, InstrumentTypeVar_co]
-):
+class ParameterBase[
+    ParameterDataTypeVar = Any,
+    InstrumentTypeVar_co: "InstrumentBase | None" = "InstrumentBase | None",
+](MetadatableWithName):
     """
     Shared behavior for all parameters. Not intended to be used
     directly, normally you should use ``Parameter``, ``ArrayParameter``,
@@ -740,7 +729,7 @@ class ParameterBase(
         return tuple(self._vals)
 
     @contextmanager
-    def extra_validator(self, vals: Validator) -> Generator[None, None, None]:
+    def extra_validator(self, vals: Validator) -> Generator[None]:
         """
         Contextmanager to to temporarily add a validator to the parameter within the
         given context. The validator is removed from the parameter when the context
@@ -1499,7 +1488,7 @@ class ParameterBase(
         return [(self, value)]
 
 
-class GetLatest(DelegateAttributes, Generic[ParameterDataTypeVar]):
+class GetLatest[ParameterDataTypeVar = Any](DelegateAttributes):
     """
     Wrapper for a class:`.Parameter` that just returns the last set or measured
     value stored in the class:`.Parameter` itself. If get has never been called

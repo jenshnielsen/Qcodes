@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="tm620", scope="function")
-def fixture_tm620() -> "Generator[CryomagneticsModelTM620, None, None]":
+def fixture_tm620() -> "Generator[CryomagneticsModelTM620]":
     """
     Fixture to create and yield a CryomagneticsModelTM620 object and close it after testing.
     """

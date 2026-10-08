@@ -70,7 +70,7 @@ def _uses_separate_file(ds: DataSet) -> bool:
 
 
 @pytest.fixture()
-def _raw_data_db(tmp_path: Path) -> Generator[None, None, None]:
+def _raw_data_db(tmp_path: Path) -> Generator[None]:
     """Set up a temp DB with the per-dataset SQLite results backend selected."""
     db_path = str(tmp_path / "test.db")
     qc.config["core"]["db_location"] = db_path
@@ -91,7 +91,7 @@ def _raw_data_db(tmp_path: Path) -> Generator[None, None, None]:
 
 
 @pytest.fixture()
-def _raw_data_experiment(_raw_data_db: None) -> Generator[None, None, None]:
+def _raw_data_experiment(_raw_data_db: None) -> Generator[None]:
     """Create a test experiment inside the raw data DB."""
     e = new_experiment("test-experiment", sample_name="test-sample")
     try:

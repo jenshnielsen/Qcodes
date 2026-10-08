@@ -1,13 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, overload
-
-from typing_extensions import TypeVar
-
-# Cannot convert to PEP 695: uses default= which requires PEP 696 (Python 3.13+).
-# Due to circular imports we cannot import the TypeVar from parameter_base.
-ParameterDataTypeVar = TypeVar("ParameterDataTypeVar", default=Any)
+from typing import TYPE_CHECKING, Any, Literal, Protocol, overload
 
 if TYPE_CHECKING:
     from .parameter_base import (
@@ -17,7 +11,7 @@ if TYPE_CHECKING:
 
 
 # The protocol is private to qcodes but used elsewhere in the codebase
-class _CacheProtocol(Protocol, Generic[ParameterDataTypeVar]):  # noqa: PYI046
+class _CacheProtocol[ParameterDataTypeVar = Any](Protocol):  # noqa: PYI046
     """
     This protocol defines the interface that a Parameter Cache implementation
     must implement. This is currently used for 2 implementations, one in
@@ -69,7 +63,7 @@ class _CacheProtocol(Protocol, Generic[ParameterDataTypeVar]):  # noqa: PYI046
     def __call__(self) -> ParameterDataTypeVar: ...
 
 
-class _Cache(Generic[ParameterDataTypeVar]):
+class _Cache[ParameterDataTypeVar = Any]:
     """
     Cache object for parameter to hold its value and raw value
 

@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def manual_parameters() -> "Generator[tuple[ManualParameter, ...], None, None]":
+def manual_parameters() -> "Generator[tuple[ManualParameter, ...]]":
     param1 = ManualParameter("param1")
     param2 = ManualParameter("param2")
     param3 = ManualParameter("param3")

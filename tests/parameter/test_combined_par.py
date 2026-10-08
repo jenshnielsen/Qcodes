@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture()
-def parameters() -> Generator[list[ManualParameter], None, None]:
+def parameters() -> Generator[list[ManualParameter]]:
     parameters = [ManualParameter(name) for name in ["X", "Y", "Z"]]
     yield parameters
 

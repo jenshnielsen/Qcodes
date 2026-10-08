@@ -307,7 +307,7 @@ def initialise_or_create_database_at(
 @contextmanager
 def initialised_database_at(
     db_file_with_abs_path: str | Path, *, journal_mode: JournalMode | None = "WAL"
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     r"""
     Initialises or creates a database at the specified location, configures QCoDeS to use this as the
     default database for the duration of the context, and restores the 'db_location' afterwards.

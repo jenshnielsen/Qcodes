@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def uut() -> "Generator[KeysightB220X, None, None]":
+def uut() -> "Generator[KeysightB220X]":
     try:
         resource_name = "insert_Keysight_B2200_VISA_resource_name_here"
         instance = KeysightB220X("switch_matrix", address=resource_name)

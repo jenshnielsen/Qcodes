@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any
-
-from typing_extensions import deprecated
+from warnings import deprecated
 
 from qcodes.parameters import ParamSpecBase as _ParamSpecBase
 from qcodes.parameters import ParamSpecBaseDict as _ParamSpecBaseDict

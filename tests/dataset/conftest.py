@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function", name="non_created_db")
-def _make_non_created_db(tmp_path) -> Generator[None, None, None]:
+def _make_non_created_db(tmp_path) -> Generator[None]:
     # set db location to a non existing file
     try:
         qc.config["core"]["db_location"] = str(tmp_path / "temp.db")
@@ -315,7 +315,7 @@ def different_setpoint_dataset(experiment, request: FixtureRequest):
 def two_params_partial_2d_dataset(
     request: FixtureRequest,
     experiment: Experiment,
-) -> Generator[DataSetProtocol, None, None]:
+) -> Generator[DataSetProtocol]:
     """
     Dataset where two numeric parameters are measured as a function of the same
     two numeric setpoints. The second measured parameter is only measured for

@@ -57,7 +57,7 @@ def matplotlib_set_backend() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def default_session_config(
     tmp_path_factory: pytest.TempPathFactory,
-) -> Generator[None, None, None]:
+) -> Generator[None]:
     """
     Set the config for the test session to be the default config.
     Making sure that that user config does not influence the tests and
@@ -107,7 +107,7 @@ def default_session_config(
 
 
 @pytest.fixture(scope="function", autouse=True)
-def reset_state_on_exit() -> Generator[None, None, None]:
+def reset_state_on_exit() -> Generator[None]:
     """
     Fixture to clean any shared state on exit
 
@@ -128,7 +128,7 @@ def reset_state_on_exit() -> Generator[None, None, None]:
 
 
 @pytest.fixture(scope="function", name="empty_temp_db")
-def _make_empty_temp_db(tmp_path: Path) -> Generator[None, None, None]:
+def _make_empty_temp_db(tmp_path: Path) -> Generator[None]:
     global n_experiments
     n_experiments = 0
     # create a temp database for testing
@@ -153,7 +153,7 @@ def _make_empty_temp_db(tmp_path: Path) -> Generator[None, None, None]:
 # so empty_temp_db needs to be passed to this fixture
 # even if unused https://github.com/pytest-dev/pytest/issues/3664
 @pytest.fixture(scope="function", name="experiment")
-def _make_experiment(empty_temp_db: None) -> Generator[Experiment, None, None]:
+def _make_experiment(empty_temp_db: None) -> Generator[Experiment]:
     e = new_experiment("test-experiment", sample_name="test-sample")
     try:
         yield e
@@ -162,7 +162,7 @@ def _make_experiment(empty_temp_db: None) -> Generator[Experiment, None, None]:
 
 
 @pytest.fixture(scope="function", name="dataset")
-def _make_dataset(experiment: Experiment) -> Generator[DataSet, None, None]:
+def _make_dataset(experiment: Experiment) -> Generator[DataSet]:
     dataset = new_data_set("test-dataset")
     try:
         yield dataset
@@ -174,7 +174,7 @@ def _make_dataset(experiment: Experiment) -> Generator[DataSet, None, None]:
 @pytest.fixture(name="standalone_parameters_dataset")
 def _make_standalone_parameters_dataset(
     dataset: DataSet,
-) -> Generator[DataSet, None, None]:
+) -> Generator[DataSet]:
     n_params = 3
     n_rows = 10**3
     params_indep = [

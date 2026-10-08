@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(name="basic_export_info")
-def _make_basic_export_info() -> "Generator[ExportInfo, None, None]":
+def _make_basic_export_info() -> "Generator[ExportInfo]":
     nc_path = "D:\\data\\33.nc"
     csv_path = "D:\\data\\33.csv"
 

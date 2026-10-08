@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Callable, Iterable, Iterator, MutableSequence, Sequence
-from typing import TYPE_CHECKING, Any, Generic, Self, cast, overload
-
-from typing_extensions import TypeVar
+from typing import TYPE_CHECKING, Any, Self, cast, overload
 
 from qcodes.metadatable import MetadatableWithName, normalize_snapshot_update
 from qcodes.parameters import (
@@ -28,13 +26,7 @@ if TYPE_CHECKING:
     from .instrument_base import InstrumentBaseKWArgs
 
 
-# Cannot convert to PEP 695: uses default= and covariant= which require PEP 696 (Python 3.13+).
-_TIB_co = TypeVar(
-    "_TIB_co", bound="InstrumentBase", default=InstrumentBase, covariant=True
-)
-
-
-class InstrumentModule(InstrumentBase, Generic[_TIB_co]):
+class InstrumentModule[TIB_co: "InstrumentBase" = InstrumentBase](InstrumentBase):
     """
     Base class for a module in an instrument.
     This could be in the form of a channel (e.g. something that
@@ -51,7 +43,7 @@ class InstrumentModule(InstrumentBase, Generic[_TIB_co]):
     """
 
     def __init__(
-        self, parent: _TIB_co, name: str, **kwargs: Unpack[InstrumentBaseKWArgs]
+        self, parent: TIB_co, name: str, **kwargs: Unpack[InstrumentBaseKWArgs]
     ) -> None:
         # need to specify parent before `super().__init__` so that the right
         # `full_name` is available in that scope. `full_name` is used for
@@ -82,7 +74,7 @@ class InstrumentModule(InstrumentBase, Generic[_TIB_co]):
         return self._parent.ask_raw(cmd)
 
     @property
-    def parent(self) -> _TIB_co:
+    def parent(self) -> TIB_co:
         return self._parent
 
     @property
@@ -112,7 +104,9 @@ class InstrumentModule(InstrumentBase, Generic[_TIB_co]):
         return [*self._parent._logger_name_parts, key]
 
 
-class InstrumentChannel(InstrumentModule[_TIB_co], Generic[_TIB_co]):
+class InstrumentChannel[TIB_co: "InstrumentBase" = InstrumentBase](
+    InstrumentModule[TIB_co]
+):
     pass
 
 

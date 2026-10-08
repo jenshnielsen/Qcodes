@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(scope="function")
-def driver() -> "Generator[Keysight33522B, None, None]":
+def driver() -> "Generator[Keysight33522B]":
     kw_sim = Keysight33522B(
         "kw_sim", address="GPIB::1::INSTR", pyvisa_sim_file="Keysight_33xxx.yaml"
     )

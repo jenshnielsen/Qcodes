@@ -1,6 +1,7 @@
+from warnings import deprecated
+
 import pytest
 from sphinx.util.inspect import safe_getattr
-from typing_extensions import deprecated
 
 from qcodes.instrument import InstrumentBase, VisaInstrument
 from qcodes.sphinx_extensions.parse_parameter_attr import (

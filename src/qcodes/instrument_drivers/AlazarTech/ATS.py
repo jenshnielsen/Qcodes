@@ -205,7 +205,7 @@ class AlazarTechATS(Instrument):
         }
 
     @contextmanager
-    def syncing(self) -> Generator[None, None, None]:
+    def syncing(self) -> Generator[None]:
         """
         Context manager for syncing settings to Alazar card. It will
         automatically call sync_settings_to_card at the end of the
