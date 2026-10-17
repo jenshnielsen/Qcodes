@@ -803,6 +803,10 @@ class Runner:
             )
             if isinstance(self.ds, DataSet):
                 self.ds.unsubscribe_all()
+                # The run is complete so no more data will be written. Release
+                # the connections the dataset opened itself; they are
+                # reopened if the dataset is accessed again.
+                self.ds._release_connections()
             self._exit_stack.close()
 
 

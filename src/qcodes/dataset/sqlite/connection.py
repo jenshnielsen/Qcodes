@@ -49,17 +49,27 @@ class AtomicConnection(sqlite3.Connection):
     Identifier (as returned by :func:`threading.get_ident`) of the thread
     that created the connection.
     """
+    _read_only: bool = False
+    _debug: bool = False
+    _reopenable: bool = False
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.path_to_dbfile = path_to_dbfile(self)
         self.owner_thread_id = threading.get_ident()
+        self._closed = False
         with _open_connections_lock:
             _open_connections.add(self)
 
+    @property
+    def closed(self) -> bool:
+        """Whether :meth:`close` has been called on this connection."""
+        return self._closed
+
     def close(self) -> None:
         super().close()
+        self._closed = True
         with _open_connections_lock:
             _open_connections.discard(self)
 

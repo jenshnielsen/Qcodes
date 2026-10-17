@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sized
+from contextlib import closing
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
@@ -9,6 +10,7 @@ from qcodes.dataset.data_set import DataSet, load_by_id, new_data_set
 from qcodes.dataset.experiment_settings import _set_default_experiment_id
 from qcodes.dataset.sqlite.connection import AtomicConnection, path_to_dbfile
 from qcodes.dataset.sqlite.database import (
+    _ReopenableConnection,
     conn_from_dbpath_or_conn,
     connect,
     get_DB_location,
@@ -66,7 +68,10 @@ class Experiment(Sized):
 
         """
 
-        self.conn = conn_from_dbpath_or_conn(conn, path_to_db)
+        self._conn_holder = _ReopenableConnection(
+            conn_from_dbpath_or_conn(conn, path_to_db), owned=conn is None
+        )
+        self._conn_holder.attach_to(self)
 
         experiments_list = get_experiments(self.conn)
 
@@ -97,8 +102,18 @@ class Experiment(Sized):
         return self._exp_id
 
     @property
+    def conn(self) -> AtomicConnection:
+        """
+        The connection to the database holding this experiment.
+
+        If the connection was opened by the experiment itself it may be closed
+        when it is not needed, and is then reopened on access.
+        """
+        return self._conn_holder.conn
+
+    @property
     def path_to_db(self) -> str:
-        return self.conn.path_to_dbfile
+        return self._conn_holder.path_to_dbfile
 
     @property
     def name(self) -> str:
@@ -219,9 +234,17 @@ def experiments(conn: AtomicConnection | None = None) -> list[Experiment]:
         All the experiments in the container
 
     """
+    owns_conn = conn is None
     conn = conn_from_dbpath_or_conn(conn=conn, path_to_db=None)
     log.info(f"loading experiments from {conn.path_to_dbfile}")
-    return [load_experiment(exp_id, conn) for exp_id in get_experiments(conn)]
+    exps = [load_experiment(exp_id, conn) for exp_id in get_experiments(conn)]
+    if owns_conn:
+        if exps:
+            for exp in exps:
+                _transfer_connection(exp)
+        else:
+            conn.close()
+    return exps
 
 
 def new_experiment(
@@ -245,6 +268,7 @@ def new_experiment(
 
     """
     sample_name = sample_name or "some_sample"
+    owns_conn = conn is None
     conn = conn or connect(get_DB_location())
     exp_ids = get_matching_exp_ids(conn, name=name, sample_name=sample_name)
     if len(exp_ids) >= 1:
@@ -256,6 +280,8 @@ def new_experiment(
         name=name, sample_name=sample_name, format_string=format_string, conn=conn
     )
     _set_default_experiment_id(path_to_dbfile(conn), experiment.exp_id)
+    if owns_conn:
+        _transfer_connection(experiment)
     return experiment
 
 
@@ -274,11 +300,10 @@ def load_experiment(exp_id: int, conn: AtomicConnection | None = None) -> Experi
         ValueError: If experiment id is not an integer.
 
     """
-    conn = conn_from_dbpath_or_conn(conn=conn, path_to_db=None)
     if not isinstance(exp_id, int):
         raise ValueError("Experiment ID must be an integer")  # noqa: TRY004
     experiment = Experiment(exp_id=exp_id, conn=conn)
-    _set_default_experiment_id(path_to_dbfile(conn), experiment.exp_id)
+    _set_default_experiment_id(experiment.path_to_db, experiment.exp_id)
     return experiment
 
 
@@ -292,8 +317,8 @@ def load_last_experiment() -> Experiment:
         ValueError: If no experiment exists in the db.
 
     """
-    conn = connect(get_DB_location())
-    last_exp_id = get_last_experiment(conn)
+    with closing(connect(get_DB_location())) as conn:
+        last_exp_id = get_last_experiment(conn)
     if last_exp_id is None:
         raise ValueError("There are no experiments in the database file")
     experiment = Experiment(exp_id=last_exp_id)
@@ -332,7 +357,25 @@ def load_experiment_by_name(
             supplied name and sample.
 
     """
+    owns_conn = conn is None
     conn = conn or connect(get_DB_location())
+    try:
+        e = _load_experiment_by_name(name, sample, conn, load_last_duplicate)
+    except BaseException:
+        if owns_conn:
+            conn.close()
+        raise
+    if owns_conn:
+        _transfer_connection(e)
+    return e
+
+
+def _load_experiment_by_name(
+    name: str,
+    sample: str | None,
+    conn: AtomicConnection,
+    load_last_duplicate: bool,
+) -> Experiment:
     if sample is not None:
         args_to_find = {"name": name, "sample_name": sample}
     else:
@@ -385,20 +428,36 @@ def load_or_create_experiment(
             load_last_duplicate is True.
 
     """
+    owns_conn = conn is None
     conn = conn or connect(get_DB_location())
     try:
-        experiment = load_experiment_by_name(
-            experiment_name,
-            sample_name,
-            load_last_duplicate=load_last_duplicate,
-            conn=conn,
-        )
-    except ValueError as exception:
-        if "Experiment not found" in str(exception):
-            experiment = new_experiment(experiment_name, sample_name, conn=conn)
-        else:
-            raise
+        try:
+            experiment = load_experiment_by_name(
+                experiment_name,
+                sample_name,
+                load_last_duplicate=load_last_duplicate,
+                conn=conn,
+            )
+        except ValueError as exception:
+            if "Experiment not found" in str(exception):
+                experiment = new_experiment(experiment_name, sample_name, conn=conn)
+            else:
+                raise
+    except BaseException:
+        if owns_conn:
+            conn.close()
+        raise
+    if owns_conn:
+        _transfer_connection(experiment)
     return experiment
+
+
+def _transfer_connection(experiment: Experiment) -> None:
+    """
+    Mark the connection of ``experiment``, which was opened on its behalf by
+    one of the functions in this module, as owned by the experiment.
+    """
+    experiment._conn_holder.take_ownership()
 
 
 def _create_exp_if_needed(

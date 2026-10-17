@@ -10,6 +10,8 @@ import io
 import math
 import sqlite3
 import sys
+import threading
+import weakref
 from contextlib import contextmanager
 from os.path import expanduser, normpath
 from typing import TYPE_CHECKING, Literal
@@ -148,7 +150,7 @@ def _register_numpy_sqlite_adapters_and_converters() -> None:
 
 
 def _connect_to_sqlite_file(
-    name: str | Path, read_only: bool = False
+    name: str | Path, read_only: bool = False, create: bool = True
 ) -> AtomicConnection:
     """
     Open a bare :class:`AtomicConnection` to an sqlite file with the settings
@@ -162,6 +164,8 @@ def _connect_to_sqlite_file(
     Args:
         name: name or path to the sqlite file
         read_only: Should the database be opened in read only mode.
+        create: Should the file be created if it does not exist. Ignored if
+            ``read_only`` is True, since a read only database is never created.
 
     Returns:
         connection object to the database (note, it is
@@ -174,14 +178,18 @@ def _connect_to_sqlite_file(
 
     if read_only:
         path = path + "?mode=ro"
+    elif not create:
+        path = path + "?mode=rw"
 
-    return sqlite3.connect(
+    conn = sqlite3.connect(
         path,
         detect_types=sqlite3.PARSE_DECLTYPES,
         check_same_thread=True,
         uri=True,
         factory=AtomicConnection,
     )
+    conn._read_only = read_only
+    return conn
 
 
 def connect(
@@ -218,10 +226,81 @@ def connect(
 
     if debug:
         conn.set_trace_callback(print)
+        conn._debug = True
 
     init_db(conn)
     perform_db_upgrade(conn, version=version)
     return conn
+
+
+def _reopen_connection(conn: AtomicConnection) -> AtomicConnection:
+    """
+    Open a new connection to the database file of ``conn`` (which is typically
+    closed) with the same settings as ``conn``.
+
+    The database is not created, initialised or upgraded since that already
+    happened when ``conn`` was opened.
+    """
+    new_conn = _connect_to_sqlite_file(
+        conn.path_to_dbfile, read_only=conn._read_only, create=False
+    )
+    if conn._debug:
+        new_conn.set_trace_callback(print)
+        new_conn._debug = True
+    return new_conn
+
+
+class _ReopenableConnection:
+    """
+    Holds the database connection of an object such as a
+    :class:`~qcodes.dataset.data_set.DataSet` or
+    :class:`~qcodes.dataset.experiment_container.Experiment`.
+
+    A connection that was opened by QCoDeS on behalf of such an object rather
+    than supplied by the user is marked as reopenable. It may be closed at any
+    time, e.g. by :meth:`release`, when its owner is garbage collected or by
+    :func:`~qcodes.dataset.close_all_connections`, and is transparently
+    reopened by any holder that needs it afterwards. That holder then owns the
+    new connection. Connections supplied by the user are never reopened, and
+    connections to in-memory databases cannot be reopened.
+    """
+
+    def __init__(self, conn: AtomicConnection, *, owned: bool) -> None:
+        self.replace(conn, owned=owned)
+
+    def attach_to(self, owner: object) -> None:
+        """Release the connection when ``owner`` is garbage collected."""
+        weakref.finalize(owner, self.release)
+
+    def replace(self, conn: AtomicConnection, *, owned: bool) -> None:
+        self._conn = conn
+        self.owned = False
+        self.path_to_dbfile = conn.path_to_dbfile
+        if owned:
+            self.take_ownership()
+
+    def take_ownership(self) -> None:
+        """Mark the connection as opened by QCoDeS on behalf of the owner."""
+        self.owned = True
+        self._conn._reopenable = True
+
+    @property
+    def conn(self) -> AtomicConnection:
+        if self._conn.closed and self._conn._reopenable and self.path_to_dbfile:
+            self._conn = _reopen_connection(self._conn)
+            self.take_ownership()
+        return self._conn
+
+    def release(self) -> None:
+        """Close the connection if it is owned, to be reopened when needed."""
+        # sqlite connections can only be closed by the thread that opened
+        # them, and this may be called from a finalizer in any thread
+        if (
+            self.owned
+            and self.path_to_dbfile
+            and self._conn.owner_thread_id == threading.get_ident()
+        ):
+            self._conn.close()
 
 
 def get_db_version_and_newest_available_version(

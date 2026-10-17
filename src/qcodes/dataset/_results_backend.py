@@ -31,6 +31,7 @@ from qcodes.dataset._raw_data_storage import (
     get_raw_data_db_path,
 )
 from qcodes.dataset.sqlite.connection import atomic, atomic_transaction
+from qcodes.dataset.sqlite.database import _reopen_connection
 from qcodes.dataset.sqlite.queries import (
     _check_if_table_found,
     _create_run_table,
@@ -207,6 +208,10 @@ class SeparateSqliteFileResultsBackend(ResultsBackend):
         # results table either, which the operation methods handle via
         # ``results_table_exists``.
         if self._conn is not None:
+            # the connection is closed when the dataset releases its
+            # connections; reopen it when it is needed again
+            if self._conn.closed:
+                self._conn = _reopen_connection(self._conn)
             return self._conn
         return self._dataset.conn
 
@@ -277,9 +282,10 @@ class SeparateSqliteFileResultsBackend(ResultsBackend):
         # looks up the rundescriber from the main DB) and call the lower-level
         # function directly with the rundescriber we already hold.
         output: ParameterData = {}
+        results_conn = self.results_conn
         for param_name in valid_param_names:
             output[param_name] = get_shaped_parameter_data_for_one_paramtree(
-                self._conn,
+                results_conn,
                 ds.table_name,
                 ds._rundescriber,
                 param_name,

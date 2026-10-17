@@ -376,6 +376,8 @@ def test_open_connections_are_tracked_until_closed(tmp_path) -> None:
     assert conn not in get_open_connections()
 
 
+# this test deliberately leaves the connection unclosed
+@pytest.mark.filterwarnings("ignore:unclosed database in:ResourceWarning")
 def test_garbage_collected_connections_are_not_tracked() -> None:
     conn = AtomicConnection(":memory:")
     assert conn in get_open_connections()

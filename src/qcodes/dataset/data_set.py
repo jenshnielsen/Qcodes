@@ -42,6 +42,7 @@ from qcodes.dataset.sqlite.connection import (
     atomic_transaction,
 )
 from qcodes.dataset.sqlite.database import (
+    _ReopenableConnection,
     conn_from_dbpath_or_conn,
     connect,
     get_DB_location,
@@ -289,7 +290,11 @@ class DataSet(BaseDataSet):
                 "Cannot instantiate a dataset in read-only mode without a run_id provided"
                 " since a new dataset will be created."
             )
-        self.conn = conn_from_dbpath_or_conn(conn, path_to_db, read_only=read_only)
+        self._conn_holder = _ReopenableConnection(
+            conn_from_dbpath_or_conn(conn, path_to_db, read_only=read_only),
+            owned=conn is None,
+        )
+        self._conn_holder.attach_to(self)
 
         self._debug = False
         self.subscribers: dict[str, _Subscriber] = {}
@@ -440,8 +445,26 @@ class DataSet(BaseDataSet):
         return run_id
 
     @property
+    def conn(self) -> AtomicConnection:
+        """
+        The connection to the database holding this dataset.
+
+        If the connection was opened by the dataset itself it may be closed
+        when it is not needed, and is then reopened on access.
+        """
+        return self._conn_holder.conn
+
+    def _release_connections(self) -> None:
+        """
+        Close the database connections opened by this dataset itself. They
+        are reopened when needed. Connections supplied by the user are kept.
+        """
+        self._conn_holder.release()
+        self._results_backend.close()
+
+    @property
     def path_to_db(self) -> str | None:
-        return self.conn.path_to_dbfile
+        return self._conn_holder.path_to_dbfile
 
     @property
     def name(self) -> str:
@@ -627,7 +650,7 @@ class DataSet(BaseDataSet):
         assert path_to_db is not None
         self._debug = not self._debug
         self.conn.close()
-        self.conn = connect(path_to_db, self._debug)
+        self._conn_holder.replace(connect(path_to_db, self._debug), owned=True)
 
     def set_interdependencies(
         self,
@@ -1800,8 +1823,8 @@ def load_by_run_spec(
         else:
             raise NameError("No run matching the supplied information found.")
     finally:
-        if not conn and not isinstance(d, DataSet):
-            internal_conn.close()
+        if not conn:
+            _transfer_or_close_connection(internal_conn, d)
     assert d is not None
     return d
 
@@ -1904,9 +1927,8 @@ def load_by_id(
             )
         d = _get_datasetprotocol_from_guid(guid, internal_conn, read_only=read_only)
     finally:
-        # dataset takes ownership of the connection but DataSetInMem does not
-        if not conn and not isinstance(d, DataSet):
-            internal_conn.close()
+        if not conn:
+            _transfer_or_close_connection(internal_conn, d)
     assert d is not None
     return d
 
@@ -1947,9 +1969,8 @@ def load_by_guid(
     try:
         d = _get_datasetprotocol_from_guid(guid, internal_conn, read_only=read_only)
     finally:
-        # dataset takes ownership of the connection but DataSetInMem does not
-        if not conn and not isinstance(d, DataSet):
-            internal_conn.close()
+        if not conn:
+            _transfer_or_close_connection(internal_conn, d)
     assert d is not None
     return d
 
@@ -1997,11 +2018,24 @@ def load_by_counter(
         guid = get_guid_from_expid_and_counter(internal_conn, exp_id, counter)
         d = _get_datasetprotocol_from_guid(guid, internal_conn, read_only=read_only)
     finally:
-        # dataset takes ownership of the connection but DataSetInMem does not
-        if not conn and not isinstance(d, DataSet):
-            internal_conn.close()
+        if not conn:
+            _transfer_or_close_connection(internal_conn, d)
     assert d is not None
     return d
+
+
+def _transfer_or_close_connection(
+    conn: AtomicConnection, d: DataSetProtocol | None
+) -> None:
+    """
+    Hand a connection opened by one of the ``load_*`` functions over to the
+    loaded :class:`DataSet`, which then owns it, or close it if it is not
+    used by the loaded dataset (e.g. a ``DataSetInMem``) or loading failed.
+    """
+    if isinstance(d, DataSet) and d._conn_holder._conn is conn:
+        d._conn_holder.take_ownership()
+    else:
+        conn.close()
 
 
 def _get_datasetprotocol_from_guid(

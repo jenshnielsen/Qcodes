@@ -17,7 +17,7 @@ from qcodes.parameters import Parameter
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from qcodes.dataset.sqlite.connection import AtomicConnection
+    from qcodes.dataset.experiment_container import Experiment
 
 
 def test_guids_from_dir(tmp_path: "Path") -> None:
@@ -113,11 +113,10 @@ def test_guid_from_not_str() -> None:
 
 
 def test_get_guids_from_multiple_run_ids(tmp_path: "Path") -> None:
-    def generate_local_exp(dbpath: "Path") -> tuple[list[str], "AtomicConnection"]:
+    def generate_local_exp(dbpath: "Path") -> tuple[list[str], "Experiment"]:
         with initialised_database_at(str(dbpath)):
             guids = []
             exp = load_or_create_experiment(experiment_name="test_guid")
-            conn = exp.conn
 
             p1 = Parameter("Voltage", set_cmd=None)
             p2 = Parameter("Current", get_cmd=np.random.randn)
@@ -135,14 +134,14 @@ def test_get_guids_from_multiple_run_ids(tmp_path: "Path") -> None:
                         )
                 guid = datasaver.dataset.guid
                 guids.append(guid)
-        return guids, conn
+        return guids, exp
 
     path = tmp_path / "dbfile2.db"
-    guids, conn = generate_local_exp(path)
+    guids, exp = generate_local_exp(path)
 
-    assert get_guids_from_multiple_run_ids(conn=conn, run_ids=[1, 2]) == guids
+    assert get_guids_from_multiple_run_ids(conn=exp.conn, run_ids=[1, 2]) == guids
 
     assert len(guids) == 2
 
     with pytest.raises(RuntimeError, match="run id 3 does not exist in the database"):
-        get_guids_from_multiple_run_ids(conn=conn, run_ids=[1, 2, 3])
+        get_guids_from_multiple_run_ids(conn=exp.conn, run_ids=[1, 2, 3])
