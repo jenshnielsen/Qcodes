@@ -49,7 +49,7 @@ from qcodes.parameters import (
     Parameter,
     ParameterBase,
 )
-from qcodes.parameters.parameter_base import _compact_parameter_snapshots
+from qcodes.parameters.parameter_base import _compact_snapshot
 from qcodes.utils import (
     DelegateAttributes,
     checked_getattr_indexed,
@@ -243,9 +243,7 @@ class Station(Metadatable, DelegateAttributes):
 
         components_to_remove = []
 
-        with _compact_parameter_snapshots(
-            qcodes.config["station"]["compact_parameter_snapshots"]
-        ):
+        with _compact_snapshot(qcodes.config["station"]["compact_snapshot"]):
             for name, itm in self.components.items():
                 if isinstance(itm, Instrument):
                     # instruments can be closed during the lifetime of the

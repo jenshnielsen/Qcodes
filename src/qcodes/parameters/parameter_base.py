@@ -76,25 +76,25 @@ LOG = logging.getLogger(__name__)
 
 _PLAIN_PARAMETER_CLASS = "qcodes.parameters.parameter.Parameter"
 _ZERO_DELAYS = frozenset({"inter_delay", "post_delay"})
-_COMPACT_SNAPSHOTS: ContextVar[bool] = ContextVar(
-    "qcodes_compact_parameter_snapshots", default=False
+_COMPACT_SNAPSHOT: ContextVar[bool] = ContextVar(
+    "qcodes_compact_snapshot", default=False
 )
 
 
 @contextmanager
-def _compact_parameter_snapshots(enabled: bool) -> Generator[None, None, None]:
+def _compact_snapshot(enabled: bool) -> Generator[None, None, None]:
     """Within the context, parameter snapshots leave out what their place in a
     station snapshot or the defaults already say, if ``enabled``.
 
     ``Station.snapshot_base`` uses this with
-    ``qcodes.config.station.compact_parameter_snapshots``, so that the config is
+    ``qcodes.config.station.compact_snapshot``, so that the config is
     read once per station snapshot rather than once per parameter.
     """
-    token = _COMPACT_SNAPSHOTS.set(enabled)
+    token = _COMPACT_SNAPSHOT.set(enabled)
     try:
         yield
     finally:
-        _COMPACT_SNAPSHOTS.reset(token)
+        _COMPACT_SNAPSHOT.reset(token)
 
 
 class _SetFunction[ValueT](Protocol):
@@ -885,7 +885,7 @@ class ParameterBase(
 
         """
         update = normalize_snapshot_update(update)
-        compact = _COMPACT_SNAPSHOTS.get()
+        compact = _COMPACT_SNAPSHOT.get()
 
         if self.snapshot_exclude:
             warnings.warn(

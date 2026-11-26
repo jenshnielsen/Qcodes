@@ -205,10 +205,10 @@ def test_snapshot() -> None:
     assert component_snapshot == snapshot["components"]["component"]
 
 
-def test_compact_parameter_snapshots_leave_out_what_place_and_defaults_say(
+def test_compact_snapshot_leaves_out_what_place_and_defaults_say(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setitem(qcodes.config["station"], "compact_parameter_snapshots", True)
+    monkeypatch.setitem(qcodes.config["station"], "compact_snapshot", True)
     instrument = DummyInstrument("instrument", gates=["one"])
     parameter = Parameter(
         "parameter",
