@@ -269,6 +269,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Update the monitor based on the monitor attribute specified in the instruments section of the station config yaml file."
+                },
+                "compact_parameter_snapshots": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Leave out of the parameters in station snapshots, such as the one stored with every dataset, what their place in the snapshot or the defaults already say: the class of the parameter's instrument (its instrument_name is kept), the class of plain Parameters, inter_delay and post_delay when 0, and validators that are empty or repeat vals. This makes station snapshots substantially smaller. Disabled by default since tools that read these keys must handle their absence."
                 }
             },
             "description": "Settings for QCoDeS Station."

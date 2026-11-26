@@ -18,9 +18,9 @@ from qcodes.instrument_drivers.mock_instruments import (
     DummyInstrument,
 )
 from qcodes.monitor import Monitor
-from qcodes.parameters import DelegateParameter, Parameter
+from qcodes.parameters import DelegateParameter, ManualParameter, Parameter
 from qcodes.station import SCHEMA_PATH, Station, ValidationWarning, update_config_schema
-from qcodes.utils import NumpyJSONEncoder, get_qcodes_path
+from qcodes.utils import NumpyJSONEncoder, full_class, get_qcodes_path
 
 from .common import DummyComponent
 
@@ -203,6 +203,64 @@ def test_snapshot() -> None:
 
     assert ["component"] == list(snapshot["components"].keys())
     assert component_snapshot == snapshot["components"]["component"]
+
+
+def test_compact_parameter_snapshots_leave_out_what_place_and_defaults_say(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setitem(qcodes.config["station"], "compact_parameter_snapshots", True)
+    instrument = DummyInstrument("instrument", gates=["one"])
+    parameter = Parameter(
+        "parameter",
+        instrument=instrument,
+        set_cmd=None,
+        vals=validators.Numbers(0, 1),
+        unit="V",
+    )
+    parameter(0.5)
+    delayed = ManualParameter(
+        "delayed", initial_value=1, inter_delay=0.1, post_delay=0.2
+    )
+    delayed.add_validator(validators.Ints())
+    delayed.add_validator(validators.Numbers(0, 2))
+    station = Station(instrument, delayed, default=False)
+
+    snapshot = station.snapshot()
+
+    compact = snapshot["instruments"]["instrument"]["parameters"]["parameter"]
+    assert compact == {
+        "full_name": "instrument_parameter",
+        "value": 0.5,
+        "raw_value": 0.5,
+        "ts": compact["ts"],
+        "instrument_name": "instrument",
+        "name": "parameter",
+        "label": "parameter",
+        "unit": "V",
+        "vals": "<Numbers 0<=v<=1>",
+    }
+    kept = snapshot["parameters"]["delayed"]
+    assert kept["__class__"] == full_class(delayed)
+    assert kept["inter_delay"] == 0.1
+    assert kept["post_delay"] == 0.2
+    assert kept["validators"] == ["<Ints>", "<Numbers 0<=v<=2>"]
+    # Snapshots taken outside a station snapshot stay complete.
+    assert parameter.snapshot()["instrument"] == full_class(instrument)
+
+
+def test_parameter_snapshots_in_station_are_complete_by_default() -> None:
+    instrument = DummyInstrument("instrument", gates=["one"])
+    parameter = Parameter("parameter", instrument=instrument, set_cmd=None)
+    station = Station(instrument, default=False)
+
+    snapshot = station.snapshot()["instruments"]["instrument"]["parameters"]
+
+    assert snapshot["parameter"] == parameter.snapshot(update="Never") | {
+        "ts": snapshot["parameter"]["ts"]
+    }
+    assert snapshot["parameter"]["instrument"] == full_class(instrument)
+    assert snapshot["parameter"]["inter_delay"] == 0
+    assert snapshot["parameter"]["validators"] == []
 
 
 def test_station_after_instrument_is_closed() -> None:

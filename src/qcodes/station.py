@@ -49,6 +49,7 @@ from qcodes.parameters import (
     Parameter,
     ParameterBase,
 )
+from qcodes.parameters.parameter_base import _compact_parameter_snapshots
 from qcodes.utils import (
     DelegateAttributes,
     checked_getattr_indexed,
@@ -242,20 +243,23 @@ class Station(Metadatable, DelegateAttributes):
 
         components_to_remove = []
 
-        for name, itm in self.components.items():
-            if isinstance(itm, Instrument):
-                # instruments can be closed during the lifetime of the
-                # station object, hence this 'if' allows to avoid
-                # snapshotting instruments that are already closed
-                if Instrument.is_valid(itm):
-                    snap["instruments"][name] = itm.snapshot(update=update)
+        with _compact_parameter_snapshots(
+            qcodes.config["station"]["compact_parameter_snapshots"]
+        ):
+            for name, itm in self.components.items():
+                if isinstance(itm, Instrument):
+                    # instruments can be closed during the lifetime of the
+                    # station object, hence this 'if' allows to avoid
+                    # snapshotting instruments that are already closed
+                    if Instrument.is_valid(itm):
+                        snap["instruments"][name] = itm.snapshot(update=update)
+                    else:
+                        components_to_remove.append(name)
+                elif isinstance(itm, (Parameter, ManualParameter)):
+                    if not itm.snapshot_exclude:
+                        snap["parameters"][name] = itm.snapshot(update=update)
                 else:
-                    components_to_remove.append(name)
-            elif isinstance(itm, (Parameter, ManualParameter)):
-                if not itm.snapshot_exclude:
-                    snap["parameters"][name] = itm.snapshot(update=update)
-            else:
-                snap["components"][name] = itm.snapshot(update=update)
+                    snap["components"][name] = itm.snapshot(update=update)
 
         for c in components_to_remove:
             self.remove_component(c)

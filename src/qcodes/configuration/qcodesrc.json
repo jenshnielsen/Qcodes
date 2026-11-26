@@ -56,7 +56,8 @@
         "enable_forced_reconnect": false,
         "default_folder": ".",
         "default_file": null,
-        "use_monitor": false
+        "use_monitor": false,
+        "compact_parameter_snapshots": false
     },
     "GUID_components": {
         "GUID_type": "random_sample",

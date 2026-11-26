@@ -7,6 +7,7 @@ import time
 import warnings
 from collections.abc import Iterator, MutableSet
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from functools import cached_property, wraps
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, overload
@@ -72,6 +73,28 @@ InstrumentTypeVar_co = TypeVar(
 )
 
 LOG = logging.getLogger(__name__)
+
+_PLAIN_PARAMETER_CLASS = "qcodes.parameters.parameter.Parameter"
+_ZERO_DELAYS = frozenset({"inter_delay", "post_delay"})
+_COMPACT_SNAPSHOTS: ContextVar[bool] = ContextVar(
+    "qcodes_compact_parameter_snapshots", default=False
+)
+
+
+@contextmanager
+def _compact_parameter_snapshots(enabled: bool) -> Generator[None, None, None]:
+    """Within the context, parameter snapshots leave out what their place in a
+    station snapshot or the defaults already say, if ``enabled``.
+
+    ``Station.snapshot_base`` uses this with
+    ``qcodes.config.station.compact_parameter_snapshots``, so that the config is
+    read once per station snapshot rather than once per parameter.
+    """
+    token = _COMPACT_SNAPSHOTS.set(enabled)
+    try:
+        yield
+    finally:
+        _COMPACT_SNAPSHOTS.reset(token)
 
 
 class _SetFunction[ValueT](Protocol):
@@ -862,6 +885,7 @@ class ParameterBase(
 
         """
         update = normalize_snapshot_update(update)
+        compact = _COMPACT_SNAPSHOTS.get()
 
         if self.snapshot_exclude:
             warnings.warn(
@@ -870,7 +894,12 @@ class ParameterBase(
                 stacklevel=2,
             )
 
-        state: dict[str, Any] = {"__class__": full_class(self), "full_name": str(self)}
+        cls = full_class(self)
+        state: dict[str, Any] = (
+            {"full_name": str(self)}
+            if compact and cls == _PLAIN_PARAMETER_CLASS
+            else {"__class__": cls, "full_name": str(self)}
+        )
 
         if self.snapshot_value:
             has_get = self.gettable
@@ -899,26 +928,31 @@ class ParameterBase(
             dttime: datetime = state["ts"]
             state["ts"] = dttime.isoformat(sep=" ", timespec="seconds")
 
+        validators: list[str] | None = None
         for attr in set(self._meta_attrs):
             if attr == "instrument" and self._instrument is not None:
-                state.update(
-                    {
-                        "instrument": full_class(self._instrument),
-                        "instrument_name": self._instrument.name,
-                    }
-                )
+                if not compact:
+                    state["instrument"] = full_class(self._instrument)
+                state["instrument_name"] = self._instrument.name
             elif attr == "validators":
-                state["validators"] = [repr(validator) for validator in self.validators]
+                validators = [repr(validator) for validator in self.validators]
             else:
                 val = getattr(self, attr, None)
                 if val is not None:
                     attr_strip = attr.lstrip("_")  # strip leading underscores
+                    if compact and attr_strip in _ZERO_DELAYS and val == 0:
+                        continue
                     if isinstance(val, Validator):
                         state[attr_strip] = repr(val)
                     elif isinstance(val, Metadatable):
                         state[attr_strip] = val.snapshot(update=update)
                     else:
                         state[attr_strip] = val
+
+        if validators is not None and not (
+            compact and validators in ([], [state.get("vals")])
+        ):
+            state["validators"] = validators
 
         return state
 
