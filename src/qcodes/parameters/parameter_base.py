@@ -928,14 +928,16 @@ class ParameterBase(
             dttime: datetime = state["ts"]
             state["ts"] = dttime.isoformat(sep=" ", timespec="seconds")
 
-        validators: list[str] | None = None
         for attr in set(self._meta_attrs):
             if attr == "instrument" and self._instrument is not None:
                 if not compact:
                     state["instrument"] = full_class(self._instrument)
                 state["instrument_name"] = self._instrument.name
             elif attr == "validators":
-                validators = [repr(validator) for validator in self.validators]
+                state["validators"] = [repr(validator) for validator in self.validators]
+            elif compact and attr == "vals":
+                # The first of the validators, which the snapshot holds anyway.
+                continue
             else:
                 val = getattr(self, attr, None)
                 if val is not None:
@@ -948,11 +950,6 @@ class ParameterBase(
                         state[attr_strip] = val.snapshot(update=update)
                     else:
                         state[attr_strip] = val
-
-        if validators is not None and not (
-            compact and validators in ([], [state.get("vals")])
-        ):
-            state["validators"] = validators
 
         return state
 

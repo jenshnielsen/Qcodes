@@ -237,15 +237,17 @@ def test_compact_parameter_snapshots_leave_out_what_place_and_defaults_say(
         "name": "parameter",
         "label": "parameter",
         "unit": "V",
-        "vals": "<Numbers 0<=v<=1>",
+        "validators": ["<Numbers 0<=v<=1>"],
     }
     kept = snapshot["parameters"]["delayed"]
     assert kept["__class__"] == full_class(delayed)
     assert kept["inter_delay"] == 0.1
     assert kept["post_delay"] == 0.2
     assert kept["validators"] == ["<Ints>", "<Numbers 0<=v<=2>"]
+    assert "vals" not in kept
     # Snapshots taken outside a station snapshot stay complete.
     assert parameter.snapshot()["instrument"] == full_class(instrument)
+    assert parameter.snapshot()["vals"] == "<Numbers 0<=v<=1>"
 
 
 def test_parameter_snapshots_in_station_are_complete_by_default() -> None:
